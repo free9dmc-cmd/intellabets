@@ -1,0 +1,118 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  username         String    @unique
+  name             String
+  image            String?
+  password         String
+  isPremium        Boolean   @default(false)
+  premiumSince     DateTime?
+  premiumUntil     DateTime?
+  stripeCustomerId String?
+  stripeAccountId  String?
+  bio              String?
+  specialties      String?   // comma-separated sports e.g. "NFL,NBA,MLB"
+  subscriptionPrice Float    @default(9.99)
+  totalWins        Int       @default(0)
+  totalLosses      Int       @default(0)
+  totalPushes      Int       @default(0)
+  winRate          Float     @default(0)
+  roi              Float     @default(0)
+  totalEarnings    Float     @default(0)
+  subscriberCount  Int       @default(0)
+  isVerified       Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  betslips                  Betslip[]
+  subscriptionsAsSubscriber Subscription[] @relation("Subscriber")
+  subscriptionsAsTipster    Subscription[] @relation("Tipster")
+  payouts                   Payout[]
+  aiSubscription            AISubscription?
+}
+
+model Betslip {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title           String
+  description     String?
+  sport           String
+  league          String?
+  totalOdds       Float     @default(0)
+  stake           Float     @default(100)
+  potentialReturn Float     @default(0)
+  isPublic        Boolean   @default(false)
+  isAI            Boolean   @default(false)
+  status          String    @default("pending")
+  profitLoss      Float     @default(0)
+  createdAt       DateTime  @default(now())
+  settledAt       DateTime?
+  updatedAt       DateTime  @updatedAt
+
+  bets Bet[]
+}
+
+model Bet {
+  id        String   @id @default(cuid())
+  betslipId String
+  betslip   Betslip  @relation(fields: [betslipId], references: [id], onDelete: Cascade)
+  game      String
+  homeTeam  String?
+  awayTeam  String?
+  pick      String
+  odds      Float
+  betType   String
+  line      String?
+  sport     String
+  gameDate  String?
+  result    String?
+}
+
+model Subscription {
+  id           String   @id @default(cuid())
+  subscriberId String
+  subscriber   User     @relation("Subscriber", fields: [subscriberId], references: [id], onDelete: Cascade)
+  tipsterId    String
+  tipster      User     @relation("Tipster", fields: [tipsterId], references: [id], onDelete: Cascade)
+  price        Float
+  status       String   @default("active")
+  stripeSubId  String?
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+  updatedAt    DateTime @updatedAt
+
+  @@unique([subscriberId, tipsterId])
+}
+
+model AISubscription {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status      String   @default("active")
+  stripeSubId String?
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
+}
+
+model Payout {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount    Float
+  fee       Float
+  netAmount Float
+  period    String
+  status    String    @default("pending")
+  createdAt DateTime  @default(now())
+  paidAt    DateTime?
+}
