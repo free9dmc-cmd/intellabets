@@ -111,6 +111,15 @@ export default function Navbar() {
                       💰 My Payouts
                     </Link>
                   )}
+                  {session?.user?.isAdmin && (
+                    <Link
+                      href="/admin"
+                      className="flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                      onClick={() => setDropdownOpen(false)}
+                    >
+                      ⚙ Admin Panel
+                    </Link>
+                  )}
                   <div className="border-t border-gray-800 mt-1 pt-1">
                     <button
                       onClick={() => signOut({ callbackUrl: "/" })}

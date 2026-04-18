@@ -11,6 +11,11 @@ export default withAuth(
       return NextResponse.redirect(new URL("/dashboard", req.url))
     }
 
+    // Block non-admins from /admin
+    if (pathname.startsWith("/admin") && !token?.isAdmin) {
+      return NextResponse.redirect(new URL("/dashboard", req.url))
+    }
+
     return NextResponse.next()
   },
   {

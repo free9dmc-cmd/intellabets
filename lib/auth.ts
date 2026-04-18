@@ -25,12 +25,16 @@ export const authOptions: NextAuthOptions = {
         const isValid = await bcrypt.compare(credentials.password, user.password)
         if (!isValid) throw new Error("Incorrect password")
 
+        const adminEmails = (process.env.ADMIN_EMAILS ?? "")
+          .split(",").map((e) => e.trim().toLowerCase()).filter(Boolean)
+
         return {
           id: user.id,
           email: user.email,
           name: user.name,
           username: user.username,
           isPremium: user.isPremium,
+          isAdmin: adminEmails.includes(user.email.toLowerCase()),
           image: user.image,
         }
       },
@@ -42,6 +46,7 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id
         token.username = user.username
         token.isPremium = user.isPremium
+        token.isAdmin = user.isAdmin
       }
       if (trigger === "update" && session) {
         token.isPremium = session.isPremium ?? token.isPremium
@@ -53,6 +58,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id
         session.user.username = token.username
         session.user.isPremium = token.isPremium
+        session.user.isAdmin = token.isAdmin ?? false
       }
       return session
     },

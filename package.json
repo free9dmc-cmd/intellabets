@@ -10,7 +10,15 @@
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "mobile:init": "cap init IntellaBets com.intellabets.app --web-dir=out",
+    "mobile:add:ios": "cap add ios",
+    "mobile:add:android": "cap add android",
+    "mobile:sync": "cap sync",
+    "mobile:run:ios": "cap run ios",
+    "mobile:run:android": "cap run android",
+    "mobile:open:ios": "cap open ios",
+    "mobile:open:android": "cap open android"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.35.0",
@@ -24,6 +32,10 @@
     "stripe": "^17.3.1"
   },
   "devDependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/cli": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/ios": "^6.0.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/react": "^18",
