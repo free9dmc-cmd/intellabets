@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import "./globals.css"
 import { Providers } from "./providers"
 import AgeGate from "@/components/AgeGate"
+import IAPProvider from "@/components/IAPProvider"
 
 export const metadata: Metadata = {
   title: "IntellaBets — Bet Smarter. Win More.",
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <Providers>
           <AgeGate />
+          <IAPProvider />
           {children}
         </Providers>
       </body>

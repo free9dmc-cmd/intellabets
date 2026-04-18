@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { SPORTS, formatOdds, formatCurrency } from "@/lib/utils"
+import { isNativePlatform, purchaseNative, IAP_PRODUCTS } from "@/lib/native-iap"
 
 interface AIBet {
   game: string
@@ -117,16 +118,21 @@ export default function AIPicksPage() {
         <p className="text-gray-500 text-sm mb-6">Cancel anytime. Instant access.</p>
         <button
           onClick={async () => {
+            setError("")
+            if (await isNativePlatform()) {
+              const result = await purchaseNative(IAP_PRODUCTS.ai)
+              if (result.cancelled) return
+              if (result.error) { setError(result.error); return }
+              setHasAccess(true)
+              return
+            }
             const checkoutRes = await fetch("/api/checkout", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ type: "ai" }),
             })
             const checkoutData = await checkoutRes.json()
-            if (checkoutData.url) {
-              window.location.href = checkoutData.url
-              return
-            }
+            if (checkoutData.url) { window.location.href = checkoutData.url; return }
             // Demo fallback
             const res = await fetch("/api/premium", {
               method: "POST",

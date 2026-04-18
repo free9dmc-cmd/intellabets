@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { isNativePlatform, purchaseNative, tipsterProductId } from "@/lib/native-iap"
 
 interface Props {
   tipsterId: string
@@ -41,18 +42,31 @@ export default function SubscribeButton({
         setError(d.error ?? "Failed")
       }
     } else {
-      // Subscribe via Stripe checkout (falls back to demo if Stripe not configured)
+      // Native iOS/Android — StoreKit / Play Billing
+      if (await isNativePlatform()) {
+        const result = await purchaseNative(tipsterProductId(price), tipsterId)
+        if (result.cancelled) { setLoading(false); return }
+        if (result.error) { setError(result.error); setLoading(false); return }
+        // Record in our DB after IAP succeeds
+        await fetch("/api/subscriptions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tipsterId, source: "iap" }),
+        })
+        setSubscribed(true)
+        router.refresh()
+        setLoading(false)
+        return
+      }
+
+      // Web — Stripe checkout (falls back to demo if Stripe not configured)
       const checkoutRes = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type: "tipster", tipsterId }),
       })
       const checkoutData = await checkoutRes.json()
-
-      if (checkoutData.url) {
-        window.location.href = checkoutData.url
-        return
-      }
+      if (checkoutData.url) { window.location.href = checkoutData.url; return }
 
       // Demo fallback
       const res = await fetch("/api/subscriptions", {

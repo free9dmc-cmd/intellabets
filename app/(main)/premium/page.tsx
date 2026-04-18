@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { PREMIUM_PRICE, AI_PRICE } from "@/lib/utils"
+import { isNativePlatform, purchaseNative, IAP_PRODUCTS } from "@/lib/native-iap"
 
 const TIPSTER_PERKS = [
   { icon: "📋", title: "Create Unlimited Betslips", desc: "Post single bets, parlays, and multi-leg picks across any sport" },
@@ -38,17 +39,23 @@ export default function PremiumPage() {
     setLoading(type)
     setError("")
 
+    // Native iOS/Android — use StoreKit / Play Billing via RevenueCat
+    if (await isNativePlatform()) {
+      const result = await purchaseNative(IAP_PRODUCTS[type])
+      if (result.cancelled) { setLoading(null); return }
+      if (result.error) { setError(result.error); setLoading(null); return }
+      router.push(`/checkout/success?type=${type}`)
+      return
+    }
+
+    // Web — use Stripe checkout
     const checkoutRes = await fetch("/api/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ type }),
     })
     const checkoutData = await checkoutRes.json()
-
-    if (checkoutData.url) {
-      window.location.href = checkoutData.url
-      return
-    }
+    if (checkoutData.url) { window.location.href = checkoutData.url; return }
 
     // Demo fallback when Stripe is not configured
     const res = await fetch("/api/premium", {
@@ -56,7 +63,6 @@ export default function PremiumPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ type }),
     })
-
     const data = await res.json()
     if (res.ok) {
       setStatus((prev) => prev ? { ...prev, isPremium: type === "premium" || prev.isPremium, hasAI: type === "ai" || prev.hasAI } : null)
