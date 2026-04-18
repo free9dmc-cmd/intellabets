@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import "./globals.css"
 import { Providers } from "./providers"
+import AgeGate from "@/components/AgeGate"
 
 export const metadata: Metadata = {
   title: "IntellaBets — Bet Smarter. Win More.",
@@ -18,7 +19,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <Providers>{children}</Providers>
+        <Providers>
+          <AgeGate />
+          {children}
+        </Providers>
       </body>
     </html>
   )

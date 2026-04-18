@@ -38,6 +38,19 @@ export default function PremiumPage() {
     setLoading(type)
     setError("")
 
+    const checkoutRes = await fetch("/api/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type }),
+    })
+    const checkoutData = await checkoutRes.json()
+
+    if (checkoutData.url) {
+      window.location.href = checkoutData.url
+      return
+    }
+
+    // Demo fallback when Stripe is not configured
     const res = await fetch("/api/premium", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -109,7 +122,6 @@ export default function PremiumPage() {
               {loading === "premium" ? "Activating..." : `Activate Premium — $${PREMIUM_PRICE}/mo`}
             </button>
           )}
-          <p className="text-gray-600 text-xs text-center mt-2">Demo mode: instant activation</p>
         </div>
 
         {/* AI Picks */}
@@ -160,7 +172,6 @@ export default function PremiumPage() {
               {loading === "ai" ? "Activating..." : `Get AI Picks — $${AI_PRICE}/mo`}
             </button>
           )}
-          <p className="text-gray-600 text-xs text-center mt-2">Demo mode: instant activation</p>
         </div>
       </div>
 

@@ -117,6 +117,17 @@ export default function AIPicksPage() {
         <p className="text-gray-500 text-sm mb-6">Cancel anytime. Instant access.</p>
         <button
           onClick={async () => {
+            const checkoutRes = await fetch("/api/checkout", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ type: "ai" }),
+            })
+            const checkoutData = await checkoutRes.json()
+            if (checkoutData.url) {
+              window.location.href = checkoutData.url
+              return
+            }
+            // Demo fallback
             const res = await fetch("/api/premium", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -134,7 +145,6 @@ export default function AIPicksPage() {
           Activate AI Picks — $9.99/mo
         </button>
         {error && <p className="text-red-400 text-sm mt-3">{error}</p>}
-        <p className="text-gray-600 text-xs mt-4">Demo mode: Click to activate with simulated payment</p>
       </div>
     )
   }

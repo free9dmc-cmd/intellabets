@@ -41,7 +41,20 @@ export default function SubscribeButton({
         setError(d.error ?? "Failed")
       }
     } else {
-      // Subscribe (demo: no Stripe, direct activation)
+      // Subscribe via Stripe checkout (falls back to demo if Stripe not configured)
+      const checkoutRes = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "tipster", tipsterId }),
+      })
+      const checkoutData = await checkoutRes.json()
+
+      if (checkoutData.url) {
+        window.location.href = checkoutData.url
+        return
+      }
+
+      // Demo fallback
       const res = await fetch("/api/subscriptions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -71,7 +84,6 @@ export default function SubscribeButton({
           {loading ? "..." : subscribed ? "✓ Subscribed" : `Subscribe — $${price}/mo`}
         </button>
         {error && <p className="text-red-400 text-xs mt-1">{error}</p>}
-        <p className="text-gray-600 text-xs mt-1">Demo: no payment required</p>
       </div>
     )
   }
