@@ -200,14 +200,83 @@ async function main() {
 
   const hashedPassword = await bcrypt.hash("password123", 12)
 
-  // Create a demo user for testing
-  await prisma.user.create({
+  // Create a fully-loaded demo user for App Store Review
+  const demoUser = await prisma.user.create({
     data: {
       email: "demo@intellabets.com",
       username: "demouser",
       name: "Demo User",
       password: hashedPassword,
       image: `https://api.dicebear.com/7.x/avataaars/svg?seed=demouser`,
+      isPremium: true,
+      isVerified: true,
+      premiumSince: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000),
+      premiumUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      bio: "Demo account for App Review. Premium tipster with AI access.",
+      specialties: "NFL,NBA,MLB",
+      subscriptionPrice: 9.99,
+      totalWins: 47,
+      totalLosses: 21,
+      totalPushes: 3,
+      winRate: 47 / (47 + 21),
+      roi: 19.4,
+      subscriberCount: 128,
+      totalEarnings: 1024.8,
+    },
+  })
+
+  // Give demo user an active AI subscription
+  await prisma.aISubscription.create({
+    data: {
+      userId: demoUser.id,
+      status: "active",
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    },
+  })
+
+  // Give demo user some published betslips
+  await prisma.betslip.create({
+    data: {
+      userId: demoUser.id,
+      title: "NFL Sunday Parlay — 3-legger",
+      description: "Strong line value with sharp money on our side. High confidence parlay.",
+      sport: "NFL",
+      league: "NFL Regular Season",
+      totalOdds: 285,
+      stake: 100,
+      potentialReturn: 385,
+      status: "won",
+      profitLoss: 285,
+      isPublic: true,
+      settledAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+      bets: {
+        create: [
+          { game: "Kansas City Chiefs @ Las Vegas Raiders", pick: "Chiefs -6.5", odds: -115, betType: "spread", sport: "NFL", homeTeam: "Las Vegas Raiders", awayTeam: "Kansas City Chiefs", line: "-6.5", result: "won" },
+          { game: "Dallas Cowboys @ Philadelphia Eagles", pick: "Eagles -3", odds: -110, betType: "spread", sport: "NFL", homeTeam: "Philadelphia Eagles", awayTeam: "Dallas Cowboys", line: "-3", result: "won" },
+          { game: "San Francisco 49ers @ Seattle Seahawks", pick: "49ers -3", odds: -112, betType: "parlay", sport: "NFL", homeTeam: "Seattle Seahawks", awayTeam: "San Francisco 49ers", line: "-3", result: "won" },
+        ],
+      },
+    },
+  })
+
+  await prisma.betslip.create({
+    data: {
+      userId: demoUser.id,
+      title: "NBA Best Bet — Lakers Over",
+      description: "Line movement suggests heavy sharp action on the over.",
+      sport: "NBA",
+      league: "NBA Regular Season",
+      totalOdds: -110,
+      stake: 110,
+      potentialReturn: 210,
+      status: "pending",
+      profitLoss: 0,
+      isPublic: true,
+      bets: {
+        create: [
+          { game: "LA Lakers @ Golden State Warriors", pick: "Over 224.5", odds: -110, betType: "total", sport: "NBA", homeTeam: "Golden State Warriors", awayTeam: "LA Lakers", line: "O 224.5" },
+        ],
+      },
     },
   })
 
@@ -331,6 +400,19 @@ async function main() {
 
   const tipsters = await prisma.user.findMany({ where: { isPremium: true } })
   console.log(`✅ Created ${tipsters.length} premium tipsters`)
+
+  // Subscribe demo user to first 3 tipsters (excluding themselves)
+  for (const tipster of tipsters.filter((t) => t.id !== demoUser.id).slice(0, 3)) {
+    await prisma.subscription.create({
+      data: {
+        subscriberId: demoUser.id,
+        tipsterId: tipster.id,
+        price: tipster.subscriptionPrice,
+        status: "active",
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      },
+    })
+  }
 
   const betslips = await prisma.betslip.count()
   console.log(`✅ Created ${betslips} betslips`)
