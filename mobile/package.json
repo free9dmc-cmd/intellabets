@@ -1,0 +1,40 @@
+{
+  "name": "@intellabets/mobile",
+  "version": "1.0.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "ios": "expo run:ios",
+    "android": "expo run:android",
+    "build:ios": "eas build --platform ios --profile production",
+    "build:ios:preview": "eas build --platform ios --profile preview",
+    "submit:ios": "eas submit --platform ios",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts,.tsx"
+  },
+  "dependencies": {
+    "expo": "~51.0.0",
+    "expo-router": "~3.5.0",
+    "expo-status-bar": "~1.12.0",
+    "expo-secure-store": "~13.0.0",
+    "expo-splash-screen": "~0.27.0",
+    "expo-font": "~12.0.0",
+    "react": "18.2.0",
+    "react-native": "0.74.0",
+    "react-native-purchases": "^8.2.0",
+    "react-native-webview": "^13.10.0",
+    "@react-native-async-storage/async-storage": "1.23.1",
+    "@tanstack/react-query": "^5.59.0",
+    "zustand": "^4.5.0",
+    "axios": "^1.7.0",
+    "pusher-js": "^8.4.0",
+    "nativewind": "^2.0.11"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.24.0",
+    "@types/react": "~18.2.0",
+    "@types/react-native": "~0.73.0",
+    "typescript": "^5.5.0"
+  }
+}

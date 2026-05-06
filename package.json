@@ -2,52 +2,28 @@
   "name": "intellabets",
   "version": "1.0.0",
   "private": true,
+  "workspaces": [
+    "backend",
+    "mobile",
+    "admin-web",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
-    "db:push": "prisma db push",
-    "db:seed": "tsx prisma/seed.ts",
-    "db:studio": "prisma studio",
-    "postinstall": "prisma generate",
-    "mobile:init": "cap init IntellaBets com.intellabets.app --web-dir=out",
-    "mobile:add:ios": "cap add ios",
-    "mobile:add:android": "cap add android",
-    "mobile:sync": "cap sync",
-    "mobile:run:ios": "cap run ios",
-    "mobile:run:android": "cap run android",
-    "mobile:open:ios": "cap open ios",
-    "mobile:open:android": "cap open android"
-  },
-  "dependencies": {
-    "@anthropic-ai/sdk": "^0.35.0",
-    "@auth/prisma-adapter": "^2.7.2",
-    "@prisma/client": "^5.22.0",
-    "bcryptjs": "^2.4.3",
-    "next": "14.2.16",
-    "next-auth": "^4.24.10",
-    "react": "^18",
-    "react-dom": "^18",
-    "stripe": "^17.3.1"
+    "dev:backend": "npm run dev --workspace=backend",
+    "dev:admin": "npm run dev --workspace=admin-web",
+    "build:backend": "npm run build --workspace=backend",
+    "build:admin": "npm run build --workspace=admin-web",
+    "db:push": "npm run db:push --workspace=backend",
+    "db:seed": "npm run db:seed --workspace=backend",
+    "db:studio": "npm run db:studio --workspace=backend",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "devDependencies": {
-    "@capacitor/android": "^6.0.0",
-    "@capacitor/cli": "^6.0.0",
-    "@capacitor/core": "^6.0.0",
-    "@capacitor/ios": "^6.0.0",
-    "@revenuecat/purchases-capacitor": "^9.0.0",
-    "@types/bcryptjs": "^2.4.6",
-    "@types/node": "^20",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
-    "autoprefixer": "^10.0.1",
-    "eslint": "^8",
-    "eslint-config-next": "14.2.16",
-    "postcss": "^8",
-    "prisma": "^5.22.0",
-    "tailwindcss": "^3.4.0",
-    "tsx": "^4.19.1",
-    "typescript": "^5"
+    "prettier": "^3.3.0",
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }
