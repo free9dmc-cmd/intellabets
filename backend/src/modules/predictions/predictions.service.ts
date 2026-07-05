@@ -4,6 +4,7 @@ import { PrismaService } from "../../common/prisma/prisma.service"
 import { PredictionEngineService } from "./prediction-engine.service"
 import { AIAnalystService } from "./ai-analyst.service"
 import { OddsAggregatorService } from "../ingestion/odds-aggregator.service"
+import { RealtimeService } from "../realtime/realtime.service"
 import type { BookMarket } from "./devig"
 import type { EngineConfig } from "./prediction.types"
 
@@ -15,7 +16,8 @@ export class PredictionsService {
     private readonly prisma: PrismaService,
     private readonly engine: PredictionEngineService,
     private readonly ai: AIAnalystService,
-    private readonly aggregator: OddsAggregatorService
+    private readonly aggregator: OddsAggregatorService,
+    private readonly realtime: RealtimeService
   ) {}
 
   /**
@@ -102,6 +104,9 @@ export class PredictionsService {
           },
         })
         predictionCount++
+
+        // Broadcast the fresh +EV pick to subscribers in real time.
+        await this.realtime.newPrediction(p)
       }
     }
 
