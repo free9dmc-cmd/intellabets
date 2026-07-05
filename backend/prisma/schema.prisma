@@ -1,0 +1,167 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Users & Auth ───────────────────────────────────────────────────────────
+
+model User {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  username         String    @unique
+  name             String
+  password         String
+  image            String?
+  isPremium        Boolean   @default(false)
+  isVerified       Boolean   @default(false)
+  isAdmin          Boolean   @default(false)
+  premiumUntil     DateTime?
+  bio              String?
+  specialties      String?
+  subscriptionPrice Float    @default(9.99)
+
+  // Performance (computed from settled predictions)
+  totalWins        Int       @default(0)
+  totalLosses      Int       @default(0)
+  totalPushes      Int       @default(0)
+  winRate          Float     @default(0)
+  roi              Float     @default(0)
+  avgClv           Float     @default(0)  // avg closing line value — the real skill metric
+  totalEarnings    Float     @default(0)
+  subscriberCount  Int       @default(0)
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  refreshTokens    RefreshToken[]
+  betslips         Betslip[]
+  predictions      Prediction[]
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ─── Odds ingestion ─────────────────────────────────────────────────────────
+
+model Game {
+  id           String   @id @default(cuid())
+  canonicalId  String   @unique  // "{sport}:{home}:{away}:{date}"
+  externalId   String              // provider game id
+  sport        String
+  league       String
+  homeTeam     String
+  awayTeam     String
+  commenceTime DateTime
+  status       String   @default("scheduled") // scheduled | live | final
+  homeScore    Int?
+  awayScore    Int?
+
+  snapshots    OddsSnapshot[]
+  predictions  Prediction[]
+
+  @@index([sport, commenceTime])
+  @@index([status])
+}
+
+// A point-in-time capture of the full market across all books for one game
+model OddsSnapshot {
+  id          String   @id @default(cuid())
+  gameId      String
+  game        Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  provider    String
+  isClosing   Boolean  @default(false) // the last snapshot before commence — used for CLV
+  markets     Json     // normalized MarketLine[] payload
+  capturedAt  DateTime @default(now())
+
+  @@index([gameId, capturedAt])
+  @@index([gameId, isClosing])
+}
+
+// ─── Predictions & tracking ─────────────────────────────────────────────────
+
+model Prediction {
+  id             String   @id @default(cuid())
+  gameId         String
+  game           Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  userId         String?  // null = house/AI prediction
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  marketType     String   // moneyline | spread | total | prop
+  outcomeId      String
+  selection      String   // "Kansas City Chiefs -6.5" (display)
+  outcomeName    String   @default("") // raw side: team name | "Over" | "Under"
+  point          Float?   // spread/total line, needed for grading
+
+  // Engine outputs at time of prediction
+  fairProbability Float   // de-vigged consensus probability
+  offeredOdds     Float   // decimal odds we recommend at
+  offeredBook     String  // which book had the best price
+  edgePercent     Float   // EV as a percentage
+  kellyStake      Float   // fraction of bankroll (post-fractional-Kelly)
+  confidence      Float   // 0-100
+  reasoning       String? // Claude's qualitative note
+
+  // Settlement / CLV tracking
+  status         String   @default("pending") // pending | won | lost | push | void
+  closingOdds    Float?   // decimal odds at close for this outcome
+  clv            Float?   // closing line value = (offeredOdds/closingOdds - 1) * 100
+  settledAt      DateTime?
+
+  createdAt      DateTime @default(now())
+
+  @@index([gameId])
+  @@index([userId])
+  @@index([status])
+}
+
+// ─── Betslips (user-facing published picks) ─────────────────────────────────
+
+model Betslip {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title           String
+  description     String?
+  sport           String
+  isPublic        Boolean   @default(false)
+  isAI            Boolean   @default(false)
+  totalOdds       Float     @default(0)
+  stake           Float     @default(100)
+  potentialReturn Float     @default(0)
+  confidence      Float?
+  status          String    @default("pending")
+  profitLoss      Float     @default(0)
+  createdAt       DateTime  @default(now())
+  settledAt       DateTime?
+
+  legs            BetslipLeg[]
+
+  @@index([userId])
+  @@index([isPublic, status])
+}
+
+model BetslipLeg {
+  id         String  @id @default(cuid())
+  betslipId  String
+  betslip    Betslip @relation(fields: [betslipId], references: [id], onDelete: Cascade)
+  game       String
+  selection  String
+  odds       Float
+  marketType String
+  sport      String
+  result     String? // won | lost | push
+  reasoning  String?
+}
