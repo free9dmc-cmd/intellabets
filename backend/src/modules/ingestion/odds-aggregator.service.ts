@@ -73,9 +73,18 @@ export class OddsAggregatorService {
     return data.map((g) => this.transform(g))
   }
 
-  /** All sport keys we actively ingest. */
+  /**
+   * Sport keys we actively ingest.
+   * Configurable via ACTIVE_SPORTS (comma-separated) to protect API quota.
+   * Defaults to NFL + NBA only — enough to prove the pipeline without burning
+   * a free-tier plan. Set ACTIVE_SPORTS=all to ingest every supported sport.
+   */
   activeSportKeys(): string[] {
-    return Object.keys(this.SPORT_KEYS)
+    const raw = this.config.get<string>("ACTIVE_SPORTS", "americanfootball_nfl,basketball_nba")
+    if (raw.trim().toLowerCase() === "all") return Object.keys(this.SPORT_KEYS)
+    const requested = raw.split(",").map((s) => s.trim()).filter(Boolean)
+    const valid = requested.filter((s) => s in this.SPORT_KEYS)
+    return valid.length ? valid : ["americanfootball_nfl"]
   }
 
   /**

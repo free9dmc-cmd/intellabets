@@ -32,8 +32,8 @@ export class IngestionService implements OnModuleInit {
       return
     }
 
-    const pollMin = Number(this.config.get("POLL_INTERVAL_MIN") ?? 15)
-    const settleMin = Number(this.config.get("SETTLE_INTERVAL_MIN") ?? 30)
+    const pollMin = Number(this.config.get("POLL_INTERVAL_MIN") ?? 30)
+    const settleMin = Number(this.config.get("SETTLE_INTERVAL_MIN") ?? 60)
 
     // Clear any stale repeatables from a previous boot, then reschedule.
     const existing = await this.queue.getRepeatableJobs()
