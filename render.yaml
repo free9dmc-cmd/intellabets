@@ -1,0 +1,50 @@
+# Render Blueprint — provisions the IntellaBets API + Postgres + Redis.
+# Deploy: push to GitHub, then Render Dashboard -> New -> Blueprint -> pick this repo.
+# Set the two `sync: false` secrets (ANTHROPIC_API_KEY, THE_ODDS_API_KEY) in the
+# Render dashboard after the first deploy.
+
+databases:
+  - name: intellabets-db
+    databaseName: intellabets
+    plan: free
+
+services:
+  - type: redis
+    name: intellabets-redis
+    plan: free
+    maxmemoryPolicy: noeviction
+    ipAllowList: []
+
+  - type: web
+    name: intellabets-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /api/docs
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: intellabets-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: intellabets-redis
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: NODE_ENV
+        value: production
+      - key: ADMIN_EMAILS
+        value: free9dmc@icloud.com
+      - key: ACTIVE_SPORTS
+        value: baseball_mlb
+      - key: POLL_INTERVAL_MIN
+        value: "30"
+      - key: SETTLE_INTERVAL_MIN
+        value: "60"
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: THE_ODDS_API_KEY
+        sync: false
