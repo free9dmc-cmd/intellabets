@@ -6,6 +6,7 @@
     "rootDir": "./src",
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
+    "strictPropertyInitialization": false,
     "paths": {
       "@intellabets/types": ["../packages/types/src"]
     }
