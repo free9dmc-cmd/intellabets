@@ -82,7 +82,9 @@ export class PredictionsService {
     let predictionCount = 0
     for (const ev of targets) {
       const gb = await this.aggregator.fetchEventProps(sportKey, ev.id).catch(() => null)
-      if (!gb || gb.booksByMarket.size === 0) continue
+      const marketCount = gb?.booksByMarket.size ?? 0
+      this.logger.log(`${ev.awayTeam} @ ${ev.homeTeam}: ${marketCount} prop markets posted`)
+      if (!gb || marketCount === 0) continue
       const isLive = gb.commenceTime.getTime() <= Date.now()
       predictionCount += await this.analyzeAndPersist(gb, { config, allowStarted: true, isProp: true, isLive })
     }
