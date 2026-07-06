@@ -5,6 +5,7 @@ import { PredictionEngineService } from "./prediction-engine.service"
 import { AIAnalystService } from "./ai-analyst.service"
 import { OddsAggregatorService } from "../ingestion/odds-aggregator.service"
 import { RealtimeService } from "../realtime/realtime.service"
+import { MlbStatsService } from "./mlb-stats.service"
 import type { BookMarket } from "./devig"
 import type { EngineConfig } from "./prediction.types"
 
@@ -17,7 +18,8 @@ export class PredictionsService {
     private readonly engine: PredictionEngineService,
     private readonly ai: AIAnalystService,
     private readonly aggregator: OddsAggregatorService,
-    private readonly realtime: RealtimeService
+    private readonly realtime: RealtimeService,
+    private readonly mlbStats: MlbStatsService
   ) {}
 
   /**
@@ -213,10 +215,62 @@ export class PredictionsService {
         })
         settled++
       }
+
+      // Grade player props (MLB only for now — free MLB Stats API).
+      if (sportKey === "baseball_mlb") {
+        settled += await this.settleMlbProps(game.id, game.homeTeam, game.awayTeam, game.commenceTime)
+      }
     }
 
     this.logger.log(`${sportKey}: settled ${settled} predictions`)
     return { settled }
+  }
+
+  /**
+   * Grade pending MLB prop predictions for a finished game using real box-score
+   * stats. Props DNP (player not in box score) are voided.
+   */
+  private async settleMlbProps(gameId: string, homeTeam: string, awayTeam: string, commenceTime: Date): Promise<number> {
+    const props = await this.prisma.prediction.findMany({
+      where: { gameId, status: "pending", marketType: "prop" },
+    })
+    if (props.length === 0) return 0
+
+    const dateISO = commenceTime.toISOString().slice(0, 10)
+    const stats = await this.mlbStats.getPlayerStats(dateISO, homeTeam, awayTeam)
+    if (!stats) return 0
+
+    let graded = 0
+    for (const pred of props) {
+      // outcomeId format: "<eventId>:<statKey>:<player>:<Over|Under>:<point>"
+      const parts = pred.outcomeId.split(":")
+      const statKey = parts[1]
+      const player = parts[2]
+      if (!statKey || !player || pred.point == null) continue
+
+      const line = stats.get(player)
+      let status: "won" | "lost" | "push" | "void"
+      if (!line) {
+        status = "void" // did not play
+      } else {
+        const actual = this.mlbStats.statForKey(statKey, line)
+        if (actual == null) continue
+        if (actual === pred.point) status = "push"
+        else {
+          const over = actual > pred.point
+          const tookOver = pred.outcomeName.toLowerCase() === "over"
+          status = over === tookOver ? "won" : "lost"
+        }
+      }
+
+      await this.prisma.prediction.update({
+        where: { id: pred.id },
+        data: { status, settledAt: new Date() },
+      })
+      graded++
+    }
+    this.logger.log(`Graded ${graded} MLB props for game ${gameId}`)
+    return graded
   }
 
   /** House predictions currently pending, newest & most confident first. */
