@@ -62,6 +62,18 @@ export class RealtimeService {
     })
   }
 
+  async liveParlayUpdate(sport: string, payload: {
+    betslipId: string
+    title: string
+    legCount: number
+    totalOdds: number
+    potentialReturn: number
+    confidence: number
+    legs: { selection: string; odds: number; edge: number }[]
+  }) {
+    await this.emit(`live-parlays-${sport.toLowerCase()}`, "parlay:update", payload)
+  }
+
   async betslipPublished(tipsterId: string, payload: {
     betslipId: string
     tipsterUsername: string

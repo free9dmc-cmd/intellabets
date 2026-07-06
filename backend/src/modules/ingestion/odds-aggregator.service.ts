@@ -111,6 +111,48 @@ export class OddsAggregatorService {
       })
   }
 
+  /**
+   * Player-prop market keys per sport (Over/Under style — cleanly de-viggable).
+   * Single-sided markets like anytime-TD are intentionally excluded because
+   * they have no fair 2-way to de-vig against.
+   */
+  private readonly PROP_MARKETS: Record<string, string[]> = {
+    americanfootball_nfl: ["player_pass_yds", "player_pass_tds", "player_rush_yds", "player_reception_yds", "player_receptions"],
+    basketball_nba: ["player_points", "player_rebounds", "player_assists", "player_threes"],
+    baseball_mlb: ["batter_hits", "batter_total_bases", "batter_home_runs", "pitcher_strikeouts"],
+    icehockey_nhl: ["player_points", "player_shots_on_goal"],
+  }
+
+  propMarketsFor(sportKey: string): string[] {
+    return this.PROP_MARKETS[sportKey] ?? []
+  }
+
+  /** List scheduled/live events for a sport (cheap — 1 credit). */
+  async fetchEvents(sportKey: string): Promise<{ id: string; homeTeam: string; awayTeam: string; commenceTime: Date }[]> {
+    const { data } = await this.http.get<OddsApiGame[]>(`/sports/${sportKey}/events`)
+    return data.map((e) => ({
+      id: e.id,
+      homeTeam: e.home_team,
+      awayTeam: e.away_team,
+      commenceTime: new Date(e.commence_time),
+    }))
+  }
+
+  /**
+   * Fetch player props for a single event across all books.
+   * Each (player, prop) becomes its own 2-way (Over/Under) market so the engine
+   * can de-vig it exactly like a game total.
+   */
+  async fetchEventProps(sportKey: string, eventId: string): Promise<GameBooks | null> {
+    const markets = this.propMarketsFor(sportKey)
+    if (markets.length === 0) return null
+
+    const { data } = await this.http.get<OddsApiGame>(`/sports/${sportKey}/events/${eventId}/odds`, {
+      params: { regions: "us", markets: markets.join(","), oddsFormat: "american" },
+    })
+    return this.transformProps(data)
+  }
+
   // ─── transform ────────────────────────────────────────────────────────────
 
   private transform(g: OddsApiGame): GameBooks {
@@ -152,11 +194,84 @@ export class OddsAggregatorService {
       booksByMarket,
     }
   }
+
+  private transformProps(g: OddsApiGame): GameBooks {
+    const sport = this.SPORT_KEYS[g.sport_key] ?? "NFL"
+    // Key = "<propKey>|<player>" so each player's line is its own 2-way market.
+    const booksByMarket = new Map<string, BookMarket[]>()
+
+    for (const bm of g.bookmakers) {
+      for (const m of bm.markets) {
+        // Group this book's outcomes for this prop by player (description field).
+        const byPlayer = new Map<string, OddsApiOutcome[]>()
+        for (const o of m.outcomes) {
+          const player = o.description ?? o.name
+          const arr = byPlayer.get(player) ?? []
+          arr.push(o)
+          byPlayer.set(player, arr)
+        }
+
+        for (const [player, outs] of byPlayer.entries()) {
+          // Need both Over and Under to de-vig; skip single-sided.
+          if (outs.length < 2) continue
+          const label = PROP_LABELS[m.key] ?? m.key
+          const key = `${m.key}|${player}`
+          const line: MarketLine = {
+            id: `${g.id}:${bm.key}:${m.key}:${player}`,
+            type: "prop",
+            name: key,
+            rawName: m.key,
+            outcomes: outs.map((o) => ({
+              id: `${g.id}:${m.key}:${player}:${o.name}:${o.point ?? ""}`,
+              name: o.name, // "Over" / "Under"
+              description: `${player} ${o.name} ${o.point ?? ""} ${label}`.trim(),
+              odds: fromAmerican(o.price),
+              point: o.point,
+              isMain: true,
+            })),
+            lastUpdated: new Date(m.last_update),
+          }
+          const arr = booksByMarket.get(key) ?? []
+          arr.push({ book: bm.key, line })
+          booksByMarket.set(key, arr)
+        }
+      }
+    }
+
+    return {
+      externalId: g.id,
+      canonicalId: `${sport}:${g.home_team}:${g.away_team}:${g.commence_time.slice(0, 10)}`,
+      sport,
+      league: g.sport_title,
+      homeTeam: g.home_team,
+      awayTeam: g.away_team,
+      commenceTime: new Date(g.commence_time),
+      booksByMarket,
+    }
+  }
+}
+
+// Human-readable prop labels for selection text.
+const PROP_LABELS: Record<string, string> = {
+  player_pass_yds: "Passing Yards",
+  player_pass_tds: "Passing TDs",
+  player_rush_yds: "Rushing Yards",
+  player_reception_yds: "Receiving Yards",
+  player_receptions: "Receptions",
+  player_points: "Points",
+  player_rebounds: "Rebounds",
+  player_assists: "Assists",
+  player_threes: "3-Pointers",
+  player_shots_on_goal: "Shots on Goal",
+  batter_hits: "Hits",
+  batter_total_bases: "Total Bases",
+  batter_home_runs: "Home Runs",
+  pitcher_strikeouts: "Strikeouts",
 }
 
 // ─── The Odds API response shapes ─────────────────────────────────────────────
 
-interface OddsApiOutcome { name: string; price: number; point?: number }
+interface OddsApiOutcome { name: string; price: number; point?: number; description?: string }
 interface OddsApiMarket { key: string; last_update: string; outcomes: OddsApiOutcome[] }
 interface OddsApiBookmaker { key: string; title: string; markets: OddsApiMarket[] }
 interface OddsApiGame {

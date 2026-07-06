@@ -32,6 +32,26 @@ export class IngestionController {
     return { sport, ...result, message: `Ingested ${result.games} games, generated ${result.predictions} predictions` }
   }
 
+  @Post("live")
+  @ApiOperation({ summary: "Ingest LIVE in-play game markets + predict now (admin)" })
+  @ApiQuery({ name: "sport", required: true })
+  async liveNow(@Query("sport") sport: string) {
+    if (!sport) throw new BadRequestException("sport query param required")
+    const result = await this.predictions.ingestLiveAndPredict(sport)
+    return { sport, ...result, message: `Live: ${result.games} in-play games, ${result.predictions} predictions` }
+  }
+
+  @Post("props")
+  @ApiOperation({ summary: "Ingest player props + predict now (admin). Costs 1 API credit per event." })
+  @ApiQuery({ name: "sport", required: true })
+  @ApiQuery({ name: "maxEvents", required: false, description: "Cap events to protect quota (default 5)" })
+  async propsNow(@Query("sport") sport: string, @Query("maxEvents") maxEvents?: string) {
+    if (!sport) throw new BadRequestException("sport query param required")
+    const cap = maxEvents ? parseInt(maxEvents, 10) : 5
+    const result = await this.predictions.ingestPropsAndPredict(sport, cap)
+    return { sport, ...result, message: `Props: ${result.events} events, ${result.predictions} predictions` }
+  }
+
   @Post("settle")
   @ApiOperation({ summary: "Settle finished games for a sport RIGHT NOW (admin)" })
   @ApiQuery({ name: "sport", required: true })

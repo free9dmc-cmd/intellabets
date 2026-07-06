@@ -50,6 +50,21 @@ export class BetslipsController {
     return this.betslips.generateFromPredictions(user.id, dto)
   }
 
+  @Post("live-parlay")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePremium()
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Build a LIVE in-game parlay from current +EV legs (game markets + props)" })
+  liveParlay(@CurrentUser() user: AuthenticatedUser, @Body() dto: GenerateBetslipDto) {
+    return this.betslips.buildLiveParlay(user.id, {
+      sport: dto.sport,
+      legCount: dto.legCount,
+      minConfidence: dto.minConfidence,
+      stake: dto.stake,
+      publish: dto.publish,
+    })
+  }
+
   @Post(":id/publish")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @RequirePremium()

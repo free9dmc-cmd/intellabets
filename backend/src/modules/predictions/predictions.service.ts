@@ -36,82 +36,141 @@ export class PredictionsService {
 
     const slate = await this.aggregator.fetchSlate(sportKey)
     let predictionCount = 0
-
     for (const gb of slate) {
-      // Upsert game
-      const game = await this.prisma.game.upsert({
-        where: { canonicalId: gb.canonicalId },
-        create: {
-          canonicalId: gb.canonicalId,
-          externalId: gb.externalId,
-          sport: gb.sport,
-          league: gb.league,
-          homeTeam: gb.homeTeam,
-          awayTeam: gb.awayTeam,
-          commenceTime: gb.commenceTime,
-        },
-        update: { commenceTime: gb.commenceTime },
-      })
-
-      // Snapshot odds (mark closing if within 10 min of kickoff)
-      const minsToStart = (gb.commenceTime.getTime() - Date.now()) / 60000
-      const isClosing = minsToStart <= 10 && minsToStart > -5
-      await this.prisma.oddsSnapshot.create({
-        data: {
-          gameId: game.id,
-          provider: "the-odds-api",
-          isClosing,
-          markets: serializeBooks(gb.booksByMarket) as Prisma.InputJsonValue,
-        },
-      })
-
-      // Only predict on games that haven't started.
-      if (minsToStart <= 0) continue
-
-      const valueBets = this.engine.analyzeGame(
-        { id: game.id, canonicalId: gb.canonicalId, sport: gb.sport, homeTeam: gb.homeTeam, awayTeam: gb.awayTeam, commenceTime: gb.commenceTime },
-        gb.booksByMarket,
-        config
-      )
-      if (valueBets.length === 0) continue
-
-      const reviewed = await this.ai.review(valueBets)
-      const keep = reviewed.filter((r) => r.aiVerdict !== "pass")
-
-      for (const p of keep) {
-        // Avoid duplicate predictions for the same outcome on the same game.
-        const existing = await this.prisma.prediction.findFirst({
-          where: { gameId: game.id, outcomeId: p.outcomeId, status: "pending", userId: null },
-        })
-        if (existing) continue
-
-        await this.prisma.prediction.create({
-          data: {
-            gameId: game.id,
-            userId: null,
-            marketType: p.marketType,
-            outcomeId: p.outcomeId,
-            selection: p.selection,
-            outcomeName: p.outcomeName,
-            point: p.point,
-            fairProbability: p.fairProbability,
-            offeredOdds: p.offeredDecimal,
-            offeredBook: p.offeredBook,
-            edgePercent: p.edgePercent,
-            kellyStake: p.kellyStake,
-            confidence: p.confidence,
-            reasoning: p.reasoning,
-          },
-        })
-        predictionCount++
-
-        // Broadcast the fresh +EV pick to subscribers in real time.
-        await this.realtime.newPrediction(p)
-      }
+      predictionCount += await this.analyzeAndPersist(gb, { config, allowStarted: false })
     }
 
     this.logger.log(`${sportKey}: ${slate.length} games, ${predictionCount} new predictions`)
     return { games: slate.length, predictions: predictionCount }
+  }
+
+  /**
+   * Ingest LIVE (in-play) game markets and generate predictions on them.
+   * Same engine, but analyses games that have already started and aren't final.
+   */
+  async ingestLiveAndPredict(sportKey: string, config: EngineConfig = {}): Promise<{ games: number; predictions: number }> {
+    if (!this.aggregator.isConfigured()) return { games: 0, predictions: 0 }
+
+    const slate = await this.aggregator.fetchSlate(sportKey)
+    const live = slate.filter((gb) => gb.commenceTime.getTime() <= Date.now())
+    let predictionCount = 0
+    for (const gb of live) {
+      predictionCount += await this.analyzeAndPersist(gb, { config, allowStarted: true, isLive: true })
+    }
+
+    this.logger.log(`${sportKey} LIVE: ${live.length} in-play games, ${predictionCount} predictions`)
+    return { games: live.length, predictions: predictionCount }
+  }
+
+  /**
+   * Ingest player props for a sport's events and generate +EV prop predictions.
+   * One API call per event, so capped by maxEvents to protect quota.
+   */
+  async ingestPropsAndPredict(sportKey: string, maxEvents = 5, config: EngineConfig = {}): Promise<{ events: number; predictions: number }> {
+    if (!this.aggregator.isConfigured()) return { events: 0, predictions: 0 }
+    if (this.aggregator.propMarketsFor(sportKey).length === 0) {
+      this.logger.warn(`No prop markets configured for ${sportKey}`)
+      return { events: 0, predictions: 0 }
+    }
+
+    const events = await this.aggregator.fetchEvents(sportKey)
+    // Prioritise soonest/in-play events.
+    const targets = events
+      .sort((a, b) => a.commenceTime.getTime() - b.commenceTime.getTime())
+      .slice(0, maxEvents)
+
+    let predictionCount = 0
+    for (const ev of targets) {
+      const gb = await this.aggregator.fetchEventProps(sportKey, ev.id).catch(() => null)
+      if (!gb || gb.booksByMarket.size === 0) continue
+      const isLive = gb.commenceTime.getTime() <= Date.now()
+      predictionCount += await this.analyzeAndPersist(gb, { config, allowStarted: true, isProp: true, isLive })
+    }
+
+    this.logger.log(`${sportKey} PROPS: ${targets.length} events, ${predictionCount} predictions`)
+    return { events: targets.length, predictions: predictionCount }
+  }
+
+  /**
+   * Shared path: upsert game, snapshot odds, run the engine, AI-review, persist
+   * surviving +EV bets, and broadcast them. Returns the number persisted.
+   */
+  private async analyzeAndPersist(
+    gb: Awaited<ReturnType<OddsAggregatorService["fetchSlate"]>>[number],
+    opts: { config: EngineConfig; allowStarted: boolean; isProp?: boolean; isLive?: boolean }
+  ): Promise<number> {
+    const minsToStart = (gb.commenceTime.getTime() - Date.now()) / 60000
+
+    const game = await this.prisma.game.upsert({
+      where: { canonicalId: gb.canonicalId },
+      create: {
+        canonicalId: gb.canonicalId,
+        externalId: gb.externalId,
+        sport: gb.sport,
+        league: gb.league,
+        homeTeam: gb.homeTeam,
+        awayTeam: gb.awayTeam,
+        commenceTime: gb.commenceTime,
+        status: opts.isLive ? "live" : "scheduled",
+      },
+      update: { commenceTime: gb.commenceTime, ...(opts.isLive ? { status: "live" } : {}) },
+    })
+
+    const isClosing = minsToStart <= 10 && minsToStart > -5
+    await this.prisma.oddsSnapshot.create({
+      data: {
+        gameId: game.id,
+        provider: "the-odds-api",
+        isClosing,
+        markets: serializeBooks(gb.booksByMarket) as Prisma.InputJsonValue,
+      },
+    })
+
+    // Pre-game jobs only predict on games that haven't started.
+    if (!opts.allowStarted && minsToStart <= 0) return 0
+
+    const valueBets = this.engine.analyzeGame(
+      { id: game.id, canonicalId: gb.canonicalId, sport: gb.sport, homeTeam: gb.homeTeam, awayTeam: gb.awayTeam, commenceTime: gb.commenceTime },
+      gb.booksByMarket,
+      opts.config
+    )
+    if (valueBets.length === 0) return 0
+
+    const reviewed = await this.ai.review(valueBets)
+    const keep = reviewed.filter((r) => r.aiVerdict !== "pass")
+
+    let count = 0
+    for (const p of keep) {
+      // Props carry the engine's internal market key; normalise to "prop".
+      if (opts.isProp) p.marketType = "prop"
+
+      const existing = await this.prisma.prediction.findFirst({
+        where: { gameId: game.id, outcomeId: p.outcomeId, status: "pending", userId: null },
+      })
+      if (existing) continue
+
+      await this.prisma.prediction.create({
+        data: {
+          gameId: game.id,
+          userId: null,
+          marketType: p.marketType,
+          outcomeId: p.outcomeId,
+          selection: p.selection,
+          outcomeName: p.outcomeName,
+          point: p.point,
+          fairProbability: p.fairProbability,
+          offeredOdds: p.offeredDecimal,
+          offeredBook: p.offeredBook,
+          edgePercent: p.edgePercent,
+          kellyStake: p.kellyStake,
+          confidence: p.confidence,
+          reasoning: p.reasoning,
+        },
+      })
+      count++
+      await this.realtime.newPrediction(p)
+    }
+    return count
   }
 
   /**
@@ -136,8 +195,9 @@ export class PredictionsService {
 
       const closing = await this.getClosingDecimals(game.id)
 
+      // Props can't be graded without a player-stats feed — skip them here.
       const preds = await this.prisma.prediction.findMany({
-        where: { gameId: game.id, status: "pending" },
+        where: { gameId: game.id, status: "pending", marketType: { not: "prop" } },
       })
 
       for (const pred of preds) {

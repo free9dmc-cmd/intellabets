@@ -133,6 +133,92 @@ export class BetslipsService {
     return betslip
   }
 
+  /**
+   * Build a LIVE in-game parlay from the freshest +EV legs on in-play games
+   * and player props. Picks at most one leg per game to limit correlation,
+   * then broadcasts the assembled parlay in real time. Re-running this as odds
+   * shift produces an updated parlay — the "recompute mid-game" behaviour.
+   */
+  async buildLiveParlay(
+    userId: string,
+    opts: { sport?: string; legCount?: number; minConfidence?: number; stake?: number; publish?: boolean }
+  ) {
+    const legCount = opts.legCount ?? 3
+    const minConfidence = opts.minConfidence ?? 0
+    const stake = opts.stake ?? 50
+
+    const preds = await this.prisma.prediction.findMany({
+      where: {
+        userId: null,
+        status: "pending",
+        confidence: { gte: minConfidence },
+        AND: [
+          { OR: [{ game: { status: "live" } }, { marketType: "prop" }] },
+          ...(opts.sport ? [{ game: { sport: opts.sport } }] : []),
+        ],
+      },
+      include: { game: true },
+      orderBy: [{ confidence: "desc" }, { edgePercent: "desc" }],
+    })
+
+    // One leg per game to reduce correlation between legs.
+    const seenGames = new Set<string>()
+    const legs = preds.filter((p) => {
+      if (seenGames.has(p.gameId)) return false
+      seenGames.add(p.gameId)
+      return true
+    }).slice(0, legCount)
+
+    if (legs.length < 2) {
+      throw new NotFoundException("Not enough live/prop +EV legs available to build a parlay right now")
+    }
+
+    const totalOdds = legs.reduce((acc, p) => acc * p.offeredOdds, 1)
+    const potentialReturn = round(stake * totalOdds, 2)
+    const avgConfidence = round(legs.reduce((s, p) => s + p.confidence, 0) / legs.length, 1)
+    const sport = opts.sport ?? legs[0].game.sport
+
+    const betslip = await this.prisma.betslip.create({
+      data: {
+        userId,
+        title: `🔴 LIVE ${sport} Parlay — ${legs.length} legs`,
+        description: `Live in-game +EV parlay assembled from current odds. Recompute as the game moves.`,
+        sport,
+        isAI: true,
+        isPublic: opts.publish ?? false,
+        totalOdds: round(totalOdds, 3),
+        stake,
+        potentialReturn,
+        confidence: avgConfidence,
+        legs: {
+          create: legs.map((p) => ({
+            game: `${p.game.awayTeam} @ ${p.game.homeTeam}`,
+            selection: p.selection,
+            odds: p.offeredOdds,
+            marketType: p.marketType,
+            sport: p.game.sport,
+            reasoning: p.reasoning,
+          })),
+        },
+      },
+      include: { legs: true },
+    })
+
+    // Push the live parlay to anyone watching this sport's live feed.
+    await this.realtime.liveParlayUpdate(sport, {
+      betslipId: betslip.id,
+      title: betslip.title,
+      legCount: legs.length,
+      totalOdds: betslip.totalOdds,
+      potentialReturn,
+      confidence: avgConfidence,
+      legs: legs.map((p) => ({ selection: p.selection, odds: p.offeredOdds, edge: p.edgePercent })),
+    })
+
+    if (betslip.isPublic) await this.broadcastPublish(userId, betslip)
+    return betslip
+  }
+
   async publish(userId: string, betslipId: string) {
     const slip = await this.prisma.betslip.findUnique({ where: { id: betslipId }, include: { legs: true } })
     if (!slip) throw new NotFoundException("Betslip not found")
