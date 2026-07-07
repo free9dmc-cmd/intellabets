@@ -4,14 +4,17 @@
   "private": true,
   "workspaces": [
     "backend",
+    "web",
     "mobile",
     "admin-web",
     "packages/*"
   ],
   "scripts": {
     "dev:backend": "npm run dev --workspace=backend",
+    "dev:web": "npm run dev --workspace=@intellabets/web",
     "dev:admin": "npm run dev --workspace=admin-web",
     "build:backend": "npm run build --workspace=backend",
+    "build:web": "npm run build --workspace=@intellabets/web",
     "build:admin": "npm run build --workspace=admin-web",
     "db:push": "npm run db:push --workspace=backend",
     "db:seed": "npm run db:seed --workspace=backend",

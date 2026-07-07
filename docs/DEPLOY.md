@@ -57,7 +57,7 @@ Open `https://intellabets-api.onrender.com/api/docs` — you should see Swagger.
 The Next.js app at the repo root is the marketing/web experience.
 
 1. Go to **[vercel.com](https://vercel.com)** → **Add New → Project** → import the repo.
-2. **Root Directory:** leave as repo root (`.`).
+2. **Root Directory:** set to **`web`** (the Next.js app now lives there).
 3. Add environment variables (Settings → Environment Variables):
    - `NEXT_PUBLIC_API_URL` = `https://api.intellabets.com/api/v1`
    - plus any the web app needs (see root `.env.example`).
