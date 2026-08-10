@@ -54,18 +54,48 @@ Open `https://intellabets-api.onrender.com/api/docs` — you should see Swagger.
 
 ## Part 3 — Deploy the web app to Vercel
 
-The Next.js app at the repo root is the marketing/web experience.
+The consumer web app lives in `web/` (Next.js 14, App Router).
 
 1. Go to **[vercel.com](https://vercel.com)** → **Add New → Project** → import the repo.
-2. **Root Directory:** set to **`web`** (the Next.js app now lives there).
-3. Add environment variables (Settings → Environment Variables):
-   - `NEXT_PUBLIC_API_URL` = `https://api.intellabets.com/api/v1`
-   - plus any the web app needs (see root `.env.example`).
+2. **Root Directory:** set to **`web`** (critical — the Next.js app lives there, not at the repo root).
+3. Add environment variables (Settings → Environment Variables). Exact list:
+
+| Variable | Value | Required? |
+|---|---|---|
+| `DATABASE_URL` | your Neon Postgres connection string | **yes** — app won't run without it |
+| `NEXTAUTH_SECRET` | output of `openssl rand -base64 32` | **yes** — sessions break without it |
+| `NEXTAUTH_URL` | `https://intellabets.com` | **yes** in production |
+| `NEXT_PUBLIC_APP_URL` | `https://intellabets.com` | yes — used for Stripe redirect URLs |
+| `ADMIN_EMAILS` | `free9dmc@icloud.com` | yes — grants `/admin` access |
+| `ANTHROPIC_API_KEY` | `sk-ant-…` | yes — AI picks fail without it |
+| `STRIPE_SECRET_KEY` | `sk_test_…` or `sk_live_…` | for real payments |
+| `STRIPE_WEBHOOK_SECRET` | `whsec_…` | for real payments |
+| `REVENUECAT_WEBHOOK_SECRET` | from RevenueCat | only when mobile IAP goes live |
+
+> **Note:** `STRIPE_PUBLISHABLE_KEY` is **not** needed. Checkout is a
+> server-side redirect to Stripe-hosted checkout, so the publishable key is
+> never used by this app.
+>
+> Without Stripe keys the app runs in **demo mode** (instant activation, no
+> charges) — see `isStripeConfigured()` in `web/lib/stripe.ts`.
+
 4. **Deploy.**
 5. Add your domain: Vercel → Project → **Domains** → add `intellabets.com` and
    `www.intellabets.com`. Vercel gives you DNS records — add them in Cloudflare:
-   - `intellabets.com` → A / CNAME per Vercel's instructions
+   - `intellabets.com` → A record `76.76.21.21` (or whatever Vercel shows)
    - `www` → CNAME `cname.vercel-dns.com`
+   - Set Cloudflare proxy to **DNS only** (grey cloud) during verification.
+
+### Stripe webhook (required for subscriptions to activate)
+
+In Stripe → **Developers → Webhooks → Add endpoint**:
+- URL: `https://intellabets.com/api/webhooks/stripe`
+- Events: `checkout.session.completed`, `customer.subscription.deleted`
+- Copy the **Signing secret** (`whsec_…`) into Vercel as `STRIPE_WEBHOOK_SECRET`
+
+Launch in Stripe **Test mode** first: test card `4242 4242 4242 4242`, any
+future expiry, any CVC. Verify a subscription activates end to end, then swap
+in the `sk_live_…` key and the live-mode webhook secret.
 
 ---
 
