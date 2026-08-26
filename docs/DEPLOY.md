@@ -76,8 +76,13 @@ The consumer web app lives in `web/` (Next.js 14, App Router).
 > server-side redirect to Stripe-hosted checkout, so the publishable key is
 > never used by this app.
 >
-> Without Stripe keys the app runs in **demo mode** (instant activation, no
-> charges) — see `isStripeConfigured()` in `web/lib/stripe.ts`.
+> **Demo billing is force-disabled in production.** The mock activation
+> endpoints (`POST /api/premium`, `POST /api/subscriptions`) grant paid
+> entitlements with no payment, so they return 404 whenever
+> `NODE_ENV=production` — see `web/lib/billing-guard.ts`. Consequently, if you
+> deploy **without** `STRIPE_SECRET_KEY`, checkout returns a 503 and nobody can
+> subscribe. That is intentional (fail closed). Set the Stripe keys before
+> launch. **Never set `DEMO_BILLING` in the Vercel production environment.**
 
 4. **Deploy.**
 5. Add your domain: Vercel → Project → **Domains** → add `intellabets.com` and
@@ -118,6 +123,13 @@ Then build with EAS (`npm run build:ios`) as covered in `docs/xcode-checklist.md
       `POST https://api.intellabets.com/api/v1/ingestion/poll?sport=baseball_mlb`
 - [ ] Upgrade Render web + DB off free tier before real users arrive
 - [ ] Rotate any key that ever touched a chat/log
+- [ ] Confirm `DEMO_BILLING` is **not** set in the Vercel production environment
+- [ ] Smoke-test the bypass is closed against production (must return 404):
+      `curl -i -X POST https://intellabets.com/api/premium -H 'Content-Type: application/json' -d '{"type":"premium"}'`
+- [ ] If the app was ever deployed before this fix, audit for free grants:
+      `User.isPremium=true` with no Stripe record, and `AISubscription`/
+      `Subscription` rows where `stripeSubId IS NULL`; review any `Payout`
+      rows those accounts generated before paying out
 - [ ] Confirm RevenueCat webhook URL points at `https://api.intellabets.com/api/v1/webhooks/revenuecat` (when IAP goes live)
 
 ## Environment variables reference (production)
