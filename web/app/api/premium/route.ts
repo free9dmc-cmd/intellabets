@@ -2,10 +2,22 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { isDemoBillingEnabled } from "@/lib/billing-guard"
 
-// In production this would create a Stripe checkout session
-// For now we simulate the upgrade flow
+/**
+ * DEMO-ONLY entitlement activation (no payment taken).
+ *
+ * Disabled unless DEMO_BILLING="true" AND NODE_ENV !== "production".
+ * In production, premium/AI access is granted exclusively by the
+ * signature-verified Stripe + RevenueCat webhooks. Real purchases go through
+ * POST /api/checkout, which redirects to Stripe-hosted checkout.
+ */
 export async function POST(req: Request) {
+  // Fail closed: never reachable in production, even if Stripe is misconfigured.
+  if (!isDemoBillingEnabled()) {
+    return new NextResponse(null, { status: 404 })
+  }
+
   const session = await getServerSession(authOptions)
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 

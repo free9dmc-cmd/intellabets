@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { isDemoBillingEnabled } from "@/lib/billing-guard"
 import {
   isStripeConfigured,
   createPremiumCheckout,
@@ -16,7 +17,17 @@ export async function POST(req: Request) {
   }
 
   if (!isStripeConfigured()) {
-    return NextResponse.json({ demo: true })
+    // Locally (with DEMO_BILLING=true) the client falls back to the mock
+    // activation endpoints. In production that fallback is a 404 by design,
+    // so surface a real error instead of pretending checkout "worked".
+    if (isDemoBillingEnabled()) {
+      return NextResponse.json({ demo: true })
+    }
+    console.error("Checkout attempted but STRIPE_SECRET_KEY is not configured")
+    return NextResponse.json(
+      { error: "Payments are temporarily unavailable. Please try again later." },
+      { status: 503 }
+    )
   }
 
   const { type, tipsterId } = await req.json()

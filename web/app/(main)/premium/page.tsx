@@ -54,16 +54,24 @@ export default function PremiumPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ type }),
     })
-    const checkoutData = await checkoutRes.json()
+    const checkoutData = await checkoutRes.json().catch(() => ({}))
     if (checkoutData.url) { window.location.href = checkoutData.url; return }
 
-    // Demo fallback when Stripe is not configured
+    // Only fall back to demo activation when the server explicitly says so.
+    // In production that endpoint is a 404 by design, so surface the error.
+    if (!checkoutData.demo) {
+      setError(checkoutData.error ?? "Could not start checkout. Please try again.")
+      setLoading(null)
+      return
+    }
+
+    // Demo fallback (local dev with DEMO_BILLING=true)
     const res = await fetch("/api/premium", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ type }),
     })
-    const data = await res.json()
+    const data = await res.json().catch(() => ({}))
     if (res.ok) {
       setStatus((prev) => prev ? { ...prev, isPremium: type === "premium" || prev.isPremium, hasAI: type === "ai" || prev.hasAI } : null)
       if (type === "premium") await updateSession({ isPremium: true })

@@ -47,28 +47,32 @@ export default function SubscribeButton({
         const result = await purchaseNative(tipsterProductId(price), tipsterId)
         if (result.cancelled) { setLoading(false); return }
         if (result.error) { setError(result.error); setLoading(false); return }
-        // Record in our DB after IAP succeeds
-        await fetch("/api/subscriptions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tipsterId, source: "iap" }),
-        })
+        // The subscription row is created authoritatively by the RevenueCat
+        // webhook (INITIAL_PURCHASE), which also records the tipster payout.
+        // Don't write it from the client — that path is unauthenticated intent.
         setSubscribed(true)
         router.refresh()
         setLoading(false)
         return
       }
 
-      // Web — Stripe checkout (falls back to demo if Stripe not configured)
+      // Web — Stripe checkout
       const checkoutRes = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type: "tipster", tipsterId }),
       })
-      const checkoutData = await checkoutRes.json()
+      const checkoutData = await checkoutRes.json().catch(() => ({}))
       if (checkoutData.url) { window.location.href = checkoutData.url; return }
 
-      // Demo fallback
+      // Only fall back to demo activation when the server says so.
+      if (!checkoutData.demo) {
+        setError(checkoutData.error ?? "Could not start checkout. Please try again.")
+        setLoading(false)
+        return
+      }
+
+      // Demo fallback (local dev with DEMO_BILLING=true)
       const res = await fetch("/api/subscriptions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -78,7 +82,7 @@ export default function SubscribeButton({
         setSubscribed(true)
         router.refresh()
       } else {
-        const d = await res.json()
+        const d = await res.json().catch(() => ({}))
         setError(d.error ?? "Failed")
       }
     }

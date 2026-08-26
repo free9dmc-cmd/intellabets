@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { isDemoBillingEnabled } from "@/lib/billing-guard"
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions)
@@ -37,7 +38,21 @@ export async function GET(req: Request) {
   return NextResponse.json({ subscriptions: subs })
 }
 
+/**
+ * DEMO-ONLY tipster subscription activation (no payment taken).
+ *
+ * Disabled unless DEMO_BILLING="true" AND NODE_ENV !== "production".
+ * In production, paid tipster subscriptions are created exclusively by the
+ * signature-verified Stripe webhook on `checkout.session.completed`
+ * (type: "tipster_subscription"), which also records the payout owed to the
+ * tipster. Real purchases go through POST /api/checkout.
+ */
 export async function POST(req: Request) {
+  // Fail closed: never reachable in production, even if Stripe is misconfigured.
+  if (!isDemoBillingEnabled()) {
+    return new NextResponse(null, { status: 404 })
+  }
+
   const session = await getServerSession(authOptions)
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 

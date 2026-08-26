@@ -131,9 +131,14 @@ export default function AIPicksPage() {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ type: "ai" }),
             })
-            const checkoutData = await checkoutRes.json()
+            const checkoutData = await checkoutRes.json().catch(() => ({}))
             if (checkoutData.url) { window.location.href = checkoutData.url; return }
-            // Demo fallback
+            // Only fall back to demo activation when the server says so.
+            if (!checkoutData.demo) {
+              setError(checkoutData.error ?? "Could not start checkout. Please try again.")
+              return
+            }
+            // Demo fallback (local dev with DEMO_BILLING=true)
             const res = await fetch("/api/premium", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -141,7 +146,7 @@ export default function AIPicksPage() {
             })
             if (res.ok) setHasAccess(true)
             else {
-              const d = await res.json()
+              const d = await res.json().catch(() => ({}))
               setError(d.error ?? "Failed to activate")
             }
           }}
