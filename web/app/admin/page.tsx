@@ -39,7 +39,7 @@ export default async function AdminDashboard() {
   const stats = [
     { label: "Total Users", value: totalUsers.toLocaleString(), color: "text-white", sub: `+${newUsers} this month` },
     { label: "Premium Tipsters", value: premiumUsers.toLocaleString(), color: "text-yellow-400", sub: `${((premiumUsers / totalUsers) * 100).toFixed(1)}% of users` },
-    { label: "AI Subscribers", value: aiSubs.toLocaleString(), color: "text-cyan-400", sub: "Active subscriptions" },
+    { label: "AI Subscribers", value: aiSubs.toLocaleString(), color: "text-cyan-400", sub: "Standalone only — Premium bundles AI" },
     { label: "Active Tipster Subs", value: activeSubs.toLocaleString(), color: "text-purple-400", sub: "Paying right now" },
     { label: "Platform Revenue", value: formatCurrency(payoutTotals._sum.fee ?? 0), color: "text-emerald-400", sub: "All time fees" },
     { label: "This Month (Fees)", value: formatCurrency(monthlyFees._sum.fee ?? 0), color: "text-emerald-400", sub: new Date().toLocaleString("default", { month: "long" }) },

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { isDemoBillingEnabled } from "@/lib/billing-guard"
+import { hasAIAccess, isPremiumActive, aiAccessSource } from "@/lib/entitlements"
 
 /**
  * DEMO-ONLY entitlement activation (no payment taken).
@@ -82,9 +83,12 @@ export async function GET(req: Request) {
   })
 
   return NextResponse.json({
-    isPremium: user?.isPremium ?? false,
+    isPremium: isPremiumActive(user),
     premiumUntil: user?.premiumUntil,
-    hasAI: user?.aiSubscription?.status === "active" && (user.aiSubscription.expiresAt > new Date()),
+    // Premium bundles AI Picks, so hasAI is true for active premium members
+    // even without a standalone AI subscription.
+    hasAI: hasAIAccess(user),
+    aiAccessSource: aiAccessSource(user),
     aiExpiresAt: user?.aiSubscription?.expiresAt,
   })
 }

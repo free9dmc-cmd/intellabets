@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { formatCurrency, formatWinRate, statusBg, timeAgo, SPORT_EMOJIS } from "@/lib/utils"
+import { hasAIAccess } from "@/lib/entitlements"
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions)
@@ -35,7 +36,8 @@ export default async function DashboardPage() {
     take: 4,
   })
 
-  const hasAI = user.aiSubscription?.status === "active" && user.aiSubscription.expiresAt > new Date()
+  // Premium bundles AI Picks — don't upsell AI to members who already have it.
+  const hasAI = hasAIAccess(user)
   const winRate = formatWinRate(user.totalWins, user.totalLosses)
   const totalBets = user.totalWins + user.totalLosses + user.totalPushes
   const pendingCount = await prisma.betslip.count({ where: { userId: user.id, status: "pending" } })

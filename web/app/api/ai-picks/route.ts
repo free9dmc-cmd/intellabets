@@ -3,19 +3,27 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { generateAIBetslip } from "@/lib/ai"
+import { hasAIAccess } from "@/lib/entitlements"
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  // Check AI subscription
-  const aiSub = await prisma.aISubscription.findUnique({
-    where: { userId: session.user.id },
+  // AI Picks is unlocked by a standalone AI subscription OR by an active
+  // Premium membership (Premium bundles AI Picks). Checked against the DB, not
+  // the JWT, so a lapsed membership can't ride a stale token.
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: {
+      isPremium: true,
+      premiumUntil: true,
+      aiSubscription: { select: { status: true, expiresAt: true } },
+    },
   })
 
-  if (!aiSub || aiSub.status !== "active" || aiSub.expiresAt < new Date()) {
+  if (!hasAIAccess(user)) {
     return NextResponse.json(
-      { error: "AI Picks subscription required", code: "NO_AI_SUB" },
+      { error: "AI Picks subscription or Premium membership required", code: "NO_AI_SUB" },
       { status: 403 }
     )
   }

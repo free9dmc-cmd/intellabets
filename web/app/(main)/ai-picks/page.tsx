@@ -115,7 +115,14 @@ export default function AIPicksPage() {
           ))}
         </div>
         <div className="text-3xl font-black mb-1" style={{ color: "#06b6d4" }}>$9.99<span className="text-base font-normal text-gray-400">/month</span></div>
-        <p className="text-gray-500 text-sm mb-6">Cancel anytime. Instant access.</p>
+        <p className="text-gray-500 text-sm mb-2">Cancel anytime. Instant access.</p>
+        <p className="text-gray-400 text-sm mb-6">
+          Already included in{" "}
+          <Link href="/premium" className="text-purple-400 hover:underline font-semibold">
+            Premium Tipster
+          </Link>{" "}
+          — get AI Picks plus everything else.
+        </p>
         <button
           onClick={async () => {
             setError("")

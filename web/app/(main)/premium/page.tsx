@@ -28,7 +28,11 @@ export default function PremiumPage() {
   const router = useRouter()
   const [loading, setLoading] = useState<"premium" | "ai" | null>(null)
   const [error, setError] = useState("")
-  const [status, setStatus] = useState<{ isPremium: boolean; hasAI: boolean } | null>(null)
+  const [status, setStatus] = useState<{
+    isPremium: boolean
+    hasAI: boolean
+    aiAccessSource?: "premium" | "standalone" | "none"
+  } | null>(null)
 
   useEffect(() => {
     fetch("/api/premium").then((r) => r.json()).then(setStatus)
@@ -73,7 +77,18 @@ export default function PremiumPage() {
     })
     const data = await res.json().catch(() => ({}))
     if (res.ok) {
-      setStatus((prev) => prev ? { ...prev, isPremium: type === "premium" || prev.isPremium, hasAI: type === "ai" || prev.hasAI } : null)
+      setStatus((prev) => {
+        if (!prev) return null
+        const isPremium = type === "premium" || prev.isPremium
+        // Premium bundles AI Picks, so activating premium also grants AI.
+        const hasAI = type === "ai" || isPremium || prev.hasAI
+        return {
+          ...prev,
+          isPremium,
+          hasAI,
+          aiAccessSource: isPremium ? "premium" : hasAI ? "standalone" : "none",
+        }
+      })
       if (type === "premium") await updateSession({ isPremium: true })
       router.push(type === "premium" ? "/dashboard" : "/ai-picks")
     } else {
@@ -109,6 +124,7 @@ export default function PremiumPage() {
 
           <ul className="space-y-3 mb-8">
             {[
+              `AI Picks included — $${AI_PRICE}/mo value`,
               "Create & publish unlimited betslips",
               "Appear on leaderboard",
               "Earn from subscriptions (80% revenue)",
@@ -169,7 +185,9 @@ export default function PremiumPage() {
 
           {status?.hasAI ? (
             <div className="text-center p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-semibold">
-              AI subscription active ✓
+              {status.aiAccessSource === "premium"
+                ? "Included with your Premium membership ✓"
+                : "AI subscription active ✓"}
             </div>
           ) : (
             <button
