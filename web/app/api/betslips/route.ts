@@ -5,21 +5,47 @@ import { prisma } from "@/lib/prisma"
 import { americanToDecimal, calcPotentialReturn } from "@/lib/utils"
 
 export async function GET(req: Request) {
+  const session = await getServerSession(authOptions)
+  const viewerId = session?.user?.id ?? null
+
   const { searchParams } = new URL(req.url)
   const userId = searchParams.get("userId")
   const sport = searchParams.get("sport")
   const status = searchParams.get("status")
   const publicOnly = searchParams.get("public") === "true"
 
-  const where: Record<string, unknown> = {}
+  const filters: Record<string, unknown> = {}
+  if (userId) filters.userId = userId
+  if (sport) filters.sport = sport
+  if (status) filters.status = status
 
-  if (userId) where.userId = userId
-  if (sport) where.sport = sport
-  if (status) where.status = status
-  if (publicOnly) where.isPublic = true
+  // Paid content gate. A private betslip is only readable by its author or by
+  // someone holding an active, unexpired subscription to that tipster.
+  // Without this, an unauthenticated GET /api/betslips returns every private
+  // pick on the platform — the entire paid product, free.
+  let visibility: Record<string, unknown>
+  if (publicOnly || !viewerId) {
+    visibility = { isPublic: true }
+  } else {
+    const activeSubs = await prisma.subscription.findMany({
+      where: {
+        subscriberId: viewerId,
+        status: "active",
+        expiresAt: { gt: new Date() },
+      },
+      select: { tipsterId: true },
+    })
+    visibility = {
+      OR: [
+        { isPublic: true },
+        { userId: viewerId },
+        { userId: { in: activeSubs.map((s) => s.tipsterId) } },
+      ],
+    }
+  }
 
   const betslips = await prisma.betslip.findMany({
-    where,
+    where: { AND: [filters, visibility] },
     include: {
       bets: true,
       user: {

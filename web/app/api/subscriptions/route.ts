@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { isDemoBillingEnabled } from "@/lib/billing-guard"
+import { cancelStripeSubscription } from "@/lib/stripe"
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions)
@@ -110,6 +111,14 @@ export async function DELETE(req: Request) {
   const { searchParams } = new URL(req.url)
   const tipsterId = searchParams.get("tipsterId")
   if (!tipsterId) return NextResponse.json({ error: "tipsterId required" }, { status: 400 })
+
+  // Cancel the real Stripe subscription, not just our row. Without this the
+  // customer keeps getting billed every month after they cancel.
+  const existing = await prisma.subscription.findUnique({
+    where: { subscriberId_tipsterId: { subscriberId: session.user.id, tipsterId } },
+    select: { stripeSubId: true },
+  })
+  await cancelStripeSubscription(existing?.stripeSubId)
 
   await prisma.subscription.updateMany({
     where: { subscriberId: session.user.id, tipsterId },

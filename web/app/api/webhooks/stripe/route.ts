@@ -29,7 +29,15 @@ export async function POST(req: Request) {
         until.setMonth(until.getMonth() + 1)
         await prisma.user.update({
           where: { id: userId },
-          data: { isPremium: true, premiumSince: new Date(), premiumUntil: until },
+          data: {
+            isPremium: true,
+            premiumSince: new Date(),
+            premiumUntil: until,
+            // Record the backing subscription so renewals can extend it and
+            // cancellation can revoke it.
+            premiumStripeSubId: (session.subscription as string) ?? null,
+            stripeCustomerId: (session.customer as string) ?? undefined,
+          },
         })
       }
 
@@ -105,6 +113,40 @@ export async function POST(req: Request) {
       break
     }
 
+    // RENEWALS. Stripe fires invoice.payment_succeeded each billing cycle, NOT
+    // checkout.session.completed. Without this, expiresAt/premiumUntil is set
+    // once at purchase and never extended — so from month 2 the customer keeps
+    // being charged while the app denies them access.
+    case "invoice.paid":
+    case "invoice.payment_succeeded": {
+      const invoice = event.data.object as {
+        subscription?: string | null
+        billing_reason?: string | null
+        subscription_details?: { metadata?: Record<string, string> | null } | null
+      }
+      const subId = invoice.subscription ?? null
+      // The first invoice is already handled by checkout.session.completed.
+      if (!subId || invoice.billing_reason === "subscription_create") break
+
+      const until = new Date()
+      until.setMonth(until.getMonth() + 1)
+
+      // Extend whichever record this subscription backs.
+      await prisma.subscription.updateMany({
+        where: { stripeSubId: subId },
+        data: { status: "active", expiresAt: until },
+      })
+      await prisma.aISubscription.updateMany({
+        where: { stripeSubId: subId },
+        data: { status: "active", expiresAt: until },
+      })
+      await prisma.user.updateMany({
+        where: { premiumStripeSubId: subId },
+        data: { isPremium: true, premiumUntil: until },
+      })
+      break
+    }
+
     case "customer.subscription.deleted": {
       const sub = event.data.object
       await prisma.subscription.updateMany({
@@ -114,6 +156,12 @@ export async function POST(req: Request) {
       await prisma.aISubscription.updateMany({
         where: { stripeSubId: sub.id },
         data: { status: "cancelled" },
+      })
+      // Premium was previously NOT revoked here — a cancelled premium
+      // subscription left isPremium true until premiumUntil lapsed.
+      await prisma.user.updateMany({
+        where: { premiumStripeSubId: sub.id },
+        data: { isPremium: false, premiumStripeSubId: null },
       })
       break
     }
