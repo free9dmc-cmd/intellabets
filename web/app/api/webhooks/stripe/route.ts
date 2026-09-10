@@ -106,7 +106,13 @@ export async function POST(req: Request) {
           })
           await prisma.user.update({
             where: { id: tipsterId },
-            data: { subscriberCount: { increment: 1 } },
+            data: {
+              subscriberCount: { increment: 1 },
+              // Credit earnings here, where money actually arrived. The
+              // withdrawal endpoint only moves this balance; it must never
+              // mint new earnings of its own.
+              totalEarnings: { increment: net },
+            },
           })
         }
       }
@@ -143,6 +149,42 @@ export async function POST(req: Request) {
       await prisma.user.updateMany({
         where: { premiumStripeSubId: subId },
         data: { isPremium: true, premiumUntil: until },
+      })
+
+      // A renewed tipster subscription earns the tipster again this month.
+      // Previously payouts were only ever created on the FIRST payment, so
+      // tipsters were paid once no matter how long a subscriber stayed.
+      const renewed = await prisma.subscription.findFirst({
+        where: { stripeSubId: subId },
+        select: { tipsterId: true, price: true },
+      })
+      if (renewed) {
+        const { fee, net } = calcTipsterPayout(renewed.price)
+        await prisma.payout.create({
+          data: {
+            userId: renewed.tipsterId,
+            amount: renewed.price,
+            fee,
+            netAmount: net,
+            period: until.toISOString().slice(0, 7),
+            status: "pending",
+          },
+        })
+        await prisma.user.update({
+          where: { id: renewed.tipsterId },
+          data: { totalEarnings: { increment: net } },
+        })
+      }
+      break
+    }
+
+    // Connect onboarding progress — flips payoutsEnabled once Stripe has
+    // verified the tipster's identity and bank details.
+    case "account.updated": {
+      const account = event.data.object as { id: string; payouts_enabled?: boolean }
+      await prisma.user.updateMany({
+        where: { stripeAccountId: account.id },
+        data: { payoutsEnabled: Boolean(account.payouts_enabled) },
       })
       break
     }
