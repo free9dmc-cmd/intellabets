@@ -10,17 +10,20 @@ import { isNativePlatform, purchaseNative, IAP_PRODUCTS } from "@/lib/native-iap
 const TIPSTER_PERKS = [
   { icon: "📋", title: "Create Unlimited Betslips", desc: "Post single bets, parlays, and multi-leg picks across any sport" },
   { icon: "🏆", title: "Appear on Leaderboard", desc: "Build your public profile ranked by win rate and ROI" },
-  { icon: "💸", title: "Earn Monthly Income", desc: "Set your own subscription price ($4.99–$49.99/mo). Keep 80% of all revenue." },
+  { icon: "💸", title: "Sell Your Picks", desc: "Set your own subscription price ($4.99–$49.99/mo). You keep 80% of what subscribers pay." },
   { icon: "✓", title: "Verified Badge", desc: "Stand out with a verified premium tipster badge" },
   { icon: "📊", title: "Analytics Dashboard", desc: "Full stats: win rate, ROI, subscriber growth, payout history" },
   { icon: "🔔", title: "Subscriber Notifications", desc: "Notify subscribers instantly when you post new picks" },
 ]
 
+// Illustrates the 80/20 fee split at small, realistic subscriber counts.
+// Deliberately does NOT project large incomes: implying typical earnings is a
+// deceptive-practices problem and a payment-processor red flag.
 const REVENUE_EXAMPLES = [
-  { subs: 50, price: 9.99, monthlyGross: 499.5, monthlyNet: 399.6 },
-  { subs: 150, price: 14.99, monthlyGross: 2248.5, monthlyNet: 1798.8 },
-  { subs: 300, price: 19.99, monthlyGross: 5997, monthlyNet: 4797.6 },
-  { subs: 600, price: 24.99, monthlyGross: 14994, monthlyNet: 11995.2 },
+  { subs: 1, price: 9.99, monthlyGross: 9.99, monthlyNet: 7.99 },
+  { subs: 5, price: 9.99, monthlyGross: 49.95, monthlyNet: 39.96 },
+  { subs: 10, price: 14.99, monthlyGross: 149.9, monthlyNet: 119.92 },
+  { subs: 25, price: 19.99, monthlyGross: 499.75, monthlyNet: 399.8 },
 ]
 
 export default function PremiumPage() {
@@ -216,10 +219,11 @@ export default function PremiumPage() {
       {/* Revenue potential table */}
       <div className="card p-6">
         <h2 className="font-black text-white text-xl mb-2 text-center">
-          💰 Your Earning <span className="gold-text">Potential</span>
+          How the <span className="gold-text">80/20 split</span> works
         </h2>
         <p className="text-gray-400 text-sm text-center mb-6">
-          As a Premium Tipster, you keep 80% of every subscription. Here&apos;s what that looks like:
+          You keep 80% of what each subscriber pays. These rows illustrate the arithmetic —
+          they are not a forecast of what you will earn.
         </p>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -247,6 +251,12 @@ export default function PremiumPage() {
         </div>
         <p className="text-gray-600 text-xs text-center mt-4">
           IntellaBets takes a 20% service fee on subscriber revenue. No hidden charges.
+        </p>
+        <p className="text-gray-600 text-xs text-center mt-2">
+          <strong className="text-gray-500">Results not typical.</strong> IntellaBets makes no
+          representation about how many subscribers you will attract or what you will earn. Most
+          tipsters earn little or nothing. Earnings depend entirely on your own performance and
+          audience, and building a subscriber base takes time.
         </p>
       </div>
 

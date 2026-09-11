@@ -1,32 +1,13 @@
 import Link from "next/link"
 import { PREMIUM_PRICE, AI_PRICE, SPORT_EMOJIS } from "@/lib/utils"
+import { prisma } from "@/lib/prisma"
 
-const MOCK_TIPSTERS = [
-  {
-    name: "SharpBettor99",
-    wins: 142, losses: 48,
-    roi: 31.4,
-    sport: "NFL",
-    subscribers: 1240,
-    price: 14.99,
-  },
-  {
-    name: "CourtVision_K",
-    wins: 218, losses: 91,
-    roi: 22.8,
-    sport: "NBA",
-    subscribers: 980,
-    price: 12.99,
-  },
-  {
-    name: "DiamondPicks",
-    wins: 97, losses: 38,
-    roi: 18.5,
-    sport: "MLB",
-    subscribers: 645,
-    price: 9.99,
-  },
-]
+// Landing page reads REAL tipsters. It previously rendered a hardcoded
+// MOCK_TIPSTERS array — invented names, win records and subscriber counts —
+// as though they were live leaderboard results. Never ship fabricated
+// performance data: it is deceptive to users and is exactly what payment
+// processors terminate merchants for.
+export const dynamic = "force-dynamic"
 
 const FEATURES = [
   {
@@ -41,7 +22,7 @@ const FEATURES = [
   },
   {
     icon: "💸",
-    title: "Earn Real Income",
+    title: "Monetize Your Picks",
     desc: "Turn your sports knowledge into a revenue stream. Build a subscriber base and earn monthly payouts.",
   },
   {
@@ -60,17 +41,28 @@ const HOW_IT_WORKS = [
   {
     step: "02",
     title: "Go Premium or Subscribe",
-    desc: "Upgrade to share your betslips and earn income, or subscribe to top tipsters to access their picks.",
+    desc: "Upgrade to publish your betslips and sell subscriptions, or subscribe to tipsters to access their picks.",
   },
   {
     step: "03",
-    title: "Win More. Earn More.",
-    desc: "Build your record, grow your subscriber base, and receive monthly payouts directly to your account.",
+    title: "Build Your Record",
+    desc: "Every pick is tracked publicly. Grow a subscriber base on a verifiable record, and withdraw your 80% share.",
   },
 ]
 
-export default function LandingPage() {
-  const winRate = (w: number, l: number) => ((w / (w + l)) * 100).toFixed(1)
+export default async function LandingPage() {
+  const winRate = (w: number, l: number) => (w + l === 0 ? "0.0" : ((w / (w + l)) * 100).toFixed(1))
+
+  // Top tipsters by win rate, only those with a meaningful settled record.
+  const topTipsters = await prisma.user.findMany({
+    where: { isPremium: true, OR: [{ totalWins: { gt: 0 } }, { totalLosses: { gt: 0 } }] },
+    orderBy: [{ winRate: "desc" }, { totalWins: "desc" }],
+    take: 3,
+    select: {
+      username: true, name: true, specialties: true, subscriptionPrice: true,
+      totalWins: true, totalLosses: true, roi: true, subscriberCount: true,
+    },
+  }).catch(() => [])
 
   return (
     <div className="min-h-screen" style={{ background: "var(--bg-primary)" }}>
@@ -118,17 +110,17 @@ export default function LandingPage() {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="inline-flex items-center gap-2 bg-purple-500/10 border border-purple-500/20 rounded-full px-4 py-1.5 mb-6">
             <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-            <span className="text-sm text-purple-300 font-medium">Live: 2,841 active tipsters earning this month</span>
+            <span className="text-sm text-purple-300 font-medium">Real odds from 10+ sportsbooks, updated continuously</span>
           </div>
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black text-white leading-tight mb-6">
             Bet Smarter.{" "}
-            <span className="gradient-text">Win More.</span>
+            <span className="gradient-text">Track Every Pick.</span>
             <br />
-            <span className="gold-text">Earn Real Income.</span>
+            <span className="gold-text">Share Your Edge.</span>
           </h1>
           <p className="text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-            Join the fastest-growing sports betting community. Follow elite tipsters, harness AI predictions,
-            or monetize your own expertise — all in one platform.
+            Sports analytics built on de-vigged odds from every major sportsbook. Follow tipsters whose
+            records are tracked publicly, get AI-assisted analysis, or publish your own picks.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
@@ -150,13 +142,14 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          {/* Hero stats */}
+          {/* What the platform actually does. These are verifiable facts about
+              the product, not usage statistics — never publish invented metrics. */}
           <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto">
             {[
-              { label: "Active Tipsters", value: "2,841" },
-              { label: "Avg. Win Rate", value: "61.3%" },
-              { label: "Paid Out This Month", value: "$184K" },
-              { label: "AI Predictions", value: "50K+" },
+              { label: "Sports Covered", value: "8" },
+              { label: "Sportsbooks Compared", value: "10+" },
+              { label: "You Keep", value: "80%" },
+              { label: "AI Analyst", value: "Claude" },
             ].map((stat) => (
               <div key={stat.label} className="card p-4 text-center">
                 <div className="text-2xl font-black gradient-text">{stat.value}</div>
@@ -228,9 +221,19 @@ export default function LandingPage() {
               Full Leaderboard →
             </Link>
           </div>
+          {topTipsters.length === 0 && (
+            <div className="card p-8 text-center text-gray-400">
+              <div className="text-3xl mb-3">🏆</div>
+              <p className="font-semibold text-white mb-1">No ranked tipsters yet</p>
+              <p className="text-sm">
+                The leaderboard fills in as tipsters publish picks and those picks settle.
+                Every record shown here is computed from real settled results.
+              </p>
+            </div>
+          )}
           <div className="grid md:grid-cols-3 gap-6">
-            {MOCK_TIPSTERS.map((t, i) => (
-              <div key={t.name} className={`card card-hover p-6 ${i === 0 ? "premium-glow border-yellow-500/20" : ""}`}>
+            {topTipsters.map((t, i) => (
+              <div key={t.username} className={`card card-hover p-6 ${i === 0 ? "premium-glow border-yellow-500/20" : ""}`}>
                 {i === 0 && (
                   <div className="flex items-center gap-1 mb-3">
                     <span className="text-yellow-400 text-sm font-bold">👑 #1 This Week</span>
@@ -241,36 +244,36 @@ export default function LandingPage() {
                     className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-white text-lg"
                     style={{ background: `hsl(${(i * 120) % 360}, 60%, 40%)` }}
                   >
-                    {t.name[0]}
+                    {(t.name || t.username)[0]}
                   </div>
                   <div>
-                    <div className="font-bold text-white">{t.name}</div>
+                    <div className="font-bold text-white">{t.name || t.username}</div>
                     <div className="text-xs text-gray-500">
-                      {SPORT_EMOJIS[t.sport]} {t.sport} Specialist
+                      {SPORT_EMOJIS[(t.specialties || "").split(",")[0]] ?? "\u{1F3C6}"} {(t.specialties || "Multi-sport").split(",")[0]} Specialist
                     </div>
                   </div>
                   <div className="ml-auto text-right">
-                    <div className="text-green-400 font-black text-xl">{winRate(t.wins, t.losses)}%</div>
+                    <div className="text-green-400 font-black text-xl">{winRate(t.totalWins, t.totalLosses)}%</div>
                     <div className="text-xs text-gray-500">Win Rate</div>
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-2 mb-4">
                   <div className="text-center">
-                    <div className="text-green-400 font-bold">{t.wins}W</div>
+                    <div className="text-green-400 font-bold">{t.totalWins}W</div>
                     <div className="text-xs text-gray-500">Wins</div>
                   </div>
                   <div className="text-center border-x border-gray-800">
-                    <div className="text-red-400 font-bold">{t.losses}L</div>
+                    <div className="text-red-400 font-bold">{t.totalLosses}L</div>
                     <div className="text-xs text-gray-500">Losses</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-purple-400 font-bold">+{t.roi}%</div>
+                    <div className="text-purple-400 font-bold">{t.roi >= 0 ? "+" : ""}{t.roi.toFixed(1)}%</div>
                     <div className="text-xs text-gray-500">ROI</div>
                   </div>
                 </div>
                 <div className="flex items-center justify-between pt-3 border-t border-gray-800">
-                  <span className="text-gray-500 text-sm">{t.subscribers.toLocaleString()} subscribers</span>
-                  <span className="text-white font-bold">${t.price}/mo</span>
+                  <span className="text-gray-500 text-sm">{t.subscriberCount.toLocaleString()} subscribers</span>
+                  <span className="text-white font-bold">${t.subscriptionPrice}/mo</span>
                 </div>
               </div>
             ))}
@@ -371,24 +374,25 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Revenue share callout */}
+          {/* Revenue share explanation. States the fee split — a fact — without
+              projecting income. Never imply a typical or expected earning. */}
           <div className="mt-12 card p-6 max-w-3xl mx-auto text-center border-yellow-500/20">
-            <div className="text-yellow-400 font-bold text-lg mb-2">💰 Tipster Revenue Potential</div>
+            <div className="text-yellow-400 font-bold text-lg mb-2">How the revenue split works</div>
             <p className="text-gray-300 text-sm mb-4">
-              Set your own subscription price. We only take a 20% platform fee — you keep 80%.
+              You set your own subscription price between $4.99 and $49.99/mo. IntellaBets takes a
+              20% platform fee; you keep 80% of what your subscribers pay.
             </p>
-            <div className="grid grid-cols-3 gap-4">
-              {[
-                { subs: "50 subscribers", price: "$9.99/mo", earn: "~$400/mo" },
-                { subs: "200 subscribers", price: "$14.99/mo", earn: "~$2,400/mo" },
-                { subs: "500 subscribers", price: "$19.99/mo", earn: "~$8,000/mo" },
-              ].map((row) => (
-                <div key={row.subs} className="p-3 rounded-lg" style={{ background: "rgba(245,158,11,0.05)" }}>
-                  <div className="text-yellow-400 font-black text-lg">{row.earn}</div>
-                  <div className="text-gray-400 text-xs mt-1">{row.subs} @ {row.price}</div>
-                </div>
-              ))}
+            <div className="p-4 rounded-lg text-left" style={{ background: "rgba(245,158,11,0.05)" }}>
+              <div className="text-gray-300 text-sm">
+                <span className="text-yellow-400 font-semibold">Example:</span> one subscriber at
+                $9.99/mo means $7.99 to you and $2.00 to the platform.
+              </div>
             </div>
+            <p className="text-gray-500 text-xs mt-4">
+              This is an illustration of the fee split only. IntellaBets makes no representation
+              about how many subscribers you will attract or what you will earn. Most tipsters earn
+              little or nothing, and results depend entirely on your own performance and audience.
+            </p>
           </div>
         </div>
       </section>
@@ -406,7 +410,7 @@ export default function LandingPage() {
             Ready to <span className="gradient-text">Level Up</span>?
           </h2>
           <p className="text-gray-400 text-lg mb-8">
-            Join thousands of sports bettors already winning with IntellaBets. Free to start.
+            Create an account free. No card required to browse the leaderboard and public picks.
           </p>
           <Link href="/register" className="btn-primary text-lg py-4 px-10 inline-block" style={{ borderRadius: "12px" }}>
             Create Free Account →
@@ -421,10 +425,20 @@ export default function LandingPage() {
           <p className="text-gray-500 text-sm text-center">
             For entertainment purposes. Please gamble responsibly. 18+ only.
           </p>
-          <div className="flex gap-4 text-sm text-gray-500">
-            <span>Terms</span>
-            <span>Privacy</span>
-            <span>Support</span>
+          {/* Must be real links: card networks and payment underwriters require
+              terms, privacy, refund policy and contact details to be reachable. */}
+          <div className="flex flex-wrap gap-4 text-sm text-gray-500 justify-center">
+            <Link href="/terms" className="hover:text-gray-300 transition-colors">Terms</Link>
+            <Link href="/privacy" className="hover:text-gray-300 transition-colors">Privacy</Link>
+            <Link href="/contact" className="hover:text-gray-300 transition-colors">Refunds &amp; Support</Link>
+            <a
+              href="https://www.ncpgambling.org"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-gray-300 transition-colors"
+            >
+              Responsible Gambling
+            </a>
           </div>
         </div>
       </footer>

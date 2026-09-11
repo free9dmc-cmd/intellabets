@@ -46,8 +46,9 @@ export default function TermsPage() {
           <li><strong className="text-white">Premium Tipster ($19.99/mo):</strong> Grants the ability to publish betslips and earn from subscribers. Billed monthly. Cancel anytime.</li>
           <li><strong className="text-white">AI Picks ($9.99/mo):</strong> Grants access to Claude-powered betslip generation. Billed monthly. Cancel anytime.</li>
           <li><strong className="text-white">Tipster Subscriptions ($4.99–$49.99/mo):</strong> Access to a specific tipster&apos;s picks. Billed monthly. Cancel anytime via your account settings.</li>
-          <li>Subscriptions auto-renew monthly until cancelled.</li>
-          <li>On web, payments are processed by Stripe. On iOS, by Apple. On Android, by Google. Refund policies are subject to those providers&apos; terms.</li>
+          <li><strong className="text-white">All subscriptions renew automatically</strong> every month at the price shown at checkout, until you cancel. You may cancel at any time from your account settings; cancellation stops future billing and takes effect at the end of the period you have already paid for.</li>
+          <li><strong className="text-white">Refunds:</strong> if you were charged in error, charged after cancelling, or were unable to access what you paid for, contact <a href="mailto:support@intellabets.com" className="text-purple-400 hover:underline">support@intellabets.com</a> within 30 days of the charge and we will refund it in full. Because analysis is delivered immediately, we do not otherwise refund a billing period already used — but contact us if something has gone wrong. Full policy: <a href="/contact" className="text-purple-400 hover:underline">Refunds &amp; Support</a>.</li>
+          <li>Purchases made inside our iOS or Android app are billed by Apple or Google, and refunds for those must be requested through Apple or Google under their policies.</li>
           <li>We may change prices with 30 days&apos; notice.</li>
         </ul>
       </section>
