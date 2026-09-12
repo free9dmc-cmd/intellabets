@@ -6,6 +6,14 @@ import { AIAnalystService } from "./ai-analyst.service"
 import { OddsAggregatorService } from "../ingestion/odds-aggregator.service"
 import { RealtimeService } from "../realtime/realtime.service"
 import { MlbStatsService } from "./mlb-stats.service"
+import {
+  STRATEGIES,
+  computeLineMovement,
+  matchesStrategy,
+  scoreForStrategy,
+  type StrategyKey,
+} from "./strategies"
+import { buildPlacementGuide } from "./placement"
 import type { BookMarket } from "./devig"
 import type { EngineConfig } from "./prediction.types"
 
@@ -281,6 +289,107 @@ export class PredictionsService {
       orderBy: [{ confidence: "desc" }, { edgePercent: "desc" }],
       take: limit,
     })
+  }
+
+  /**
+   * Pending predictions filtered and ranked by a strategy.
+   *
+   * All strategies draw from the same pool of +EV bets — none of them invent
+   * edge. Movement-based strategies (steam/contrarian) need at least two odds
+   * snapshots for the game, so they return fewer picks early in a game's life.
+   */
+  async listByStrategy(strategy: StrategyKey, sport?: string, limit = 25) {
+    const def = STRATEGIES[strategy]
+
+    const candidates = await this.prisma.prediction.findMany({
+      where: { userId: null, status: "pending", ...(sport ? { game: { sport } } : {}) },
+      include: { game: true },
+      orderBy: [{ confidence: "desc" }],
+      // Pull a wider pool than we return, since strategies filter it down.
+      take: Math.max(limit * 6, 100),
+    })
+
+    // Movement needs snapshot history; only load it for strategies that use it.
+    const movementByOutcome = new Map<string, ReturnType<typeof computeLineMovement>>()
+    if (def.needsMovement) {
+      const gameIds = Array.from(new Set(candidates.map((c) => c.gameId)))
+      for (const gameId of gameIds) {
+        const snaps = await this.prisma.oddsSnapshot.findMany({
+          where: { gameId },
+          orderBy: { capturedAt: "asc" },
+          select: { markets: true },
+        })
+        if (snaps.length < 2) continue
+        for (const c of candidates.filter((x) => x.gameId === gameId)) {
+          movementByOutcome.set(c.outcomeId, computeLineMovement(snaps, c.outcomeId))
+        }
+      }
+    }
+
+    const enriched = candidates.map((c) => ({
+      prediction: c,
+      candidate: {
+        fairProbability: c.fairProbability,
+        confidence: c.confidence,
+        edgePercent: c.edgePercent,
+        movement: movementByOutcome.get(c.outcomeId) ?? null,
+      },
+    }))
+
+    const picks = enriched
+      .filter((e) => matchesStrategy(strategy, e.candidate))
+      .sort((a, b) => scoreForStrategy(strategy, b.candidate) - scoreForStrategy(strategy, a.candidate))
+      .slice(0, limit)
+
+    return {
+      strategy: def,
+      count: picks.length,
+      // Say so when a strategy came up empty, rather than implying no edge exists.
+      note:
+        picks.length === 0
+          ? def.needsMovement
+            ? "No qualifying picks yet — this strategy needs at least two odds snapshots per game, so it fills in as lines move."
+            : "No current picks match this strategy."
+          : undefined,
+      predictions: picks.map((p) => ({
+        ...p.prediction,
+        lineMovement: p.candidate.movement
+          ? {
+              openImpliedProbability: round(p.candidate.movement.openProb, 4),
+              currentImpliedProbability: round(p.candidate.movement.currentProb, 4),
+              deltaPercentagePoints: round(p.candidate.movement.delta * 100, 2),
+            }
+          : null,
+      })),
+    }
+  }
+
+  /** Step-by-step instructions for placing one prediction at the best-priced book. */
+  async placementGuide(predictionId: string, bankroll?: number) {
+    const p = await this.prisma.prediction.findUnique({
+      where: { id: predictionId },
+      include: { game: true },
+    })
+    if (!p) return null
+    return buildPlacementGuide(
+      {
+        marketType: p.marketType,
+        selection: p.selection,
+        outcomeName: p.outcomeName,
+        point: p.point,
+        offeredOdds: p.offeredOdds,
+        offeredBook: p.offeredBook,
+        kellyStake: p.kellyStake,
+        edgePercent: p.edgePercent,
+        game: {
+          homeTeam: p.game.homeTeam,
+          awayTeam: p.game.awayTeam,
+          commenceTime: p.game.commenceTime,
+          sport: p.game.sport,
+        },
+      },
+      { bankroll }
+    )
   }
 
   /** Rolling performance of house predictions — the honest scoreboard. */
