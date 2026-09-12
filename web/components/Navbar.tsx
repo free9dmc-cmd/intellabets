@@ -13,6 +13,7 @@ export default function Navbar() {
 
   const navLinks = [
     { href: "/dashboard", label: "Dashboard", icon: "⊞" },
+    { href: "/picks", label: "Engine Picks", icon: "📍" },
     { href: "/leaderboard", label: "Leaderboard", icon: "🏆" },
     { href: "/ai-picks", label: "AI Picks", icon: "🧠" },
     { href: "/betslips", label: "My Slips", icon: "📋" },

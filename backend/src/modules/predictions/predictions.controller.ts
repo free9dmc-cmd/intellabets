@@ -2,6 +2,7 @@ import { Controller, Get, NotFoundException, Param, Query, UseGuards } from "@ne
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from "@nestjs/swagger"
 import { PredictionsService } from "./predictions.service"
 import { JwtAuthGuard, RolesGuard } from "../auth/guards/jwt-auth.guard"
+import { ServiceOrPremiumGuard } from "../auth/guards/service-or-premium.guard"
 import { RequirePremium } from "../auth/decorators/current-user.decorator"
 import { STRATEGIES, isStrategyKey } from "./strategies"
 
@@ -28,8 +29,7 @@ export class PredictionsController {
   }
 
   @Get("strategy/:key")
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @RequirePremium()
+  @UseGuards(ServiceOrPremiumGuard)
   @ApiBearerAuth()
   @ApiOperation({
     summary: "Picks for one strategy (value | steam | contrarian | safe | longshot)",
@@ -50,8 +50,7 @@ export class PredictionsController {
   }
 
   @Get(":id/how-to-bet")
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @RequirePremium()
+  @UseGuards(ServiceOrPremiumGuard)
   @ApiBearerAuth()
   @ApiOperation({
     summary:
