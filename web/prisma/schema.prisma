@@ -42,6 +42,7 @@ model User {
   subscriptionsAsSubscriber Subscription[] @relation("Subscriber")
   subscriptionsAsTipster    Subscription[] @relation("Tipster")
   payouts                   Payout[]
+  supportTickets            SupportTicket[]
   aiSubscription            AISubscription?
 }
 
@@ -120,4 +121,39 @@ model Payout {
   status    String    @default("pending")
   createdAt DateTime  @default(now())
   paidAt    DateTime?
+}
+
+// ─── Support ─────────────────────────────────────────────────────────────────
+
+model SupportTicket {
+  id          String    @id @default(cuid())
+  userId      String?
+  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  subject     String
+  category    String    @default("other") // billing | access | payout | technical | other
+  priority    String    @default("normal") // low | normal | high | urgent
+  status      String    @default("open")   // open | resolved | closed
+  // What the agent could see about the account when it escalated. This is the
+  // whole point of escalation: whoever picks the ticket up shouldn't have to
+  // re-interrogate the customer to find out what state they were in.
+  diagnostics Json?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  resolvedAt  DateTime?
+
+  messages    SupportMessage[]
+
+  @@index([status, createdAt])
+  @@index([userId])
+}
+
+model SupportMessage {
+  id        String        @id @default(cuid())
+  ticketId  String
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  role      String        // user | assistant | staff
+  content   String
+  createdAt DateTime      @default(now())
+
+  @@index([ticketId, createdAt])
 }

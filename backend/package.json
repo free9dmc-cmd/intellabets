@@ -38,7 +38,7 @@
     "bcryptjs": "^2.4.3",
     "class-validator": "^0.14.1",
     "class-transformer": "^0.5.1",
-    "@anthropic-ai/sdk": "^0.35.0",
+    "@anthropic-ai/sdk": "^0.125.0",
     "axios": "^1.7.0",
     "ws": "^8.18.0",
     "pusher": "^5.2.0",

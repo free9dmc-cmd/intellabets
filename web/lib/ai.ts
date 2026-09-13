@@ -88,7 +88,7 @@ Return ONLY a valid JSON object with this exact structure:
 }`
 
   const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
+    model: process.env.AI_MODEL ?? "claude-opus-5",
     max_tokens: 1500,
     system:
       "You are an expert sports betting analyst. Always respond with valid JSON only, no markdown, no explanation. Generate realistic, data-driven betting recommendations.",

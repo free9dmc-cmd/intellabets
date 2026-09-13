@@ -27,7 +27,7 @@ export class AIAnalystService {
 
   constructor(private readonly config: ConfigService) {
     const apiKey = config.get<string>("ANTHROPIC_API_KEY")
-    this.model = config.get<string>("AI_MODEL", "claude-sonnet-4-6")
+    this.model = config.get<string>("AI_MODEL", "claude-opus-5")
     this.client = apiKey ? new Anthropic({ apiKey }) : null
     if (!this.client) {
       this.logger.warn("ANTHROPIC_API_KEY not set — AI analyst will pass bets through unfiltered")
