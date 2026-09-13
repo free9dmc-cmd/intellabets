@@ -447,6 +447,42 @@ export class PredictionsService {
     )
   }
 
+  /**
+   * Settlement results for a set of predictions.
+   *
+   * The consumer app tracks what users actually bet, but grading lives here
+   * with the game data. Rather than duplicating scores and grading rules into
+   * the web app, it asks for the outcome of the pick a bet was based on.
+   */
+  async resultsFor(ids: string[]) {
+    if (ids.length === 0) return { results: [] }
+    const rows = await this.prisma.prediction.findMany({
+      where: { id: { in: ids.slice(0, 200) } },
+      select: {
+        id: true,
+        status: true,
+        settledAt: true,
+        closingOdds: true,
+        clv: true,
+        game: { select: { status: true, homeScore: true, awayScore: true, homeTeam: true, awayTeam: true } },
+      },
+    })
+    return {
+      results: rows.map((r) => ({
+        predictionId: r.id,
+        status: r.status,
+        settledAt: r.settledAt?.toISOString() ?? null,
+        closingOdds: r.closingOdds,
+        clv: r.clv,
+        gameStatus: r.game.status,
+        finalScore:
+          r.game.homeScore != null && r.game.awayScore != null
+            ? `${r.game.awayTeam} ${r.game.awayScore} - ${r.game.homeScore} ${r.game.homeTeam}`
+            : null,
+      })),
+    }
+  }
+
   /** Rolling performance of house predictions — the honest scoreboard. */
   async performance() {
     const settled = await this.prisma.prediction.findMany({

@@ -6,6 +6,7 @@ import Link from "next/link"
 import { hasAIAccess } from "@/lib/entitlements"
 import { getStrategyPicks, isEngineConfigured, type StrategyResult } from "@/lib/engine"
 import HowToBet from "./HowToBet"
+import BookPicker from "./BookPicker"
 
 export const dynamic = "force-dynamic"
 
@@ -175,6 +176,7 @@ export default async function PicksPage({
                 </p>
               )}
 
+              <BookPicker predictionId={p.id} sport={p.game.sport} marketType={p.marketType} />
               <HowToBet predictionId={p.id} />
             </div>
           ))}

@@ -16,6 +16,7 @@ export default function Navbar() {
     { href: "/picks", label: "Engine Picks", icon: "📍" },
     { href: "/leaderboard", label: "Leaderboard", icon: "🏆" },
     { href: "/ai-picks", label: "AI Picks", icon: "🧠" },
+    { href: "/my-bets", label: "My Bets", icon: "📒" },
     { href: "/betslips", label: "My Slips", icon: "📋" },
   ]
 

@@ -27,6 +27,8 @@ model User {
   bio              String?
   specialties      String?   // comma-separated sports e.g. "NFL,NBA,MLB"
   subscriptionPrice Float    @default(9.99)
+  // Where this user actually bets, so guidance defaults to their own book.
+  preferredBook    String?
   totalWins        Int       @default(0)
   totalLosses      Int       @default(0)
   totalPushes      Int       @default(0)
@@ -43,6 +45,7 @@ model User {
   subscriptionsAsTipster    Subscription[] @relation("Tipster")
   payouts                   Payout[]
   supportTickets            SupportTicket[]
+  placedBets                PlacedBet[]
   aiSubscription            AISubscription?
 }
 
@@ -156,4 +159,47 @@ model SupportMessage {
   createdAt DateTime      @default(now())
 
   @@index([ticketId, createdAt])
+}
+
+// ─── Bet tracking ────────────────────────────────────────────────────────────
+
+// A bet the user actually placed at their own sportsbook.
+//
+// IntellaBets never places bets — this records what the user says they did, so
+// their real results can be tracked against what was recommended.
+//
+// `source` and `externalId` exist so an automatic feed (e.g. a bet-tracking
+// vendor that reads a linked sportsbook account) can populate the same table
+// later without a schema change; `externalId` is the dedupe key for that.
+model PlacedBet {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // The engine pick this came from, if any. Grading follows this pick's result.
+  predictionId    String?
+  matchup         String
+  sport           String
+  book            String
+  selection       String
+  marketType      String
+  oddsDecimal     Float
+  oddsAmerican    String
+  stake           Float
+  potentialPayout Float
+
+  status          String    @default("pending") // pending | won | lost | push | void
+  actualPayout    Float?
+  profit          Float?
+  settledAt       DateTime?
+
+  source          String    @default("manual")  // manual | linked-account
+  externalId      String?
+
+  placedAt        DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+
+  @@unique([userId, externalId])
+  @@index([userId, status])
+  @@index([predictionId])
 }

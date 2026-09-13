@@ -49,6 +49,16 @@ export class PredictionsController {
     return this.predictions.listByStrategy(key, sport, limit ? parseInt(limit, 10) : 25)
   }
 
+  @Get("results")
+  @UseGuards(ServiceOrPremiumGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Settlement results for a set of prediction ids (comma-separated)" })
+  @ApiQuery({ name: "ids", required: true })
+  results(@Query("ids") ids: string) {
+    const list = (ids ?? "").split(",").map((s) => s.trim()).filter(Boolean)
+    return this.predictions.resultsFor(list)
+  }
+
   @Get(":id/books")
   @UseGuards(ServiceOrPremiumGuard)
   @ApiBearerAuth()

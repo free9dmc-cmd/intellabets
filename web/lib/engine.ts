@@ -113,3 +113,56 @@ export function getPlacementGuide(
   const qs = bankroll ? `?bankroll=${encodeURIComponent(bankroll)}` : ""
   return engineFetch(`/predictions/${encodeURIComponent(predictionId)}/how-to-bet${qs}`)
 }
+
+export interface BookOption {
+  book: string
+  bookName: string
+  oddsAmerican: string
+  oddsDecimal: number
+  payout: number
+  profit: number
+  link: string | null
+  isBest: boolean
+  isPreferred: boolean
+  lessThanBest: number
+}
+
+export interface BookComparison {
+  selection: string
+  matchup: string
+  stake: number
+  options: BookOption[]
+  best: BookOption | null
+  preferred: BookOption | null
+  savingsVsPreferred: number
+  note: string
+  pricesAsOf: string | null
+  disclaimer: string
+}
+
+export interface PredictionResult {
+  predictionId: string
+  status: string
+  settledAt: string | null
+  closingOdds: number | null
+  clv: number | null
+  gameStatus: string
+  finalScore: string | null
+}
+
+export function getBookComparison(
+  predictionId: string,
+  opts: { stake?: number; preferred?: string | null } = {}
+): Promise<BookComparison | null> {
+  const qs = new URLSearchParams()
+  if (opts.stake) qs.set("stake", String(opts.stake))
+  if (opts.preferred) qs.set("preferred", opts.preferred)
+  const suffix = qs.toString() ? `?${qs}` : ""
+  return engineFetch(`/predictions/${encodeURIComponent(predictionId)}/books${suffix}`)
+}
+
+/** Settlement outcomes for picks the user bet on, used to grade their bets. */
+export function getPredictionResults(ids: string[]): Promise<{ results: PredictionResult[] } | null> {
+  if (ids.length === 0) return Promise.resolve({ results: [] })
+  return engineFetch(`/predictions/results?ids=${encodeURIComponent(ids.join(","))}`)
+}
