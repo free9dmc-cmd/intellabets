@@ -1,3 +1,8 @@
+// DEVELOPMENT SEED -- NEVER RUN AGAINST PRODUCTION.
+// Creates tipsters with invented win rates, subscriber counts and earnings.
+// Shipping these to a live site is fabricated performance data shown to
+// paying customers. Local development databases only.
+
 import { PrismaClient } from "@prisma/client"
 import bcrypt from "bcryptjs"
 

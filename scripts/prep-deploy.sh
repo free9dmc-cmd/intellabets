@@ -37,10 +37,19 @@ say "Creating tables in Neon"
 ( cd web && DATABASE_URL="$DB_URL" npx prisma db push ) || die "Schema push failed — check the connection string."
 ok "Tables created"
 
-read -r -p "Seed demo tipsters and picks so the site isn't empty? [y/N] " SEED
-if [[ "${SEED:-n}" =~ ^[Yy]$ ]]; then
-  ( cd web && DATABASE_URL="$DB_URL" npx tsx prisma/seed.ts ) && ok "Seeded" || warn "Seed failed (not fatal)"
-fi
+# Deliberately NOT seeding.
+#
+# prisma/seed.ts inserts invented tipsters with invented track records --
+# win rates, subscriber counts, earnings, isVerified: true. That is fine for
+# local development and unacceptable on a site that takes money: it is
+# fabricated performance data shown to paying customers, and it is what a
+# payment processor's underwriters look for. Run it by hand against a local
+# database if you want a populated dev environment:
+#
+#   cd web && DATABASE_URL="<local db>" npx tsx prisma/seed.ts
+#
+# An empty leaderboard on launch day is honest. A fake one is not.
+warn "Skipping demo seed -- production starts with real data only."
 
 # ── Secrets ──────────────────────────────────────────────────────────────────
 NEXTAUTH_SECRET=$(node -e "console.log(require('crypto').randomBytes(32).toString('base64'))")
