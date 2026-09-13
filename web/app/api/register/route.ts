@@ -1,9 +1,17 @@
 import { NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
+import { check, clientKey, tooManyRequests } from "@/lib/rate-limit"
 
 export async function POST(req: Request) {
   try {
+    // Account creation is unauthenticated by definition, so throttle per IP to
+    // keep a script from filling the user table.
+    const rl = check(`register:${clientKey(req)}`, 5, 3600)
+    if (!rl.ok) {
+      return tooManyRequests(rl.retryAfter, "Too many accounts created from this address. Try again later.")
+    }
+
     const { name, email, username, password } = await req.json()
 
     if (!name || !email || !username || !password) {

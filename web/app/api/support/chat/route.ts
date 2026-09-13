@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { check, clientKey, tooManyRequests } from "@/lib/rate-limit"
 import {
   runSupportAgent,
   loadAccountContext,
@@ -21,6 +22,20 @@ export async function POST(req: Request) {
   }
 
   const session = await getServerSession(authOptions)
+
+  // Every call here spends Anthropic tokens, and the route is reachable without
+  // an account, so anonymous callers get a much tighter budget than signed-in
+  // ones. Without this, a loop against this endpoint is a direct bill.
+  const userId = session?.user?.id ?? null
+  const limit = userId ? 20 : 5
+  const rl = check(`support:${clientKey(req, userId)}`, limit, 300)
+  if (!rl.ok) {
+    return tooManyRequests(
+      rl.retryAfter,
+      "Too many messages in a short time. Please wait a moment, or email support@intellabets.com."
+    )
+  }
+
   const body = await req.json().catch(() => null)
   if (!body || typeof body.message !== "string" || !body.message.trim()) {
     return NextResponse.json({ error: "message is required" }, { status: 400 })

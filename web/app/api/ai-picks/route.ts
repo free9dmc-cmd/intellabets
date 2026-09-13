@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { generateAIBetslip } from "@/lib/ai"
 import { hasAIAccess } from "@/lib/entitlements"
+import { check, clientKey, tooManyRequests } from "@/lib/rate-limit"
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions)
@@ -26,6 +27,13 @@ export async function POST(req: Request) {
       { error: "AI Picks subscription or Premium membership required", code: "NO_AI_SUB" },
       { status: 403 }
     )
+  }
+
+  // Paid access is not unlimited access: each generation costs real tokens, so
+  // one subscriber cannot script this into an unbounded bill.
+  const rl = check(`aipicks:${clientKey(req, session.user.id)}`, 15, 3600)
+  if (!rl.ok) {
+    return tooManyRequests(rl.retryAfter, "You have generated a lot of picks in the last hour. Please try again shortly.")
   }
 
   const { sport, betType, riskLevel } = await req.json()

@@ -60,10 +60,10 @@ NEXTAUTH_SECRET
 ${NEXTAUTH_SECRET}
 
 NEXTAUTH_URL
-https://intellabets.com
+https://<your-project>.vercel.app      <-- see note below
 
 NEXT_PUBLIC_APP_URL
-https://intellabets.com
+https://<your-project>.vercel.app      <-- see note below
 
 ADMIN_EMAILS
 $(git config user.email 2>/dev/null || echo "your@email.com")
@@ -91,6 +91,16 @@ ${ENGINE_KEY}
    2. Root Directory → Edit → select  web     <-- the one setting that must be right
    3. Paste the variables above
    4. Deploy
+
+ ABOUT THE TWO URL VARIABLES
+   Vercel gives you a <project>.vercel.app address as soon as the first
+   deploy finishes. Use THAT for NEXTAUTH_URL and NEXT_PUBLIC_APP_URL to
+   begin with. If you point them at intellabets.com before DNS is pointed
+   at Vercel, every login will redirect to a dead address.
+
+   Once intellabets.com resolves to the app, change both variables to
+   https://intellabets.com and redeploy. That switch is the last step, not
+   the first.
 ────────────────────────────────────────────────────────────────────────────
 
 Stripe keys are intentionally absent: add STRIPE_SECRET_KEY and
