@@ -68,6 +68,10 @@ export class OddsAggregatorService {
         regions: "us",
         markets: "h2h,spreads,totals",
         oddsFormat: "american",
+        // Ask for bookmaker deep links so we can send the user straight to a
+        // pre-populated betslip at whichever book they choose.
+        includeLinks: "true",
+        includeSids: "true",
       },
     })
     return data.map((g) => this.transform(g))
@@ -148,7 +152,13 @@ export class OddsAggregatorService {
     if (markets.length === 0) return null
 
     const { data } = await this.http.get<OddsApiGame>(`/sports/${sportKey}/events/${eventId}/odds`, {
-      params: { regions: "us", markets: markets.join(","), oddsFormat: "american" },
+      params: {
+        regions: "us",
+        markets: markets.join(","),
+        oddsFormat: "american",
+        includeLinks: "true",
+        includeSids: "true",
+      },
     })
     return this.transformProps(data)
   }
@@ -174,6 +184,8 @@ export class OddsAggregatorService {
             odds: fromAmerican(o.price),
             point: o.point,
             isMain: true,
+            link: o.link ?? m.link ?? undefined,
+            sid: o.sid ?? undefined,
           })),
           lastUpdated: new Date(m.last_update),
         }
@@ -228,6 +240,8 @@ export class OddsAggregatorService {
               odds: fromAmerican(o.price),
               point: o.point,
               isMain: true,
+              link: o.link ?? m.link ?? undefined,
+              sid: o.sid ?? undefined,
             })),
             lastUpdated: new Date(m.last_update),
           }
@@ -271,8 +285,8 @@ const PROP_LABELS: Record<string, string> = {
 
 // ─── The Odds API response shapes ─────────────────────────────────────────────
 
-interface OddsApiOutcome { name: string; price: number; point?: number; description?: string }
-interface OddsApiMarket { key: string; last_update: string; outcomes: OddsApiOutcome[] }
+interface OddsApiOutcome { name: string; price: number; point?: number; description?: string; link?: string; sid?: string }
+interface OddsApiMarket { key: string; last_update: string; outcomes: OddsApiOutcome[]; link?: string }
 interface OddsApiBookmaker { key: string; title: string; markets: OddsApiMarket[] }
 interface OddsApiGame {
   id: string

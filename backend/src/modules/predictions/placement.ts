@@ -226,3 +226,114 @@ export function buildPlacementGuide(
     warnings,
   }
 }
+
+// ─── Comparing the same bet across books ──────────────────────────────────────
+
+export interface BookOption {
+  book: string
+  bookName: string
+  oddsAmerican: string
+  oddsDecimal: number
+  /** Total returned if it wins, including the stake back. */
+  payout: number
+  profit: number
+  /** Deep link to this book, ideally a pre-populated betslip. */
+  link: string | null
+  isBest: boolean
+  isPreferred: boolean
+  /** How much less this book pays than the best one, for the same stake. */
+  lessThanBest: number
+}
+
+export interface BookComparison {
+  selection: string
+  matchup: string
+  stake: number
+  options: BookOption[]
+  best: BookOption | null
+  preferred: BookOption | null
+  /** Extra profit from using the best book instead of the preferred one. */
+  savingsVsPreferred: number
+  note: string
+}
+
+/**
+ * Rank every book offering this selection by what it actually pays.
+ *
+ * The point is the money, not the odds display: two books quoting -108 and -112
+ * look similar until you see the payout on a real stake. Users bet at the book
+ * they already have funded, so we show their book alongside the best one and
+ * state the difference plainly rather than nagging them to switch.
+ */
+export function compareBooks(params: {
+  selection: string
+  matchup: string
+  stake: number
+  /** book key -> { decimal, link } from the latest odds snapshot */
+  pricesByBook: Map<string, { decimal: number; link?: string | null }>
+  preferredBook?: string | null
+}): BookComparison {
+  const { selection, matchup, stake, pricesByBook, preferredBook } = params
+
+  const raw = Array.from(pricesByBook.entries())
+    .filter(([, v]) => v.decimal > 1)
+    .map(([book, v]) => {
+      const resolved = resolveBook(book)
+      const payout = Math.round(stake * v.decimal * 100) / 100
+      return {
+        book,
+        bookName: resolved.name,
+        oddsAmerican: formatAmerican(v.decimal),
+        oddsDecimal: v.decimal,
+        payout,
+        profit: Math.round((payout - stake) * 100) / 100,
+        link: v.link ?? null,
+        isBest: false,
+        isPreferred: preferredBook ? book.toLowerCase() === preferredBook.toLowerCase() : false,
+        lessThanBest: 0,
+      }
+    })
+    .sort((a, b) => b.payout - a.payout)
+
+  if (raw.length === 0) {
+    return {
+      selection,
+      matchup,
+      stake,
+      options: [],
+      best: null,
+      preferred: null,
+      savingsVsPreferred: 0,
+      note: "No current prices available for this selection.",
+    }
+  }
+
+  raw[0].isBest = true
+  for (const o of raw) {
+    o.lessThanBest = Math.round((raw[0].payout - o.payout) * 100) / 100
+  }
+
+  const best = raw[0]
+  const preferred = raw.find((o) => o.isPreferred) ?? null
+  const savings = preferred ? Math.round((best.payout - preferred.payout) * 100) / 100 : 0
+
+  let note: string
+  if (!preferred) {
+    note = `${best.bookName} pays the most on this bet: $${best.payout.toFixed(2)} back on a $${stake.toFixed(2)} stake.`
+  } else if (preferred.isBest) {
+    note = `${preferred.bookName} already has the best price on this bet — no reason to shop it.`
+  } else {
+    note = `${preferred.bookName} returns $${preferred.payout.toFixed(2)}; ${best.bookName} returns $${best.payout.toFixed(2)} — $${savings.toFixed(2)} more on the same $${stake.toFixed(2)} stake.`
+  }
+
+  return {
+    selection,
+    matchup,
+    stake,
+    options: raw,
+    best,
+    preferred,
+    savingsVsPreferred: savings,
+    note,
+  }
+}

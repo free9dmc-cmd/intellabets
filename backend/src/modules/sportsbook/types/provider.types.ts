@@ -37,6 +37,14 @@ export interface Outcome {
   odds: NormalizedOdds
   point?: number          // spread / total line value
   isMain: boolean         // false for alternate lines
+  /**
+   * Deepest link the bookmaker exposes for this selection — ideally a
+   * pre-populated betslip, falling back to the market or event page.
+   * Supplied by The Odds API when includeLinks=true.
+   */
+  link?: string
+  /** Bookmaker-side id for this outcome, for constructing custom links. */
+  sid?: string
 }
 
 export interface MarketLine {

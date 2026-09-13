@@ -13,7 +13,7 @@ import {
   scoreForStrategy,
   type StrategyKey,
 } from "./strategies"
-import { buildPlacementGuide } from "./placement"
+import { buildPlacementGuide, compareBooks } from "./placement"
 import type { BookMarket } from "./devig"
 import type { EngineConfig } from "./prediction.types"
 
@@ -361,6 +361,61 @@ export class PredictionsService {
             }
           : null,
       })),
+    }
+  }
+
+  /**
+   * Every book's current price for one prediction, ranked by what it pays.
+   *
+   * Users bet where their money already is, so this shows their own book
+   * alongside the best one and states the difference in dollars rather than
+   * assuming they will open a new account.
+   */
+  async compareBooksFor(predictionId: string, stake = 100, preferredBook?: string | null) {
+    const p = await this.prisma.prediction.findUnique({
+      where: { id: predictionId },
+      include: { game: true },
+    })
+    if (!p) return null
+
+    const snap = await this.prisma.oddsSnapshot.findFirst({
+      where: { gameId: p.gameId },
+      orderBy: { capturedAt: "desc" },
+      select: { markets: true, capturedAt: true },
+    })
+
+    const pricesByBook = new Map<string, { decimal: number; link?: string | null }>()
+    if (snap) {
+      const books = snap.markets as unknown as Record<
+        string,
+        { book: string; line: { outcomes: { id: string; odds: { decimal: number }; link?: string }[] } }[]
+      >
+      for (const marketBooks of Object.values(books ?? {})) {
+        if (!Array.isArray(marketBooks)) continue
+        for (const bm of marketBooks) {
+          const outcome = bm?.line?.outcomes?.find((o) => o.id === p.outcomeId)
+          if (outcome && outcome.odds?.decimal > 1) {
+            pricesByBook.set(bm.book, { decimal: outcome.odds.decimal, link: outcome.link ?? null })
+          }
+        }
+      }
+    }
+
+    const comparison = compareBooks({
+      selection: p.selection,
+      matchup: `${p.game.awayTeam} @ ${p.game.homeTeam}`,
+      stake,
+      pricesByBook,
+      preferredBook,
+    })
+
+    return {
+      ...comparison,
+      pricesAsOf: snap?.capturedAt?.toISOString() ?? null,
+      // Restated on every response: prices move, and a stale quote is the main
+      // way a user ends up taking a bet that is no longer +EV.
+      disclaimer:
+        "Prices change constantly. Confirm the number in your sportsbook before placing — if it has moved against you, the edge may be gone.",
     }
   }
 

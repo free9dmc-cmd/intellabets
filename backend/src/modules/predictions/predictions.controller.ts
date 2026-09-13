@@ -49,6 +49,26 @@ export class PredictionsController {
     return this.predictions.listByStrategy(key, sport, limit ? parseInt(limit, 10) : 25)
   }
 
+  @Get(":id/books")
+  @UseGuards(ServiceOrPremiumGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "Every sportsbook's current price for this pick, ranked by payout",
+  })
+  @ApiQuery({ name: "stake", required: false, description: "Stake in USD (default 100)" })
+  @ApiQuery({ name: "preferred", required: false, description: "Your usual book, e.g. fanduel" })
+  async books(
+    @Param("id") id: string,
+    @Query("stake") stake?: string,
+    @Query("preferred") preferred?: string
+  ) {
+    const parsed = stake ? Number(stake) : 100
+    const amount = Number.isFinite(parsed) && parsed > 0 ? parsed : 100
+    const result = await this.predictions.compareBooksFor(id, amount, preferred ?? null)
+    if (!result) throw new NotFoundException("Prediction not found")
+    return result
+  }
+
   @Get(":id/how-to-bet")
   @UseGuards(ServiceOrPremiumGuard)
   @ApiBearerAuth()
