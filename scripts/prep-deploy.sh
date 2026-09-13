@@ -55,18 +55,52 @@ warn "Skipping demo seed -- production starts with real data only."
 NEXTAUTH_SECRET=$(node -e "console.log(require('crypto').randomBytes(32).toString('base64'))")
 ENGINE_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
 
-cat <<EOF
+# Secrets are written to a file, NOT printed here.
+#
+# Printing them puts live credentials in terminal scrollback, which then get
+# pasted wholesale into chat windows, screenshots and support threads. A file
+# you open deliberately is harder to leak by accident, and if it does leak you
+# can delete it. DEPLOY-SECRETS.txt is gitignored.
+SECRETS_FILE="DEPLOY-SECRETS.txt"
+umask 077
+cat > "$SECRETS_FILE" <<SECRETS
+IntellaBets deploy secrets - generated $(date)
 
-────────────────────────────────────────────────────────────────────────────
- PASTE THESE INTO VERCEL  (Project → Settings → Environment Variables)
- Set every one to the **Production** environment.
-────────────────────────────────────────────────────────────────────────────
+Treat this file like a password. Do not paste its contents into chat, a
+screenshot, an issue or a commit. Delete it once the values are in Vercel:
+
+    rm DEPLOY-SECRETS.txt
 
 DATABASE_URL
 ${DB_URL}
 
 NEXTAUTH_SECRET
 ${NEXTAUTH_SECRET}
+
+ENGINE_SERVICE_KEY
+${ENGINE_KEY}
+
+The ENGINE_SERVICE_KEY above also goes in Render
+(service: intellabets-api -> Environment). It must match exactly, or the
+picks page stays empty.
+SECRETS
+chmod 600 "$SECRETS_FILE"
+
+cat <<EOF
+
+────────────────────────────────────────────────────────────────────────────
+ VERCEL ENVIRONMENT VARIABLES  (Project → Settings → Environment Variables)
+ Set every one to the **Production** environment.
+────────────────────────────────────────────────────────────────────────────
+
+ These three are SECRET. They are in ${SECRETS_FILE} in this folder --
+ open it, copy them into Vercel, then delete the file.
+
+   DATABASE_URL
+   NEXTAUTH_SECRET
+   ENGINE_SERVICE_KEY
+
+ These are safe to read off the screen:
 
 NEXTAUTH_URL
 https://<your-project>.vercel.app      <-- see note below
@@ -75,31 +109,21 @@ NEXT_PUBLIC_APP_URL
 https://<your-project>.vercel.app      <-- see note below
 
 ADMIN_EMAILS
-$(git config user.email 2>/dev/null || echo "your@email.com")
+$(git config user.email 2>/dev/null || echo "<the email you log in with>")
 
 ANTHROPIC_API_KEY
-<your sk-ant-... key>
+<your sk-ant-... key from console.anthropic.com>
 
 ENGINE_API_URL
 https://api.intellabets.com/api/v1
-
-ENGINE_SERVICE_KEY
-${ENGINE_KEY}
-
-────────────────────────────────────────────────────────────────────────────
- ALSO add this ONE variable in RENDER (service: intellabets-api → Environment)
- It must match the value above exactly, or the picks page stays empty.
-────────────────────────────────────────────────────────────────────────────
-
-ENGINE_SERVICE_KEY
-${ENGINE_KEY}
 
 ────────────────────────────────────────────────────────────────────────────
  THEN, in Vercel:
    1. vercel.com/new → import  free9dmc-cmd/intellabets
    2. Root Directory → Edit → select  web     <-- the one setting that must be right
-   3. Paste the variables above
+   3. Add the variables above
    4. Deploy
+   5. rm DEPLOY-SECRETS.txt
 
  ABOUT THE TWO URL VARIABLES
    Vercel gives you a <project>.vercel.app address as soon as the first
@@ -110,6 +134,10 @@ ${ENGINE_KEY}
    Once intellabets.com resolves to the app, change both variables to
    https://intellabets.com and redeploy. That switch is the last step, not
    the first.
+
+ ABOUT ADMIN_EMAILS
+   This is the ONLY thing that grants /admin access, matched against the
+   email you sign in with. If it is wrong or unset, nobody is an admin.
 ────────────────────────────────────────────────────────────────────────────
 
 Stripe keys are intentionally absent: add STRIPE_SECRET_KEY and
