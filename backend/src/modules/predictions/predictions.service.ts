@@ -128,7 +128,13 @@ export class PredictionsService {
       update: { commenceTime: gb.commenceTime, ...(opts.isLive ? { status: "live" } : {}) },
     })
 
-    const isClosing = minsToStart <= 10 && minsToStart > -5
+    // Flag any pregame snapshot inside the last hour before kickoff. The old
+    // window (10 minutes before to 5 after) was both narrower than the default
+    // 30-minute poll interval -- so most games never got a flagged snapshot at
+    // all -- and open on the wrong side, since a snapshot 5 minutes after
+    // kickoff is an in-play price, not a closing one. Several snapshots may
+    // now qualify; the reader takes the latest, which is the one we want.
+    const isClosing = minsToStart > 0 && minsToStart <= 60
     await this.prisma.oddsSnapshot.create({
       data: {
         gameId: game.id,
@@ -205,7 +211,7 @@ export class PredictionsService {
         data: { status: "final", homeScore: s.homeScore, awayScore: s.awayScore },
       })
 
-      const closing = await this.getClosingDecimals(game.id)
+      const closing = await this.getClosingDecimals(game.id, game.commenceTime)
 
       // Props can't be graded without a player-stats feed — skip them here.
       const preds = await this.prisma.prediction.findMany({
@@ -508,12 +514,34 @@ export class PredictionsService {
 
   // ─── helpers ──────────────────────────────────────────────────────────────
 
-  private async getClosingDecimals(gameId: string): Promise<Map<string, number>> {
-    const snap = await this.prisma.oddsSnapshot.findFirst({
-      where: { gameId, isClosing: true },
-      orderBy: { capturedAt: "desc" },
-    })
-    const target = snap ?? (await this.prisma.oddsSnapshot.findFirst({ where: { gameId }, orderBy: { capturedAt: "desc" } }))
+  private async getClosingDecimals(gameId: string, commenceTime: Date): Promise<Map<string, number>> {
+    // The closing line is the last price observed BEFORE the game started.
+    //
+    // This used to fall back to "the most recent snapshot for this game" when
+    // no snapshot was flagged isClosing. Settlement runs after a game is
+    // final, so that fallback routinely picked up an in-play or post-game
+    // price -- a book pricing a team down 9-0 quotes something like 15.00
+    // against a pregame 2.10, which records a CLV of -86% and says nothing
+    // about whether the pick was good. Averaged in, a handful of those drag
+    // the whole scoreboard negative.
+    //
+    // The isClosing flag is only a hint (it depends on a poll happening to
+    // land in a narrow window before kickoff, which at a 30-minute poll
+    // interval often does not happen). Correctness comes from the capturedAt
+    // bound instead: prefer a flagged snapshot, but only ever consider
+    // snapshots taken before commenceTime.
+    const target =
+      (await this.prisma.oddsSnapshot.findFirst({
+        where: { gameId, isClosing: true, capturedAt: { lt: commenceTime } },
+        orderBy: { capturedAt: "desc" },
+      })) ??
+      (await this.prisma.oddsSnapshot.findFirst({
+        where: { gameId, capturedAt: { lt: commenceTime } },
+        orderBy: { capturedAt: "desc" },
+      }))
+
+    // No pregame snapshot means no honest closing line. Leave CLV null rather
+    // than inventing one from a price that was never available pregame.
     if (!target) return new Map()
 
     const map = new Map<string, number>()
