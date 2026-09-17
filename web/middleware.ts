@@ -23,7 +23,26 @@ export default withAuth(
       authorized({ token, req }) {
         const pathname = req.nextUrl.pathname
         // Public routes don't require auth
-        const publicRoutes = ["/", "/login", "/register", "/leaderboard"]
+        // Anything reachable without an account. Legal and marketing pages
+        // MUST be here: Apple and Google both require a publicly loadable
+        // privacy policy URL for store review, payment underwriters read the
+        // terms and refund policy before approving a merchant, and a pricing
+        // page behind a login wall cannot convert anyone.
+        //
+        // These pages call no session APIs of their own, so gating them bought
+        // nothing. Prefix matching means /profile/<username> is covered too,
+        // which the public leaderboard links straight into.
+        const publicRoutes = [
+          "/",
+          "/login",
+          "/register",
+          "/leaderboard",
+          "/premium",
+          "/terms",
+          "/privacy",
+          "/contact",
+          "/profile",
+        ]
         if (publicRoutes.some((r) => pathname === r || pathname.startsWith(r + "/"))) {
           return true
         }
