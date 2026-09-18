@@ -8,41 +8,41 @@ datasource db {
 }
 
 model User {
-  id               String    @id @default(cuid())
-  email            String    @unique
-  username         String    @unique
-  name             String
-  image            String?
-  password         String
-  isPremium        Boolean   @default(false)
-  premiumSince     DateTime?
-  premiumUntil     DateTime?
-  stripeCustomerId String?
-  stripeAccountId  String?
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  username           String    @unique
+  name               String
+  image              String?
+  password           String
+  isPremium          Boolean   @default(false)
+  premiumSince       DateTime?
+  premiumUntil       DateTime?
+  stripeCustomerId   String?
+  stripeAccountId    String?
   // Stripe subscription backing the Premium membership. Needed to extend
   // premiumUntil on renewal and to revoke premium when the sub is cancelled.
   premiumStripeSubId String?
   // Stripe Connect payout onboarding state
-  payoutsEnabled   Boolean @default(false)
-  bio              String?
-  specialties      String?   // comma-separated sports e.g. "NFL,NBA,MLB"
-  subscriptionPrice Float    @default(9.99)
+  payoutsEnabled     Boolean   @default(false)
+  bio                String?
+  specialties        String? // comma-separated sports e.g. "NFL,NBA,MLB"
+  subscriptionPrice  Float     @default(9.99)
   // Where this user actually bets, so guidance defaults to their own book.
-  preferredBook    String?
-  totalWins        Int       @default(0)
-  totalLosses      Int       @default(0)
-  totalPushes      Int       @default(0)
-  winRate          Float     @default(0)
-  roi              Float     @default(0)
-  totalEarnings    Float     @default(0)
-  subscriberCount  Int       @default(0)
-  isVerified       Boolean   @default(false)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  preferredBook      String?
+  totalWins          Int       @default(0)
+  totalLosses        Int       @default(0)
+  totalPushes        Int       @default(0)
+  winRate            Float     @default(0)
+  roi                Float     @default(0)
+  totalEarnings      Float     @default(0)
+  subscriberCount    Int       @default(0)
+  isVerified         Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   betslips                  Betslip[]
-  subscriptionsAsSubscriber Subscription[] @relation("Subscriber")
-  subscriptionsAsTipster    Subscription[] @relation("Tipster")
+  subscriptionsAsSubscriber Subscription[]  @relation("Subscriber")
+  subscriptionsAsTipster    Subscription[]  @relation("Tipster")
   payouts                   Payout[]
   supportTickets            SupportTicket[]
   placedBets                PlacedBet[]
@@ -72,9 +72,9 @@ model Betslip {
 }
 
 model Bet {
-  id        String   @id @default(cuid())
+  id        String  @id @default(cuid())
   betslipId String
-  betslip   Betslip  @relation(fields: [betslipId], references: [id], onDelete: Cascade)
+  betslip   Betslip @relation(fields: [betslipId], references: [id], onDelete: Cascade)
   game      String
   homeTeam  String?
   awayTeam  String?
@@ -135,7 +135,7 @@ model SupportTicket {
   subject     String
   category    String    @default("other") // billing | access | payout | technical | other
   priority    String    @default("normal") // low | normal | high | urgent
-  status      String    @default("open")   // open | resolved | closed
+  status      String    @default("open") // open | resolved | closed
   // What the agent could see about the account when it escalated. This is the
   // whole point of escalation: whoever picks the ticket up shouldn't have to
   // re-interrogate the customer to find out what state they were in.
@@ -144,7 +144,7 @@ model SupportTicket {
   updatedAt   DateTime  @updatedAt
   resolvedAt  DateTime?
 
-  messages    SupportMessage[]
+  messages SupportMessage[]
 
   @@index([status, createdAt])
   @@index([userId])
@@ -154,7 +154,7 @@ model SupportMessage {
   id        String        @id @default(cuid())
   ticketId  String
   ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  role      String        // user | assistant | staff
+  role      String // user | assistant | staff
   content   String
   createdAt DateTime      @default(now())
 
@@ -172,9 +172,9 @@ model SupportMessage {
 // vendor that reads a linked sportsbook account) can populate the same table
 // later without a schema change; `externalId` is the dedupe key for that.
 model PlacedBet {
-  id              String    @id @default(cuid())
-  userId          String
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // The engine pick this came from, if any. Grading follows this pick's result.
   predictionId    String?
@@ -188,18 +188,35 @@ model PlacedBet {
   stake           Float
   potentialPayout Float
 
-  status          String    @default("pending") // pending | won | lost | push | void
-  actualPayout    Float?
-  profit          Float?
-  settledAt       DateTime?
+  status       String    @default("pending") // pending | won | lost | push | void
+  actualPayout Float?
+  profit       Float?
+  settledAt    DateTime?
 
-  source          String    @default("manual")  // manual | linked-account
-  externalId      String?
+  source     String  @default("manual") // manual | linked-account
+  externalId String?
 
-  placedAt        DateTime  @default(now())
-  createdAt       DateTime  @default(now())
+  placedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([userId, externalId])
   @@index([userId, status])
   @@index([predictionId])
+}
+
+// ─── Rate limiting ───────────────────────────────────────────────────────────
+
+// A fixed-window counter shared by every serverless instance.
+//
+// The in-memory limiter this replaces did not work in production: each Vercel
+// instance kept its own counter and started from zero on a cold start, so
+// seven requests against a limit of five all passed. Verified against the live
+// site. Anything protecting spend has to be durable and shared, and Postgres
+// is already here -- no extra service to provision or pay for.
+model RateLimit {
+  key     String   @id
+  count   Int      @default(1)
+  resetAt DateTime
+
+  @@index([resetAt])
 }

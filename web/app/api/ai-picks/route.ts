@@ -31,7 +31,7 @@ export async function POST(req: Request) {
 
   // Paid access is not unlimited access: each generation costs real tokens, so
   // one subscriber cannot script this into an unbounded bill.
-  const rl = check(`aipicks:${clientKey(req, session.user.id)}`, 15, 3600)
+  const rl = await check(`aipicks:${clientKey(req, session.user.id)}`, 15, 3600)
   if (!rl.ok) {
     return tooManyRequests(rl.retryAfter, "You have generated a lot of picks in the last hour. Please try again shortly.")
   }

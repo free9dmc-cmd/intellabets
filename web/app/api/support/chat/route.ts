@@ -28,7 +28,7 @@ export async function POST(req: Request) {
   // ones. Without this, a loop against this endpoint is a direct bill.
   const userId = session?.user?.id ?? null
   const limit = userId ? 20 : 5
-  const rl = check(`support:${clientKey(req, userId)}`, limit, 300)
+  const rl = await check(`support:${clientKey(req, userId)}`, limit, 300)
   if (!rl.ok) {
     return tooManyRequests(
       rl.retryAfter,
