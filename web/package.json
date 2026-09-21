@@ -22,7 +22,7 @@
     "@auth/prisma-adapter": "^2.7.2",
     "@prisma/client": "^5.22.0",
     "bcryptjs": "^2.4.3",
-    "next": "14.2.16",
+    "next": "15.5.24",
     "next-auth": "^4.24.10",
     "react": "^18",
     "react-dom": "^18",
