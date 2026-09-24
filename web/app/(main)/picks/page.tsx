@@ -185,8 +185,9 @@ export default async function PicksPage({
 
       <p className="text-gray-600 text-xs text-center leading-relaxed">
         IntellaBets does not accept wagers or place bets. You place your own bets at your own
-        sportsbook. Positive expected value does not mean an individual bet will win. 18+ only —
-        please gamble responsibly.
+        sportsbook. Positive expected value does not mean an individual bet will win — see{" "}
+        <Link href="/how-it-works" className="text-purple-400 hover:underline">how we compute it</Link>.
+        18+ only — please gamble responsibly.
       </p>
     </div>
   )

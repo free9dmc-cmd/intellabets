@@ -18,7 +18,7 @@ const FEATURES = [
   {
     icon: "🏆",
     title: "Elite Tipster Network",
-    desc: "Follow verified tipsters with proven track records. Real win rates, real ROI — no fake claims.",
+    desc: "Follow tipsters whose picks are tracked publicly from the moment they're posted — no fabricated records, no cherry-picking.",
   },
   {
     icon: "💸",
@@ -28,7 +28,7 @@ const FEATURES = [
   {
     icon: "📊",
     title: "Transparent Analytics",
-    desc: "Every bet tracked. Win rates, ROI, and performance history visible to all. Accountability built in.",
+    desc: "Every bet logged the moment it's placed, win or lose, visible to anyone. No editing the record after the fact.",
   },
 ]
 
@@ -74,6 +74,7 @@ export default async function LandingPage() {
             <span className="text-xs bg-purple-500/20 text-purple-400 border border-purple-500/30 px-2 py-0.5 rounded-full font-medium">BETA</span>
           </Link>
           <nav className="hidden md:flex items-center gap-6">
+            <Link href="/how-it-works" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">How It Works</Link>
             <Link href="/leaderboard" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Leaderboard</Link>
             <Link href="/ai-picks" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">AI Picks</Link>
             <Link href="/#pricing" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Pricing</Link>
@@ -428,6 +429,7 @@ export default async function LandingPage() {
           {/* Must be real links: card networks and payment underwriters require
               terms, privacy, refund policy and contact details to be reachable. */}
           <div className="flex flex-wrap gap-4 text-sm text-gray-500 justify-center">
+            <Link href="/how-it-works" className="hover:text-gray-300 transition-colors">How It Works</Link>
             <Link href="/terms" className="hover:text-gray-300 transition-colors">Terms</Link>
             <Link href="/privacy" className="hover:text-gray-300 transition-colors">Privacy</Link>
             <Link href="/contact" className="hover:text-gray-300 transition-colors">Refunds &amp; Support</Link>

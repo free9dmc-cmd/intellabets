@@ -42,6 +42,7 @@ export default withAuth(
           "/privacy",
           "/contact",
           "/profile",
+          "/how-it-works",
         ]
         if (publicRoutes.some((r) => pathname === r || pathname.startsWith(r + "/"))) {
           return true
