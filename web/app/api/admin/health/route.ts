@@ -29,7 +29,14 @@ interface Check {
 async function checkDatabase(): Promise<Check> {
   try {
     const users = await prisma.user.count()
-    return { name: "database", status: "ok", detail: `connected, ${users} users` }
+    // count() only touches the row count, not the column list, so it stays
+    // green even when schema.prisma has drifted from the live table (e.g. a
+    // column added to the schema but never applied with `prisma db push`).
+    // findFirst selects every scalar field and will throw if any of them
+    // don't exist in the database -- which is exactly the failure mode that
+    // silently broke login and registration on 2026-09-24.
+    await prisma.user.findFirst()
+    return { name: "database", status: "ok", detail: `connected, ${users} users, schema matches` }
   } catch (err) {
     return { name: "database", status: "failing", detail: message(err) }
   }

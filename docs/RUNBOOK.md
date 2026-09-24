@@ -108,6 +108,7 @@ curl -s --max-time 60 https://api.intellabets.com/api/v1/predictions/strategies
 | Vercel build stops with "services" | Root Directory isn't `web` |
 | `prisma db push` → `P1001` | Unquoted `&` in the URL (shell backgrounds it), or Neon compute asleep. Neon's SQL Editor sidesteps both |
 | Typecheck fails in `web/` after backend work | Shared `@prisma/client` was regenerated for the other schema. Re-run `npx prisma generate` in `web/` |
+| Login/register return 500, `prisma...findUnique()` error mentions "does not exist in the current database" | `schema.prisma` has a column the production Neon DB doesn't have — someone committed a schema change without running `prisma db push` against production. `GET /api/admin/health` now catches this (`database` check runs a real `findFirst`, not just `count`). Fix: `cd web && DATABASE_URL="<neon url>" npx prisma db push`, or run the equivalent `ALTER TABLE` in Neon's SQL Editor |
 
 ---
 
@@ -124,6 +125,14 @@ cd web && npx prisma generate && npx tsc --noEmit && npx next build
 After the deploy, **re-check the live endpoint the change was meant to affect.**
 A green build is not evidence that production behaviour changed.
 
+**If this push changes `schema.prisma`, run `prisma db push` against production
+in the same session.** `next build` and `tsc` both pass against the schema
+file, not the live database — they cannot tell you the migration was never
+run. This exact gap took `User.premiumStripeSubId` (committed 2026-09-10) out
+of sync with production and broke every login and registration for two weeks
+before it was caught on 2026-09-24. `GET /api/admin/health` now checks for
+this class of drift on every run — check it after any schema change.
+
 ### Schema migrations
 
 The project uses `prisma db push`, not migration files.
@@ -138,6 +147,20 @@ local setup and no connection string to get wrong.
 ---
 
 ## Known issues
+
+**Login and registration are broken in production right now (found 2026-09-24).**
+`prisma.user.findUnique()` / `.create()` fail because `User.premiumStripeSubId`
+(schema change committed 2026-09-10, `payoutsEnabled` likely too) was never
+applied to the production Neon database. Confirmed live: `POST /api/register`
+with valid, unique input returns 500 `{"error":"Failed to create account"}`,
+and `POST /api/auth/callback/credentials` with any credentials returns a
+NextAuth error URL containing `The column User.premiumStripeSubId does not
+exist in the current database`. **This has blocked every new signup and every
+fresh login since the schema change shipped — independent of, and upstream
+of, the payment processor gap.** Fix: run `prisma db push` against production
+(see Deploying, above) and re-verify both endpoints. Needs the production
+`DATABASE_URL`, which this run did not have access to — see LAUNCH-PLAN.md
+"Open questions for the owner".
 
 **Stripe is dead.** The account was terminated — almost certainly over
 fabricated statistics published on the site, since removed. The
