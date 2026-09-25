@@ -192,7 +192,25 @@ function calcParlayOdds(oddsArr: number[]): number {
   return decimal >= 2 ? Math.round((decimal - 1) * 100) : Math.round(-100 / (decimal - 1))
 }
 
+function assertLocalDatabase() {
+  let host = ""
+  let hostParam: string | null = null
+  try {
+    const url = new URL(process.env.DATABASE_URL ?? "")
+    host = url.hostname
+    // Prisma connects to ?host= over the URL host; only a unix socket path is local.
+    hostParam = url.searchParams.get("host")
+  } catch {}
+  const local = ["localhost", "127.0.0.1", "[::1]"].includes(host) && (!hostParam || hostParam.startsWith("/"))
+  if (!local) {
+    throw new Error(
+      `Refusing to seed "${hostParam || host || "unknown host"}": this script deletes every user and inserts fabricated tipsters. Local databases only.`
+    )
+  }
+}
+
 async function main() {
+  assertLocalDatabase()
   console.log("🌱 Seeding database...")
 
   // Clean up existing data
@@ -430,5 +448,8 @@ async function main() {
 }
 
 main()
-  .catch(console.error)
+  .catch((err) => {
+    console.error(err)
+    process.exitCode = 1
+  })
   .finally(() => prisma.$disconnect())

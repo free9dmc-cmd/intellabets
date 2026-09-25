@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "crypto"
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { calcTipsterPayout } from "@/lib/stripe"
@@ -12,6 +13,16 @@ const PRODUCT_TYPE: Record<string, "premium" | "ai"> = {
   "com.intellabets.ai": "ai",
 }
 
+// RevenueCat sends the dashboard's "Authorization header value" verbatim, with
+// no Bearer prefix of its own, so accept the secret with or without one.
+function isAuthorized(header: string, secret: string): boolean {
+  const got = Buffer.from(header)
+  return [secret, `Bearer ${secret}`].some((expected) => {
+    const want = Buffer.from(expected)
+    return got.length === want.length && timingSafeEqual(got, want)
+  })
+}
+
 function oneMonthFromNow() {
   const d = new Date()
   d.setMonth(d.getMonth() + 1)
@@ -19,9 +30,13 @@ function oneMonthFromNow() {
 }
 
 export async function POST(req: Request) {
-  const secret = process.env.REVENUECAT_WEBHOOK_SECRET ?? ""
-  const auth = req.headers.get("authorization") ?? ""
-  if (secret && auth !== `Bearer ${secret}`) {
+  // Fail closed: with no secret configured, anyone could POST a purchase event
+  // and grant any user premium, AI access or tipster earnings for free.
+  const secret = (process.env.REVENUECAT_WEBHOOK_SECRET ?? "").trim()
+  if (!secret) {
+    return NextResponse.json({ error: "Webhook not configured" }, { status: 503 })
+  }
+  if (!isAuthorized(req.headers.get("authorization") ?? "", secret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 

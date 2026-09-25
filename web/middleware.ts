@@ -43,6 +43,8 @@ export default withAuth(
           "/contact",
           "/profile",
           "/how-it-works",
+          "/sitemap.xml",
+          "/robots.txt",
         ]
         if (publicRoutes.some((r) => pathname === r || pathname.startsWith(r + "/"))) {
           return true
