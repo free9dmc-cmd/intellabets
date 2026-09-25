@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { isDemoBillingEnabled } from "@/lib/billing-guard"
+import { billingUnavailableResponse, isBillingAuthError } from "@/lib/billing/degradation"
 import {
   isStripeConfigured,
   createPremiumCheckout,
@@ -73,6 +74,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid type" }, { status: 400 })
   } catch (err: unknown) {
     console.error("Checkout error:", err)
+    // A revoked/invalid Stripe key throws an auth error mid-call. Surface it as
+    // a clean 503, not an opaque 500, so it reads as a transient outage.
+    if (isBillingAuthError(err)) return billingUnavailableResponse()
     return NextResponse.json({ error: "Checkout creation failed" }, { status: 500 })
   }
 }
