@@ -64,11 +64,11 @@ All products will start as **"Ready to Submit"** — that's correct. They go liv
 5. In RevenueCat → **Products** → **Import from App Store** — imports all 12 products
 6. Copy the **iOS SDK Key** (`appl_xxxxxxx`) from **Project Settings → API Keys**
 7. **Integrations → Webhooks** → Add:
-   - URL: `https://intellabets.vercel.app/api/webhooks/revenuecat`
-   - Copy the shared secret
+   - URL: `https://intellabets.com/api/webhooks/revenuecat`
+   - **Authorization header value**: generate a long random string yourself (e.g. `openssl rand -hex 32`) and paste it here. RevenueCat sends it verbatim; it does not give you one.
 8. Add these to your Vercel env vars:
    - `NEXT_PUBLIC_REVENUECAT_IOS_KEY=appl_xxxxx`
-   - `REVENUECAT_WEBHOOK_SECRET=<secret>`
+   - `REVENUECAT_WEBHOOK_SECRET=<the same random string>` — the webhook rejects every event (503) until this is set
 9. Redeploy Vercel so the env vars take effect.
 
 ---

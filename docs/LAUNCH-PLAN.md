@@ -61,10 +61,42 @@ This run could not fix it directly: the fix needs the production
 "Open questions for the owner" below — this is now #1 there, not the Stripe
 termination code.
 
-Fix, once someone with Vercel/Neon access is available:
-1. Open the Neon dashboard → the project backing `DATABASE_URL` → SQL Editor, and run whatever `prisma db push` would generate for the current schema (safest: pull the real `DATABASE_URL` from Vercel and run `cd web && npx prisma db push` locally — it reconciles all drift in one shot, including the `RateLimit` table below).
-2. Re-verify: `curl -s -X POST https://intellabets.com/api/register -d '{"name":"t","email":"t@example.com","username":"testuser1","password":"testpass123"}' -H 'Content-Type: application/json'` should return 201, not 500.
-3. Then re-check `GET /api/admin/health` (now checks for this exact class of drift — see `web/app/api/admin/health/route.ts`).
+Confirmed 2026-09-25 by reproducing locally: of seven historical schema
+states, only the 7308b97-era web schema gives production's exact error. Also
+missing: `User.payoutsEnabled`, `User.preferredBook`, and the `SupportTicket`,
+`SupportMessage`, `PlacedBet` and `RateLimit` tables (inferred from linear
+history; `docs/sql/verify.sql` settles it). The deployed build already knows
+these objects, so **no redeploy is needed for the DB fix**.
+
+Fix, in this order (owner; needs the Vercel and Neon dashboards, no code):
+1. **First, close the RevenueCat hole.** The deployed webhook skips auth when
+   `REVENUECAT_WEBHOOK_SECRET` is unset, and fixing the database is what makes
+   that exploitable (anyone could register, then grant themselves premium or
+   credit tipster earnings). Vercel → project → Settings → Environment
+   Variables → add `REVENUECAT_WEBHOOK_SECRET` (Production) = a long random
+   string → Deployments → Redeploy the current production deployment. The
+   unpushed code change makes the webhook fail closed, which removes this step
+   once it ships.
+2. Neon console → SQL Editor → select the branch and database behind Vercel's
+   `DATABASE_URL` → paste `docs/sql/verify.sql` → Run (read-only; shows what's
+   missing, plus a CONTEXT row with the user count so you can tell it's the
+   real data).
+3. Paste `docs/sql/schema-sync.sql` (the whole file) → Run. It is one
+   statement, applies fully or not at all, refuses the wrong database, and is
+   safe to re-run. A lock-timeout error means "nothing changed, run it again".
+4. Run `docs/sql/verify.sql` again → the first row must read `SUMMARY … OK`.
+5. Log in on intellabets.com. **Do not run `prisma/seed.ts`** — it deletes
+   every user (it now refuses non-local databases, but the deployed copy of
+   the docs said to run it).
+6. Audit for free grants made through the old open webhook (DEPLOY.md
+   "audit for free grants"), especially `AISubscription` / `Subscription`
+   rows with `stripeSubId IS NULL` and any pending `Payout` rows.
+
+Tested on local Postgres 16 across all seven schema states, the wrong
+(engine) database, stray lowercase objects, editor statement-splitting, lock
+contention, and three consecutive runs; after the fix, `prisma migrate diff`
+and a real `prisma db push` both report no changes, and the real app (HEAD
+build) registers, logs in, and returns 503 from checkout with no processor.
 
 ### 2. Payment processor
 Stripe terminated the account. Recommended: **2Accept** (https://2accept.com) —
@@ -161,10 +193,11 @@ policy in the terms matches what the processor will actually do.
 
 ## Open questions for the owner
 
-1. **Vercel/Neon access to fix P0.1** — someone needs to pull the production `DATABASE_URL` from Vercel (Project → intellabets → Settings → Environment Variables) and run `prisma db push` against it, or run the equivalent DDL in Neon's SQL Editor. This run had no credentials to do it and login/registration stay broken until it happens.
-2. Stripe's termination reason code — needed for the 2Accept application
-3. Business entity and bank account — are formation docs ready to submit?
-4. Launch target date, to work backwards from
+1. **Run the P0.1 fix** (steps above: set `REVENUECAT_WEBHOOK_SECRET` + redeploy, then `docs/sql/schema-sync.sql` in the Neon SQL Editor). The automated runs have no database credentials and no GitHub push access, so login and registration stay broken until the owner does this.
+2. **Push access for the automated runs** — the session's git proxy denies pushes to this repo ("not in this session's authorized repository set"). Add the repo to the routine's sources with write access, or apply the patch files each run hands over. Do not give the runs production database credentials.
+3. Stripe's termination reason code — needed for the 2Accept application
+4. Business entity and bank account — are formation docs ready to submit?
+5. Launch target date, to work backwards from
 
 ---
 

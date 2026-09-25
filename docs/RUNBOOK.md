@@ -157,10 +157,21 @@ and `POST /api/auth/callback/credentials` with any credentials returns a
 NextAuth error URL containing `The column User.premiumStripeSubId does not
 exist in the current database`. **This has blocked every new signup and every
 fresh login since the schema change shipped — independent of, and upstream
-of, the payment processor gap.** Fix: run `prisma db push` against production
-(see Deploying, above) and re-verify both endpoints. Needs the production
-`DATABASE_URL`, which this run did not have access to — see LAUNCH-PLAN.md
-"Open questions for the owner".
+of, the payment processor gap.** Fix: `docs/sql/schema-sync.sql` in the Neon
+SQL Editor, then `docs/sql/verify.sql` — but set `REVENUECAT_WEBHOOK_SECRET`
+and redeploy first (see LAUNCH-PLAN.md P0.1 for the order and why).
+
+**The deployed RevenueCat webhook has no auth when `REVENUECAT_WEBHOOK_SECRET`
+is unset** (found 2026-09-25). Anyone can POST a purchase event and grant any
+user premium or AI access, or credit tipster earnings; user ids are public via
+`/api/leaderboard` and profiles. Fixed in code (fails closed with 503 when the
+secret is unset) but not yet deployed — until then, keep the variable set.
+
+**Support chat is failing for a non-schema reason.** One anonymous test message
+got the catch-branch reply ("Something went wrong on our side..."), which wraps
+only the Anthropic call. Likely an invalid, revoked or out-of-credit
+`ANTHROPIC_API_KEY` (or a bad `SUPPORT_MODEL`); only Vercel function logs or
+`/api/admin/health` can tell which, and the latter needs an admin login.
 
 **Stripe is dead.** The account was terminated — almost certainly over
 fabricated statistics published on the site, since removed. The

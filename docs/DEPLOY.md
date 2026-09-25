@@ -130,7 +130,7 @@ Then build with EAS (`npm run build:ios`) as covered in `docs/xcode-checklist.md
       `User.isPremium=true` with no Stripe record, and `AISubscription`/
       `Subscription` rows where `stripeSubId IS NULL`; review any `Payout`
       rows those accounts generated before paying out
-- [ ] Confirm RevenueCat webhook URL points at `https://api.intellabets.com/api/v1/webhooks/revenuecat` (when IAP goes live)
+- [ ] Confirm RevenueCat webhook URL points at `https://intellabets.com/api/webhooks/revenuecat` — the web app, not the engine, which has no webhook route (when IAP goes live)
 
 ## Environment variables reference (production)
 

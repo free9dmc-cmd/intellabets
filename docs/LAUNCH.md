@@ -68,7 +68,7 @@ These were all real and would have cost money or customers:
 
 ### 2. Database
 - [ ] **Rotate your Neon password** — the old connection string was pasted into a chat
-- [ ] From `web/`: `npx prisma db push` then `npx tsx prisma/seed.ts`
+- [ ] Bring the schema up to date: paste `docs/sql/schema-sync.sql` into the Neon SQL Editor (or, from `web/`, `npx prisma db push` using the **direct**, non-pooled connection string). **Never run `prisma/seed.ts` against production** — it deletes every user and inserts fabricated tipsters; it now refuses any non-local database.
 
 ### 3. Deploy the web app
 - [ ] [vercel.com/new](https://vercel.com/new) → import the repo
