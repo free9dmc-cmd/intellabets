@@ -40,6 +40,7 @@ export default withAuth(
           "/premium",
           "/terms",
           "/privacy",
+          "/refund",
           "/contact",
           "/profile",
         ]
