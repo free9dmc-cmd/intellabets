@@ -90,16 +90,44 @@ Return ONLY a valid JSON object with this exact structure:
 
   const message = await anthropic.messages.create({
     model: process.env.AI_MODEL ?? "claude-opus-5",
-    max_tokens: 1500,
+    // Must cover the thinking blocks AND the JSON. The old value of 1500 was
+    // sized for the JSON alone; with thinking on, the answer gets truncated
+    // mid-object and JSON.parse throws on a response that is otherwise fine.
+    max_tokens: 8000,
+    thinking: { type: "adaptive" },
+    // This is structured extraction against odds we supply, not open-ended
+    // analysis. Low effort is both sufficient and materially cheaper per call.
+    output_config: { effort: "low" },
     system:
       "You are an expert sports betting analyst. Always respond with valid JSON only, no markdown, no explanation. Generate realistic, data-driven betting recommendations.",
     messages: [{ role: "user", content: prompt }],
   })
 
-  const content = message.content[0]
-  if (content.type !== "text") throw new Error("Unexpected AI response type")
+  // Find the text block rather than assuming it is first.
+  //
+  // This threw "Unexpected AI response type" on every call. content[0] is a
+  // thinking block on models that think by default (Claude Opus 5 does), so
+  // indexing position 0 and demanding type "text" always failed. It went
+  // unnoticed because the API key was returning 401 -- the moment the key was
+  // fixed, this became the next error in line.
+  const textBlock = message.content.find(
+    (b): b is Extract<typeof b, { type: "text" }> => b.type === "text"
+  )
+  if (!textBlock) {
+    throw new Error(
+      `No text block in AI response (stop_reason: ${message.stop_reason}, blocks: ${message.content
+        .map((b) => b.type)
+        .join(", ")})`
+    )
+  }
 
-  const text = content.text.trim().replace(/^```json\n?/, "").replace(/\n?```$/, "")
+  // A truncated response parses as invalid JSON with a confusing message; say
+  // what actually happened instead.
+  if (message.stop_reason === "max_tokens") {
+    throw new Error("AI response hit the token limit before completing the betslip JSON")
+  }
+
+  const text = textBlock.text.trim().replace(/^```json\n?/, "").replace(/\n?```$/, "")
 
   const betslip = JSON.parse(text) as AIBetslip
   return betslip
