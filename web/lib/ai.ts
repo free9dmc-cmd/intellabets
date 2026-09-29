@@ -1,7 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk"
+import { anthropicKey } from "./anthropic-key"
 
 const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
+  apiKey: anthropicKey() ?? undefined,
 })
 
 export interface AIBet {

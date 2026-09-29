@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk"
+import { anthropicKey, isAnthropicKeyWellFormed } from "./anthropic-key"
 import { prisma } from "@/lib/prisma"
 import { hasAIAccess, isPremiumActive, aiAccessSource } from "@/lib/entitlements"
 
@@ -152,7 +153,7 @@ export interface SupportReply {
 }
 
 export function isSupportConfigured(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY)
+  return isAnthropicKeyWellFormed(anthropicKey())
 }
 
 export async function runSupportAgent(
@@ -167,7 +168,9 @@ export async function runSupportAgent(
     }
   }
 
-  const client = new Anthropic()
+  // Pass the key explicitly: the zero-arg constructor reads the raw env var,
+  // which is the untrimmed value that was producing 401s.
+  const client = new Anthropic({ apiKey: anthropicKey() ?? undefined })
 
   // Account state goes in the MESSAGES, not the system prompt, so the cached
   // system prefix stays byte-identical across every customer.

@@ -3,6 +3,7 @@ import Anthropic from "@anthropic-ai/sdk"
 import { requireAdminApi } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
 import { isEngineConfigured, listStrategies } from "@/lib/engine"
+import { anthropicKey, anthropicKeyProblem } from "@/lib/anthropic-key"
 
 export const dynamic = "force-dynamic"
 
@@ -58,14 +59,12 @@ async function checkRateLimitTable(): Promise<Check> {
 }
 
 async function checkAnthropic(): Promise<Check> {
-  const key = process.env.ANTHROPIC_API_KEY
-  if (!key) {
-    return {
-      name: "anthropic",
-      status: "misconfigured",
-      detail: "ANTHROPIC_API_KEY not set - AI picks and support chat are both offline",
-    }
+  // Shape problems first: they are the common cause and need no network call.
+  const problem = anthropicKeyProblem()
+  if (problem) {
+    return { name: "anthropic", status: "misconfigured", detail: problem }
   }
+  const key = anthropicKey() as string
   try {
     // Smallest possible real call: proves the key is valid and the account has
     // credit, which merely reading the variable does not.
