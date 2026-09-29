@@ -38,8 +38,22 @@ services:
         value: production
       - key: ADMIN_EMAILS
         value: free9dmc@icloud.com
+      # Sports the engine ingests odds for. Each one costs API requests on
+      # every poll cycle, so this list is the main lever on Odds API quota.
+      #
+      # MLB alone was leaving the picks pages empty: the regular season ends
+      # in late September, so for most of the year there are no games, no
+      # odds, and therefore nothing for the engine to find an edge in. NFL and
+      # college football run Sep-Jan, NBA and NHL Oct-Jun, so together these
+      # cover the calendar with no dead months.
+      #
+      # Quota: roughly (sports x 24h x 60 / POLL_INTERVAL_MIN) odds requests
+      # per day, plus scores and props. At 5 sports and a 30-minute interval
+      # that is ~240/day before props. Check this against your plan before
+      # adding more; "all" ingests every supported sport and will burn a small
+      # plan quickly.
       - key: ACTIVE_SPORTS
-        value: baseball_mlb
+        value: americanfootball_nfl,americanfootball_ncaaf,basketball_nba,icehockey_nhl,baseball_mlb
       - key: POLL_INTERVAL_MIN
         value: "30"
       - key: SETTLE_INTERVAL_MIN

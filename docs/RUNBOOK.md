@@ -100,6 +100,7 @@ curl -s --max-time 60 https://api.intellabets.com/api/v1/predictions/strategies
 | Symptom | Almost always |
 |---|---|
 | Picks pages empty, no error | `ENGINE_SERVICE_KEY` differs between Vercel and Render |
+| Picks pages empty, engine healthy | Check `ACTIVE_SPORTS` on Render. A sport out of season has no games, so no odds and no picks. MLB alone goes dead from October to March |
 | Engine times out on first request | Render free tier cold start. Retry for 60s before escalating |
 | Support chat: "something went wrong" | `ANTHROPIC_API_KEY` invalid, revoked, or out of credit. Check `/api/admin/health` |
 | Rate limits never fire (all 200s) | `RateLimit` table missing from Neon — the limiter fails open by design |
