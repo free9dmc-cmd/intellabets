@@ -143,7 +143,10 @@ export default function SupportChat() {
             </div>
             <p className="text-gray-600 text-xs mt-2 leading-relaxed">
               An AI assistant. It can read your account but cannot change billing — anything it
-              can&apos;t fix gets escalated to a person.
+              can&apos;t fix gets escalated to a person.{" "}
+              <a href="/privacy#ai-features" className="text-gray-400 underline underline-offset-2 hover:text-gray-300">
+                What it can see
+              </a>
             </p>
           </div>
         </div>
