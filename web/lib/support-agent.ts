@@ -2,6 +2,19 @@ import Anthropic from "@anthropic-ai/sdk"
 import { anthropicKey, isAnthropicKeyWellFormed } from "./anthropic-key"
 import { prisma } from "@/lib/prisma"
 import { hasAIAccess, isPremiumActive, aiAccessSource } from "@/lib/entitlements"
+import {
+  AI_PRICE,
+  PLATFORM_FEE,
+  PREMIUM_PRICE,
+  TIPSTER_SUB_MAX_PRICE,
+  TIPSTER_SUB_MIN_PRICE,
+  formatCurrency,
+} from "@/lib/utils"
+
+// Prices come from the same constants as checkout and the Terms, so the bot
+// can never quote a stale price. Evaluated once at module load, so the prompt
+// stays byte-identical across requests and prompt caching still hits.
+const TIPSTER_SHARE = Math.round((1 - PLATFORM_FEE) * 100)
 
 /**
  * AI support agent.
@@ -29,7 +42,7 @@ const SYSTEM_PROMPT = `You are the support agent for IntellaBets, a sports analy
 
 WHAT INTELLABETS IS
 - It sells sports betting ANALYSIS by subscription. It is NOT a sportsbook: it never accepts wagers, holds betting funds, or places bets. Users place their own bets at their own sportsbook.
-- Products: Premium Tipster ($19.99/mo — publish picks, sell subscriptions, keep 80%, and AI Picks is INCLUDED), AI Picks ($9.99/mo standalone), and individual tipster subscriptions ($4.99–$49.99/mo).
+- Products: Premium Tipster (${formatCurrency(PREMIUM_PRICE)}/mo — publish picks, sell subscriptions, keep ${TIPSTER_SHARE}%, and AI Picks is INCLUDED), AI Picks (${formatCurrency(AI_PRICE)}/mo standalone), and individual tipster subscriptions (${formatCurrency(TIPSTER_SUB_MIN_PRICE)}–${formatCurrency(TIPSTER_SUB_MAX_PRICE)}/mo).
 - The prediction engine finds positive-expected-value bets by comparing odds across sportsbooks, removing the bookmaker margin, and surfacing where the best available price beats the market consensus.
 
 WHAT YOU CAN AND CANNOT DO
@@ -42,8 +55,8 @@ COMMON ISSUES AND THE REAL ANSWERS
 - "AI Picks says I need a subscription but I'm Premium": Premium INCLUDES AI Picks. If their state shows active premium and they still can't access it, that's a real bug — escalate as access/high.
 - "There are no picks today": this is normal and not a fault. The engine only surfaces bets where the best available price genuinely beats the market consensus, and real edges are rare. Some days have none. Never imply picks are guaranteed daily.
 - "I cancelled but was charged again": escalate as billing/urgent. Cancellation should stop future billing at the end of the paid period.
-- "How do I cancel": account settings. Cancelling stops future billing and they keep access until the end of the period already paid for.
-- "Where's my payout": tipsters must complete payout onboarding (identity and bank details) before money can be sent, and there's a minimum balance. If onboarding is complete and a balance is owed but stuck, escalate as payout/high.
+- "How do I cancel": a tipster subscription is cancelled with the Unsubscribe button on that tipster's profile. Premium and AI Picks have no self-serve cancel button yet: escalate as billing/normal so a person cancels it, and tell them you have. Purchases made through the iOS or Android app are cancelled in their Apple or Google account. Cancelling stops future billing, and the policy is that they keep access until the end of the period already paid for.
+- "Where's my payout": payouts are not available yet. Earnings are recorded on the payouts page and will be paid once our payout provider is set up. If they have already submitted a payout request, escalate as payout/normal so a person can follow up.
 - "Is this pick guaranteed": absolutely not. Positive expected value means profitable over a large sample, not that any single bet wins. Never reassure a customer that a bet will win.
 
 TONE AND LIMITS
