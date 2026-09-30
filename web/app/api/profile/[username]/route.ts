@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { TIPSTER_SUB_MAX_PRICE, TIPSTER_SUB_MIN_PRICE } from "@/lib/utils"
 
 export async function GET(req: Request, { params }: { params: { username: string } }) {
   const session = await getServerSession(authOptions)
@@ -78,7 +79,10 @@ export async function PATCH(req: Request, { params }: { params: { username: stri
       ...(bio !== undefined && { bio }),
       ...(specialties !== undefined && { specialties }),
       ...(subscriptionPrice !== undefined && {
-        subscriptionPrice: Math.max(4.99, Math.min(49.99, subscriptionPrice)),
+        subscriptionPrice: Math.max(
+          TIPSTER_SUB_MIN_PRICE,
+          Math.min(TIPSTER_SUB_MAX_PRICE, subscriptionPrice)
+        ),
       }),
     },
     select: {
