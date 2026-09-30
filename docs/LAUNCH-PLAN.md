@@ -27,6 +27,8 @@ cannot even let anyone sign up.
 | Checkout fails safely when unauthenticated | ✅ `POST /api/checkout` → 401 (code inspection: falls through to a clean 503 once authenticated, if `STRIPE_SECRET_KEY` is absent/malformed — **not re-verified live**, since no account could be created to test it authenticated) |
 | Private betslips protected | ✅ signed-out requests leak nothing |
 | Legal + pricing pages public | ✅ required for store review and underwriting |
+| Legal docs unified | ✅ in code (branch `legal/unify-privacy-terms`): Terms, Privacy and Support & Refunds are data in `web/lib/legal/`, one version each, operator **Black Rose Studios, Inc. d/b/a IntellaBets**, Arizona law. ⏳ `legal.intellabets.com` still serves the old cPanel copies until the DNS cutover below |
+| **support@intellabets.com** | ❌ **cannot receive mail — `intellabets.com` has no MX record.** Every legal page, the contact page and the support bot point customers there |
 | Security headers, CORS allowlist | ✅ verified live |
 | **Payment processing** | ❌ **no processor** |
 | Support chat | ❌ Anthropic key invalid (unverified today — could not reach `/api/admin/health`, itself blocked by the same DB drift) |
@@ -122,6 +124,7 @@ code has for "no processor". Delete it until a real processor is live.
 
 ### 4. Build the processor integration
 Once approved, the webhook handler needs, *before* taking a single payment:
+- **Cancellation that matches the Terms** (`web/lib/legal/billing.ts`). The Terms promise that cancelling stops future charges and access continues to the end of the paid period. Today: Premium and AI Picks have no self-serve cancel (add it to Settings, calling `/api/premium/cancel`); tipster Unsubscribe and RevenueCat `CANCELLATION` end access immediately (keep access until `expiresAt`). Auto-renewal laws require an online cancel path for online sign-ups.
 - **Idempotency** — a processed-events table. Retried webhooks must not double-grant or double-pay.
 - **Refunds and disputes** — revoke access on refund; handle chargebacks.
 - **Renewals** — already handled for Stripe's shape; re-verify against the new processor's events.
@@ -136,13 +139,16 @@ Once approved, the webhook handler needs, *before* taking a single payment:
 | Fix `ANTHROPIC_API_KEY` | Support chat is the customer's only live help channel |
 | Create the `RateLimit` table | Limits fail open until it exists; `/api/support/chat` spends tokens per call |
 | Let CLV accumulate | Settlement bug fixed; old rows still wrong. No performance claims until a clean sample exists |
-| Terms: refund policy | Underwriters read it. Must match what the processor actually does |
+| Terms: refund policy | Unified in `web/lib/legal/billing.ts` (shared by /terms and /contact). Re-check it against what the chosen processor actually does |
+| **AI Picks invents games** | `lib/ai.ts` asks the model for "realistic upcoming matchups" with no schedule or odds input. The Terms now disclose this, but selling it is a deception risk and an underwriting red flag. Feed it engine data, or stop charging for it |
+| Legal accuracy follow-ups | Account deletion must also scrub `SupportTicket.diagnostics` (it keeps email/username after the user row is deleted); schedule `pruneExpired` for the `RateLimit` table (it stores IPs); `lib/stripe.ts` hardcodes 1999/999 cents and settings hardcodes 4.99/49.99 — read the `lib/utils` constants |
 | Error monitoring | Currently blind to runtime errors in production |
 
 ---
 
 ## P2 — growth
 
+- **Before any app-store submission:** in-app account deletion (Apple 5.1.1(v), Google Play) — the policies currently say deletion is by email; update `docs/xcode-checklist.md` App Privacy labels to match `web/lib/legal/privacy.ts` (Name, Customer Support, Other User Content) and set the Privacy Policy URL to `https://intellabets.com/privacy`.
 - Mobile apps (Expo shell → real screens → store submission)
 - SharpSports integration for automatic bet tracking
 - Tipster payouts (Stripe Connect was built, then obsoleted — needs rebuilding on the new processor)
@@ -196,8 +202,11 @@ policy in the terms matches what the processor will actually do.
 1. **Run the P0.1 fix** (steps above: set `REVENUECAT_WEBHOOK_SECRET` + redeploy, then `docs/sql/schema-sync.sql` in the Neon SQL Editor). The automated runs have no database credentials and no GitHub push access, so login and registration stay broken until the owner does this.
 2. **Push access for the automated runs** — the session's git proxy denies pushes to this repo ("not in this session's authorized repository set"). Add the repo to the routine's sources with write access, or apply the patch files each run hands over. Do not give the runs production database credentials.
 3. Stripe's termination reason code — needed for the 2Accept application
-4. Business entity and bank account — are formation docs ready to submit?
+4. Business entity and bank account — are formation docs ready to submit? The legal docs now name **Black Rose Studios, Inc., doing business as IntellaBets** as the contracting party; the merchant application must use the same entity.
 5. Launch target date, to work backwards from
+6. **Fix support email:** Cloudflare → intellabets.com → Email → Email Routing → enable → route `support@intellabets.com` to a real inbox. Adds the MX and SPF records automatically.
+7. **Move legal.intellabets.com to Vercel** (after the legal PR is merged): add it in Vercel → project → Domains as a normal domain (NOT "redirect to another domain"), then Cloudflare DNS: replace the `legal` A record with `CNAME legal → cname.vercel-dns.com`, **DNS only (grey cloud)**. Verify: `curl -sI https://legal.intellabets.com/terms.html` → 308 to `https://intellabets.com/terms`. Then remove the cPanel addon domain.
+8. **Notify existing users** of the new Terms and Privacy Policy (governing law changed from Delaware + arbitration to Arizona courts; new AI-assistant disclosure). Both old versions promised notice of material changes.
 
 ---
 
@@ -208,3 +217,4 @@ policy in the terms matches what the processor will actually do.
 - Both end with **THINGS I NEED YOU TO DO** — numbered, specific, linked.
 - A fix is not done until the live endpoint proves it. A green build is not evidence.
 - Update this file when status changes. It is the only memory between runs.
+- **Legal docs are code.** Any change that adds a service touching personal data (email, analytics, error monitoring, SharpSports, a payment processor, crypto payments) or changes billing behaviour must update `web/lib/legal/` in the same PR and bump that document's `lastUpdated`. `next build` fails if a legal document is malformed.
