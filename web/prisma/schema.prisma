@@ -41,11 +41,12 @@ model User {
   updatedAt          DateTime  @updatedAt
 
   betslips                  Betslip[]
-  subscriptionsAsSubscriber Subscription[]  @relation("Subscriber")
-  subscriptionsAsTipster    Subscription[]  @relation("Tipster")
+  subscriptionsAsSubscriber Subscription[]       @relation("Subscriber")
+  subscriptionsAsTipster    Subscription[]       @relation("Tipster")
   payouts                   Payout[]
   supportTickets            SupportTicket[]
   placedBets                PlacedBet[]
+  passwordResetTokens       PasswordResetToken[]
   aiSubscription            AISubscription?
 }
 
@@ -219,4 +220,28 @@ model RateLimit {
   resetAt DateTime
 
   @@index([resetAt])
+}
+
+// ─── Password reset ──────────────────────────────────────────────────────────
+
+// A single-use, short-lived password reset grant.
+//
+// Only the SHA-256 of the token is stored. The token itself exists in exactly
+// two places: the email we send, and the link in the user's hands. A database
+// dump therefore does not let anyone reset an account -- which matters more
+// here than usual, since the whole point of this row is to bypass the password.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  // Set the moment the token is spent. Presence of this means "already used",
+  // which is checked separately from expiry so a replayed link can be told
+  // apart from a stale one.
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
 }
