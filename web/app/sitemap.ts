@@ -1,4 +1,7 @@
 import type { MetadataRoute } from "next"
+import { privacyPolicy } from "@/lib/legal/privacy"
+import { supportAndRefunds } from "@/lib/legal/support"
+import { termsOfService } from "@/lib/legal/terms"
 
 const BASE_URL = "https://intellabets.com"
 
@@ -13,8 +16,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE_URL}/leaderboard`, lastModified: now, changeFrequency: "daily", priority: 0.7 },
     { url: `${BASE_URL}/register`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
     { url: `${BASE_URL}/login`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
-    { url: `${BASE_URL}/contact`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
-    { url: `${BASE_URL}/terms`, lastModified: now, changeFrequency: "yearly", priority: 0.2 },
-    { url: `${BASE_URL}/privacy`, lastModified: now, changeFrequency: "yearly", priority: 0.2 },
+    // Legal pages report when their wording last changed, not the build time.
+    ...[supportAndRefunds, termsOfService, privacyPolicy].map((doc) => ({
+      url: `${BASE_URL}${doc.path}`,
+      lastModified: new Date(`${doc.lastUpdated}T00:00:00Z`),
+      changeFrequency: "yearly" as const,
+      priority: doc.path === "/contact" ? 0.3 : 0.2,
+    })),
   ]
 }

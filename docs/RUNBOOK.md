@@ -18,6 +18,8 @@ change this file in the same commit.
 | Queue | Render Redis `intellabets-redis` | BullMQ jobs |
 | Odds data | The Odds API | Multi-book odds, scores, player props |
 | DNS | Cloudflare | `intellabets.com` → Vercel, `api.intellabets.com` → Render |
+| Legal pages | `web/lib/legal/` | Terms, Privacy, Support & Refunds as data, rendered by `components/legal/`. `legal.intellabets.com` redirects to them via `web/next.config.js` once its DNS points at Vercel (CNAME, DNS-only) |
+| Support email | Cloudflare Email Routing (to set up) | `support@intellabets.com` — no MX record exists yet, so mail to it bounces |
 
 Both deploy automatically from `main`.
 
@@ -80,6 +82,13 @@ for p in / /login /register /premium /terms /privacy /contact /leaderboard; do
 # Gated pages — must be 307
 for p in /picks /dashboard /my-bets /betslips; do
   printf "%-14s %s\n" "$p" "$(curl -s -o /dev/null -w '%{http_code}' "$B$p")"; done
+
+# Old legal subdomain — both must be 308 to https://intellabets.com/{terms,privacy}
+curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" https://legal.intellabets.com/terms.html
+curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" https://legal.intellabets.com/privacy-policy.html
+
+# Support email must have an MX record (empty output = customers' mail bounces)
+dig +short MX intellabets.com
 
 # Revenue bypass — both MUST be 404
 curl -s -o /dev/null -w "%{http_code}\n" -X POST "$B/api/premium"

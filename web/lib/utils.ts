@@ -132,3 +132,7 @@ export const SPORTS = ["NFL", "NBA", "MLB", "NHL", "Soccer", "UFC", "Tennis", "G
 export const PLATFORM_FEE = 0.20 // 20%
 export const PREMIUM_PRICE = 19.99
 export const AI_PRICE = 9.99
+// Bounds a tipster may set for their own subscription price. Enforced by the
+// profile API and quoted in the Terms — both read these, so they cannot differ.
+export const TIPSTER_SUB_MIN_PRICE = 4.99
+export const TIPSTER_SUB_MAX_PRICE = 49.99

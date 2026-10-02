@@ -134,7 +134,17 @@ export default function RegisterPage() {
       </form>
 
       <p className="text-center text-gray-500 text-xs mt-4 leading-relaxed">
-        By signing up, you agree to our Terms of Service. You must be 18+ to use IntellaBets.
+        {/* Linking both documents at the point of sign-up is what makes the
+            Terms enforceable: the user can see what they are agreeing to. */}
+        By signing up, you agree to our{" "}
+        <Link href="/terms" className="text-purple-400 hover:text-purple-300">
+          Terms of Service
+        </Link>{" "}
+        and acknowledge our{" "}
+        <Link href="/privacy" className="text-purple-400 hover:text-purple-300">
+          Privacy Policy
+        </Link>
+        . You must be 18+ to use IntellaBets.
       </p>
 
       <p className="text-center text-gray-500 text-sm mt-4">

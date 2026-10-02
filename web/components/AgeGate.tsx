@@ -1,17 +1,25 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { usePathname } from "next/navigation"
+import { isLegalPath } from "@/lib/legal/pages"
 
 const STORAGE_KEY = "intellabets_age_verified"
 
 export default function AgeGate() {
   const [visible, setVisible] = useState(false)
+  // Legal pages stay readable without confirming age: app-store reviewers and
+  // parents need them, and this dialog links to the Terms itself — which would
+  // otherwise open underneath this same dialog.
+  const onLegalPage = isLegalPath(usePathname())
 
   useEffect(() => {
     if (typeof window !== "undefined" && !localStorage.getItem(STORAGE_KEY)) {
       setVisible(true)
     }
   }, [])
+
+  if (onLegalPage) return null
 
   const confirm = () => {
     localStorage.setItem(STORAGE_KEY, "1")
