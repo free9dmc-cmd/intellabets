@@ -26,7 +26,10 @@ export interface CheckoutInput {
   cancelUrl: string
   /**
    * web3 only: the wallet the user has connected in the browser. When supplied
-   * we pin the order to it, so only a transfer FROM that address can settle it.
+   * we record it on the order as OPTIONAL extra defense (a settling Transfer's
+   * `from` must then also match it). It is client-supplied, so it is NOT the
+   * security boundary: what binds a payment to exactly one order is the per-order
+   * UNIQUE expected amount matched EXACTLY on-chain.
    */
   walletAddress?: string | null
 }

@@ -14,12 +14,17 @@ import {
 const USDC = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
 const RECIPIENT = "0xReceiverAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".toLowerCase()
 const PAYER = "0xPayerBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB".toLowerCase()
-const EXPECTED_AMOUNT = BigInt(19990000)
+// Per-order UNIQUE amount: the $19.99 base-unit price (19_990_000) plus a sub-cent
+// nonce. Each live order gets a distinct value in those low digits.
+const EXPECTED_AMOUNT = BigInt(19990042)
+// A DIFFERENT order's unique amount (same plan/price, different nonce) — what an
+// attacker's own order would carry.
+const OTHER_ORDER_AMOUNT = BigInt(19990777)
 
 const expected: ExpectedPayment = {
   tokenAddress: USDC,
   recipient: RECIPIENT,
-  minAmount: EXPECTED_AMOUNT,
+  expectedAmount: EXPECTED_AMOUNT,
 }
 
 /** A correct, qualifying USDC Transfer to our recipient. */
@@ -39,16 +44,31 @@ describe("findSettlingTransfer", () => {
     expect(findSettlingTransfer(transfers, expected)).not.toBeNull()
   })
 
-  it("accepts an overpayment (value greater than expected)", () => {
+  it("REJECTS an overpayment (exact match required, not >=)", () => {
+    // With per-order unique amounts, anything but the exact value is ambiguous
+    // (it may belong to a different order), so even an overpayment must not match.
     const transfers = [goodTransfer({ value: EXPECTED_AMOUNT + BigInt(1) })]
-    expect(findSettlingTransfer(transfers, expected)).not.toBeNull()
+    expect(findSettlingTransfer(transfers, expected)).toBeNull()
+  })
+
+  it("H1 claim-jack: a transfer carrying a DIFFERENT order's amount does NOT settle this order", () => {
+    // The attacker replays a victim's real USDC transfer (to our one recipient,
+    // correct token) whose value is the VICTIM's unique order amount, trying to
+    // settle their own same-price order. Exact matching rejects it.
+    const victimTransfer = goodTransfer({ value: OTHER_ORDER_AMOUNT })
+    expect(findSettlingTransfer([victimTransfer], expected)).toBeNull()
+  })
+
+  it("H1: an exact-amount transfer DOES settle the matching order", () => {
+    expect(findSettlingTransfer([goodTransfer({ value: EXPECTED_AMOUNT })], expected)).not.toBeNull()
   })
 
   it("finds the right transfer among unrelated ones", () => {
     const transfers = [
       goodTransfer({ token: "0xdeadbeef", to: RECIPIENT }), // wrong token
       goodTransfer({ to: "0xsomeoneelse" }), // wrong recipient
-      goodTransfer(), // the real one
+      goodTransfer({ value: OTHER_ORDER_AMOUNT }), // another order's exact amount
+      goodTransfer(), // the real one (exact amount)
     ]
     expect(findSettlingTransfer(transfers, expected)).not.toBeNull()
   })
@@ -87,6 +107,27 @@ describe("verifyOnChainTransfer", () => {
     const out = verifyOnChainTransfer({
       ...base,
       transfers: [goodTransfer({ value: EXPECTED_AMOUNT - BigInt(1) })],
+    })
+    expect(out.ok).toBe(false)
+  })
+
+  it("H1: PASSES on the EXACT per-order amount", () => {
+    const out = verifyOnChainTransfer({ ...base, transfers: [goodTransfer({ value: EXPECTED_AMOUNT })] })
+    expect(out.ok).toBe(true)
+  })
+
+  it("H1: FAILS on an overpayment (exact match required)", () => {
+    const out = verifyOnChainTransfer({
+      ...base,
+      transfers: [goodTransfer({ value: EXPECTED_AMOUNT + BigInt(1) })],
+    })
+    expect(out.ok).toBe(false)
+  })
+
+  it("H1 claim-jack: FAILS when the transfer carries a DIFFERENT order's amount", () => {
+    const out = verifyOnChainTransfer({
+      ...base,
+      transfers: [goodTransfer({ value: OTHER_ORDER_AMOUNT })],
     })
     expect(out.ok).toBe(false)
   })

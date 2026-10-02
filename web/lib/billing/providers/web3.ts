@@ -13,6 +13,7 @@
  */
 import { createPublicClient, http, parseEventLogs, erc20Abi } from "viem"
 import { base, baseSepolia } from "viem/chains"
+import { Prisma } from "@prisma/client"
 import { prisma } from "../../prisma"
 import type { PaymentProvider } from "../provider"
 import type { CheckoutInput, CheckoutResult, NormalizedEvent, PlanId } from "../types"
@@ -56,6 +57,21 @@ function centsToUsdcBaseUnits(cents: number): bigint {
   return BigInt(cents) * centToBaseUnitFactor
 }
 
+// A USDC price in cents occupies the base-unit value *10^4, leaving the lowest
+// four decimal digits (up to 9999 slots, all BELOW one cent) free for a
+// per-order nonce. Adding a unique nonce to the price makes every PENDING
+// order's on-chain amount distinct, so an exact-amount Transfer settles exactly
+// one order — the core of the H1 claim-jacking fix.
+const MAX_NONCE = 9999
+// How many distinct amounts to try before giving up (collisions are rare; this
+// is a safety bound, not an expected cost).
+const MAX_AMOUNT_ATTEMPTS = 16
+
+function randomNonce(): number {
+  // [1, 9999] — never 0, so the amount is always strictly above the bare price.
+  return 1 + Math.floor(Math.random() * MAX_NONCE)
+}
+
 function publicClient() {
   const rpcUrl = process.env.WEB3_RPC_URL
   return createPublicClient({
@@ -80,26 +96,65 @@ export const web3Provider: PaymentProvider = {
 
     const amountCents = planAmountCents(input.plan)
     const baseUnits = centsToUsdcBaseUnits(amountCents)
+    const fromAddress = input.walletAddress ? input.walletAddress.toLowerCase() : null
 
-    const order = await prisma.paymentOrder.create({
-      data: {
-        provider: "web3",
-        plan: input.plan,
-        userId: input.userId,
-        expectedAmount: baseUnits.toString(),
-        currency: "usdc",
-        chainId: chainId(),
-        tokenAddress: token,
-        recipient: to,
-        fromAddress: input.walletAddress ? input.walletAddress.toLowerCase() : null,
-      },
-    })
+    // Allocate a PENDING order with a per-order UNIQUE on-chain amount. We pick a
+    // random sub-cent nonce, confirm no other live (pending) order for the same
+    // token+recipient already claims that exact amount, then insert. On a race
+    // (a concurrent order grabbed the same amount, or a unique constraint trips)
+    // we retry with a fresh nonce. Exact-amount matching at verify time then
+    // binds a Transfer to exactly this order.
+    let order = null
+    for (let attempt = 0; attempt < MAX_AMOUNT_ATTEMPTS; attempt++) {
+      const expectedAmount = (baseUnits + BigInt(randomNonce())).toString()
+
+      const clash = await prisma.paymentOrder.findFirst({
+        where: {
+          provider: "web3",
+          status: "pending",
+          tokenAddress: token,
+          recipient: to,
+          expectedAmount,
+        },
+        select: { id: true },
+      })
+      if (clash) continue
+
+      try {
+        order = await prisma.paymentOrder.create({
+          data: {
+            provider: "web3",
+            plan: input.plan,
+            userId: input.userId,
+            expectedAmount,
+            currency: "usdc",
+            chainId: chainId(),
+            tokenAddress: token,
+            recipient: to,
+            fromAddress,
+          },
+        })
+        break
+      } catch (err) {
+        // Defensive: if a DB-level unique ever guards the amount, retry on it.
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+          continue
+        }
+        throw err
+      }
+    }
+
+    if (!order) {
+      return { kind: "unsupported", reason: "could not allocate a unique payment amount" }
+    }
 
     return {
       kind: "wallet",
       chainId: chainId(),
       tokenAddress: token,
-      amount: baseUnits.toString(),
+      // Return the EXACT per-order amount the client must transfer. The wallet
+      // UI transfers precisely this; verify requires an exact match.
+      amount: order.expectedAmount,
       recipient: to,
       orderId: order.id,
       decimals: USDC_DECIMALS,
@@ -161,7 +216,7 @@ export const web3Provider: PaymentProvider = {
       expected: {
         tokenAddress: order.tokenAddress,
         recipient: order.recipient,
-        minAmount: BigInt(order.expectedAmount),
+        expectedAmount: BigInt(order.expectedAmount),
         fromAddress: order.fromAddress,
       },
     })

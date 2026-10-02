@@ -135,6 +135,15 @@ export const authorizenetProvider: PaymentProvider = {
       },
     })
 
+    // Authorize.Net caps invoiceNumber at 20 chars. Persist the EXACT value we
+    // send so the authcapture webhook can match this order back exactly, instead
+    // of by an id prefix (which could collide with another order's id).
+    const invoiceNumber = order.id.slice(0, 20)
+    await prisma.paymentOrder.update({
+      where: { id: order.id },
+      data: { invoiceNumber },
+    })
+
     const returnOptions = JSON.stringify({
       showReceipt: true,
       url: input.successUrl,
@@ -150,7 +159,7 @@ export const authorizenetProvider: PaymentProvider = {
           transactionType: "authCaptureTransaction",
           amount,
           order: {
-            invoiceNumber: order.id.slice(0, 20), // Authorize.Net caps at 20 chars
+            invoiceNumber, // exact value persisted above (<=20 chars)
             description: planDescription(input.plan),
           },
           customer: input.userEmail ? { email: input.userEmail } : undefined,
@@ -232,11 +241,29 @@ export const authorizenetProvider: PaymentProvider = {
     if (eventType === "net.authorize.payment.authcapture.created") {
       const invoice = body.payload?.invoiceNumber
       if (!invoice) return null
-      // invoiceNumber was truncated to 20 chars at creation; match on prefix.
+      // Match the EXACT invoiceNumber we persisted at checkout (no prefix match).
       const order = await prisma.paymentOrder.findFirst({
-        where: { provider: "authorizenet", id: { startsWith: invoice } },
+        where: { provider: "authorizenet", invoiceNumber: invoice },
       })
       if (!order) return null
+      // Defense-in-depth: never grant on an underpayment. authAmount is USD
+      // dollars; expectedAmount is cents. Only reject when a settlement amount is
+      // present and is strictly below what the order expected.
+      const authAmount = body.payload?.authAmount
+      if (typeof authAmount === "number") {
+        const paidCents = Math.round(authAmount * 100)
+        if (paidCents < Number(order.expectedAmount)) {
+          console.error(
+            "authorizenet authcapture underpaid",
+            order.id,
+            "paidCents",
+            paidCents,
+            "expected",
+            order.expectedAmount
+          )
+          return null
+        }
+      }
       await prisma.paymentOrder.update({
         where: { id: order.id },
         data: { status: "paid", paidAt: new Date() },

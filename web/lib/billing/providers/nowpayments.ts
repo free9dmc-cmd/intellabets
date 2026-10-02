@@ -137,6 +137,24 @@ export const nowpaymentsProvider: PaymentProvider = {
       : null
     if (!order || order.provider !== "nowpayments") return null
 
+    // Defense-in-depth: never grant on an underpayment. price_amount is the
+    // invoice's USD price (dollars); expectedAmount is cents. Only reject when a
+    // price is present and is strictly below what the order expected.
+    if (typeof body.price_amount === "number") {
+      const paidCents = Math.round(body.price_amount * 100)
+      if (paidCents < Number(order.expectedAmount)) {
+        console.error(
+          "nowpayments IPN underpaid",
+          order.id,
+          "paidCents",
+          paidCents,
+          "expected",
+          order.expectedAmount
+        )
+        return null
+      }
+    }
+
     await prisma.paymentOrder.update({
       where: { id: order.id },
       data: { status: "paid", paidAt: new Date() },

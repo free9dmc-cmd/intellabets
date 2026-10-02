@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { getProvider } from "@/lib/billing/registry"
-import { InvalidWebhookSignatureError } from "@/lib/billing/provider"
+import { InvalidWebhookSignatureError, isWebhookBodyTooLarge } from "@/lib/billing/provider"
 import { withIdempotency } from "@/lib/billing/idempotency"
 import { applyBillingEvent } from "@/lib/billing/events"
 
@@ -10,6 +10,9 @@ export const runtime = "nodejs"
 export async function POST(req: Request) {
   // RAW body, read before any parse, so the HMAC verifies over exact bytes.
   const raw = await req.text()
+  if (isWebhookBodyTooLarge(raw)) {
+    return NextResponse.json({ error: "Payload too large" }, { status: 400 })
+  }
   const provider = getProvider("nowpayments")
   if (!provider) return NextResponse.json({ error: "Unknown provider" }, { status: 400 })
 

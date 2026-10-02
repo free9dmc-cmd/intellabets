@@ -259,12 +259,19 @@ model PaymentOrder {
   // Stored as String so large web3 base-unit values never lose precision.
   expectedAmount String
   currency       String    @default("usd")
+  // Authorize.Net: the EXACT invoiceNumber (<=20 chars) we sent to the hosted
+  // page, stored so the authcapture webhook can match the order back EXACTLY
+  // rather than by an id prefix (which could match more than one order).
+  // Null for other rails. Additive — existing rows keep null.
+  invoiceNumber  String?
   // web3 binding fields (null for fiat rails)
   chainId        Int?
   tokenAddress   String?
   recipient      String?
   // The user's connected wallet, lowercased, if they supplied one at checkout.
-  // When present, the on-chain Transfer's `from` MUST match this.
+  // OPTIONAL extra defense only: when present we also require the on-chain
+  // Transfer's `from` to match it. It is client-supplied, so it is NOT the
+  // security boundary — the per-order unique `expectedAmount` + exact match is.
   fromAddress    String?
   status         String    @default("pending") // pending | paid | expired
   txHash         String? // web3: the settling transaction
@@ -273,6 +280,11 @@ model PaymentOrder {
 
   @@index([provider, status])
   @@index([userId])
+  @@index([invoiceNumber])
+  // Defense-in-depth: one settled transaction can never settle two orders.
+  // txHash is null until confirmed; Postgres treats NULLs as distinct, so many
+  // pending orders coexist — only non-null (settled) hashes must be unique.
+  @@unique([txHash])
 }
 
 // ─── Rate limiting ───────────────────────────────────────────────────────────

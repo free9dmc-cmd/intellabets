@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getProvider } from "@/lib/billing/registry"
+import { isWebhookBodyTooLarge } from "@/lib/billing/provider"
+import { billingUnavailableResponse } from "@/lib/billing/degradation"
 import { withIdempotency } from "@/lib/billing/idempotency"
 import { applyBillingEvent } from "@/lib/billing/events"
 
@@ -24,7 +26,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const { txHash, orderId } = await req.json().catch(() => ({}))
+  // RAW body first so we can cap its size before parsing (same guard as the
+  // signed webhook routes).
+  const raw = await req.text()
+  if (isWebhookBodyTooLarge(raw)) {
+    return NextResponse.json({ error: "Payload too large" }, { status: 400 })
+  }
+  let parsed: { txHash?: unknown; orderId?: unknown } = {}
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    parsed = {}
+  }
+  const { txHash, orderId } = parsed
   if (typeof txHash !== "string" || typeof orderId !== "string") {
     return NextResponse.json({ error: "txHash and orderId are required" }, { status: 400 })
   }
@@ -32,9 +46,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid txHash" }, { status: 400 })
   }
 
+  // Degrade cleanly (503) when the web3 rail is unconfigured or missing, before
+  // we touch the chain — a revoked/absent RPC/receiving address is a transient
+  // provider-side outage, not a bad request.
   const provider = getProvider("web3")
-  if (!provider?.verifyOnChainPayment) {
-    return NextResponse.json({ error: "Web3 payments unavailable" }, { status: 503 })
+  if (!provider?.verifyOnChainPayment || !provider.isConfigured()) {
+    return billingUnavailableResponse()
   }
 
   // The order must belong to the authenticated user — a user may only confirm

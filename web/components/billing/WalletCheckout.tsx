@@ -14,7 +14,7 @@
  *      transfer on-chain before granting. We never grant from the client.
  */
 import { useState } from "react"
-import { erc20Abi } from "viem"
+import { erc20Abi, formatUnits } from "viem"
 import {
   useAccount,
   useSwitchChain,
@@ -98,8 +98,11 @@ function WalletCheckoutInner({ plan, onGranted }: { plan: PlanId; onGranted: () 
         await switchChainAsync({ chainId: order.chainId! })
       }
 
-      // 3. ERC-20 transfer of USDC to our receiving address.
-      setStatus("Confirm the USDC transfer in your wallet…")
+      // 3. ERC-20 transfer of USDC to our receiving address. We transfer EXACTLY
+      // the per-order amount the server returned — the server verifies an exact
+      // match, so the amount must not be rounded or altered client-side.
+      const humanAmount = formatUnits(BigInt(order.amount!), order.decimals ?? 6)
+      setStatus(`Confirm the transfer of exactly ${humanAmount} USDC in your wallet…`)
       const hash = await writeContractAsync({
         address: order.tokenAddress as `0x${string}`,
         abi: erc20Abi,

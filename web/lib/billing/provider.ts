@@ -67,6 +67,18 @@ export interface PaymentProvider {
 }
 
 /**
+ * Upper bound on an inbound webhook / confirm request body (bytes). Legitimate
+ * processor payloads and our own confirm POST are a few KB at most; anything
+ * past this is junk or abuse, so we reject it before parsing or verifying.
+ */
+export const MAX_WEBHOOK_BODY_BYTES = 1_000_000
+
+/** True when a raw request body exceeds the webhook size cap. */
+export function isWebhookBodyTooLarge(raw: string): boolean {
+  return raw.length > MAX_WEBHOOK_BODY_BYTES
+}
+
+/**
  * Thrown by verifyWebhook when a webhook's signature is missing or invalid.
  * The webhook routes map this to an HTTP 400 so forged/misconfigured calls are
  * rejected loudly, distinct from genuine events we simply don't act on.
