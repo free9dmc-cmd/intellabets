@@ -36,6 +36,10 @@ export default withAuth(
           "/",
           "/login",
           "/register",
+          // Must be public: someone resetting a password cannot sign in, so
+          // gating these behind auth makes the whole flow unreachable.
+          "/forgot-password",
+          "/reset-password",
           "/leaderboard",
           "/premium",
           "/terms",

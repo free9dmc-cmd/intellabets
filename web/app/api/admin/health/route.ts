@@ -4,6 +4,7 @@ import { requireAdminApi } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
 import { isEngineConfigured, listStrategies } from "@/lib/engine"
 import { anthropicKey, anthropicKeyProblem } from "@/lib/anthropic-key"
+import { isEmailConfigured } from "@/lib/email"
 
 export const dynamic = "force-dynamic"
 
@@ -89,6 +90,26 @@ async function checkAnthropic(): Promise<Check> {
   }
 }
 
+async function checkEmail(): Promise<Check> {
+  // Password reset is the only thing that needs email, and it is designed to
+  // stay silent on failure so it cannot be used to discover which addresses
+  // have accounts. That means a broken sender looks exactly like a working one
+  // from outside -- this is the only place it shows up.
+  if (!isEmailConfigured()) {
+    return {
+      name: "email",
+      status: "misconfigured",
+      detail:
+        "RESEND_API_KEY not set or malformed - password reset emails are NOT being delivered, and the flow cannot report that to users by design",
+    }
+  }
+  return {
+    name: "email",
+    status: "ok",
+    detail: "sender configured (delivery still requires a verified domain at the provider)",
+  }
+}
+
 async function checkEngine(): Promise<Check> {
   if (!isEngineConfigured()) {
     return {
@@ -122,6 +143,7 @@ export async function GET() {
     checkRateLimitTable(),
     checkAnthropic(),
     checkEngine(),
+    checkEmail(),
   ])
 
   const healthy = checks.every((c) => c.status === "ok")
