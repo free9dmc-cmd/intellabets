@@ -22,6 +22,14 @@ model User {
   // Stripe subscription backing the Premium membership. Needed to extend
   // premiumUntil on renewal and to revoke premium when the sub is cancelled.
   premiumStripeSubId String?
+  // Provider-neutral backing for the Premium membership once a processor other
+  // than Stripe is used (Authorize.Net ARB, NOWPayments, self-custody web3).
+  // Additive to premiumStripeSubId so existing Stripe records are untouched.
+  // `premiumProvider` is a PaymentProvider id ('authorizenet'|'nowpayments'|'web3');
+  // `premiumProviderSubId` is that provider's subscription id (ARB subscriptionId),
+  // or null for the per-period rails (crypto/web3) which have no recurring object.
+  premiumProvider      String?
+  premiumProviderSubId String?
   // Stripe Connect payout onboarding state
   payoutsEnabled     Boolean   @default(false)
   bio                String?
@@ -109,6 +117,11 @@ model AISubscription {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   status      String   @default("active")
   stripeSubId String?
+  // Provider-neutral backing (additive to stripeSubId). `provider` is the
+  // PaymentProvider id; `providerSubId` is the ARB subscriptionId for card, or
+  // null for per-period crypto/web3 grants.
+  provider     String?
+  providerSubId String?
   createdAt   DateTime @default(now())
   expiresAt   DateTime
 }
@@ -202,6 +215,64 @@ model PlacedBet {
   @@unique([userId, externalId])
   @@index([userId, status])
   @@index([predictionId])
+}
+
+// ─── Payments: idempotency & orders ──────────────────────────────────────────
+
+// Every processor webhook / on-chain confirmation we have already applied.
+//
+// Money-path events arrive more than once by design: payment processors retry
+// webhooks until they get a 2xx, and a user can POST the same settled tx hash
+// twice. Granting entitlements is NOT naturally idempotent (a per-period crypto
+// payment adds +1 month each time it runs), so we claim each event here with a
+// unique insert BEFORE applying it. A duplicate insert fails on the
+// @@unique([provider, eventId]) constraint (Prisma P2002), and we skip.
+model ProcessedEvent {
+  id          String   @id @default(cuid())
+  provider    String // 'nowpayments' | 'authorizenet' | 'web3' | ...
+  eventId     String // provider event id, or the tx hash for web3
+  type        String?
+  processedAt DateTime @default(now())
+
+  @@unique([provider, eventId])
+  @@index([processedAt])
+}
+
+// A pending payment the server created before handing the user off to a
+// processor or an on-chain transfer. It pins down exactly what we expect to be
+// paid, so a webhook / tx confirmation can be correlated back to a user + plan
+// WITHOUT trusting anything the client sends.
+//
+// Used by:
+//   - NOWPayments: order id passed as `order_id`; the IPN maps back to this row.
+//   - web3 (USDC on Base): the confirm route checks the on-chain Transfer
+//     against expectedAmount / recipient / tokenAddress / (optional) fromAddress.
+//   - Authorize.Net: order id passed as the hosted-payment invoiceNumber.
+model PaymentOrder {
+  id             String    @id @default(cuid())
+  provider       String
+  plan           String // PlanId: 'premium' | 'ai'
+  userId         String
+  // Expected amount in the smallest unit the rail settles in:
+  //   fiat rails (NOWPayments / Authorize.Net) -> cents (USD)
+  //   web3 (USDC)                               -> base units (6 decimals)
+  // Stored as String so large web3 base-unit values never lose precision.
+  expectedAmount String
+  currency       String    @default("usd")
+  // web3 binding fields (null for fiat rails)
+  chainId        Int?
+  tokenAddress   String?
+  recipient      String?
+  // The user's connected wallet, lowercased, if they supplied one at checkout.
+  // When present, the on-chain Transfer's `from` MUST match this.
+  fromAddress    String?
+  status         String    @default("pending") // pending | paid | expired
+  txHash         String? // web3: the settling transaction
+  createdAt      DateTime  @default(now())
+  paidAt         DateTime?
+
+  @@index([provider, status])
+  @@index([userId])
 }
 
 // ─── Rate limiting ───────────────────────────────────────────────────────────

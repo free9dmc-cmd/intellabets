@@ -9,6 +9,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "vitest run",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
@@ -23,12 +24,18 @@
     "@anthropic-ai/sdk": "^0.125.0",
     "@auth/prisma-adapter": "^2.7.2",
     "@prisma/client": "^5.22.0",
+    "@reown/appkit": "^1.8.24",
+    "@reown/appkit-adapter-wagmi": "^1.8.24",
+    "@tanstack/react-query": "^5.104.1",
+    "authorizenet": "^1.0.10",
     "bcryptjs": "^2.4.3",
     "next": "14.2.16",
     "next-auth": "^4.24.10",
     "react": "^18",
     "react-dom": "^18",
-    "stripe": "^17.3.1"
+    "stripe": "^17.3.1",
+    "viem": "^2.57.2",
+    "wagmi": "^2.19.5"
   },
   "devDependencies": {
     "@capacitor/android": "^6.0.0",
@@ -47,6 +54,7 @@
     "prisma": "^5.22.0",
     "tailwindcss": "^3.4.0",
     "tsx": "^4.19.1",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^2.1.9"
   }
 }

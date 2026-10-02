@@ -22,11 +22,21 @@ export default function RefundPage() {
       </div>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-bold text-white">1. Automatic renewal</h2>
+        <h2 className="text-lg font-bold text-white">1. Payment methods &amp; renewal</h2>
         <p>
-          All IntellaBets subscriptions renew automatically each month at the price shown at checkout,
-          until you cancel. This applies to Premium Tipster ($19.99/mo), AI Picks ($9.99/mo), and
-          individual tipster subscriptions ($4.99–$49.99/mo).
+          On the web you can pay by card (processed by Authorize.Net), by crypto (processed by
+          NOWPayments), or directly on-chain from your own self-custody wallet (USDC on the Base
+          network).
+        </p>
+        <p>
+          <strong className="text-white">Card subscriptions</strong> renew automatically each month at
+          the price shown at checkout, until you cancel. This applies to Premium Tipster ($19.99/mo),
+          AI Picks ($9.99/mo), and individual tipster subscriptions ($4.99–$49.99/mo).
+        </p>
+        <p>
+          <strong className="text-white">Crypto and self-custody wallet payments do not auto-renew.</strong>{" "}
+          Each payment grants one month of access; to continue, you simply pay again. We never store
+          anything that would let us charge your wallet automatically.
         </p>
       </section>
 
@@ -55,6 +65,14 @@ export default function RefundPage() {
             Because picks and analysis are delivered immediately, we do not otherwise refund a billing
             period that has already been used — but if something has gone wrong, contact us and we will
             make it right.
+          </li>
+          <li>
+            <strong className="text-white">Crypto &amp; on-chain payments are irreversible.</strong> A
+            blockchain transaction cannot be reversed by us or by the network, so any approved refund of
+            a crypto (NOWPayments) or self-custody wallet (USDC on Base) payment is processed{" "}
+            <strong className="text-white">manually, back to the wallet address the payment came from</strong>.
+            To request one, email us from your account email and include the transaction hash. Refunds
+            are returned in the same asset and may be net of any network (gas) fees.
           </li>
         </ul>
       </section>

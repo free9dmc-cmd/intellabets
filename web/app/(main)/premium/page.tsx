@@ -3,9 +3,19 @@
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
+import dynamic from "next/dynamic"
 import { PREMIUM_PRICE, AI_PRICE } from "@/lib/utils"
 import { isNativePlatform, purchaseNative, IAP_PRODUCTS } from "@/lib/native-iap"
+import type { PlanId } from "@/lib/billing/types"
+
+// The wallet rail pulls in wagmi + Reown AppKit. Load it client-only so none of
+// that touches SSR / the build; it self-wraps in its own web3 provider.
+const WalletCheckout = dynamic(() => import("@/components/billing/WalletCheckout"), {
+  ssr: false,
+  loading: () => <p className="text-xs text-gray-500 text-center">Loading wallet…</p>,
+})
+
+type ConfiguredProvider = { id: string; label: string }
 
 const TIPSTER_PERKS = [
   { icon: "📋", title: "Create Unlimited Betslips", desc: "Post single bets, parlays, and multi-leg picks across any sport" },
@@ -36,9 +46,20 @@ export default function PremiumPage() {
     hasAI: boolean
     aiAccessSource?: "premium" | "standalone" | "none"
   } | null>(null)
+  const [providers, setProviders] = useState<ConfiguredProvider[]>([])
+  const [method, setMethod] = useState<string>("authorizenet") // default: card
 
   useEffect(() => {
     fetch("/api/premium").then((r) => r.json()).then(setStatus)
+    fetch("/api/billing/providers")
+      .then((r) => r.json())
+      .then((d: { providers?: ConfiguredProvider[]; defaultProviderId?: string | null }) => {
+        if (d.providers?.length) {
+          setProviders(d.providers)
+          setMethod(d.defaultProviderId ?? d.providers[0].id)
+        }
+      })
+      .catch(() => {})
   }, [])
 
   const activate = async (type: "premium" | "ai") => {
@@ -55,11 +76,12 @@ export default function PremiumPage() {
       return
     }
 
-    // Web — use Stripe checkout
+    // Web — hand off to the selected payment rail (card / crypto). The wallet
+    // rail does not go through here; it is handled by <WalletCheckout/>.
     const checkoutRes = await fetch("/api/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type }),
+      body: JSON.stringify({ type, providerId: method }),
     })
     const checkoutData = await checkoutRes.json().catch(() => ({}))
     if (checkoutData.url) { window.location.href = checkoutData.url; return }
@@ -109,6 +131,29 @@ export default function PremiumPage() {
         <p className="text-gray-400">Upgrade to unlock premium features. Cancel anytime.</p>
       </div>
 
+      {/* Payment method picker — only rails that are actually configured. */}
+      {providers.length > 1 && (
+        <div className="card p-4">
+          <div className="text-xs text-gray-500 uppercase mb-3 text-center">Payment method</div>
+          <div className="flex flex-wrap justify-center gap-2">
+            {providers.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => setMethod(p.id)}
+                className="px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+                style={{
+                  background: method === p.id ? "rgba(124,58,237,0.15)" : "rgba(255,255,255,0.03)",
+                  color: method === p.id ? "#a78bfa" : "#9ca3af",
+                  border: `1px solid ${method === p.id ? "rgba(124,58,237,0.4)" : "rgba(255,255,255,0.08)"}`,
+                }}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Plan cards */}
       <div className="grid md:grid-cols-2 gap-6">
         {/* Premium Tipster */}
@@ -145,6 +190,15 @@ export default function PremiumPage() {
             <div className="text-center p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-semibold">
               Premium membership active ✓
             </div>
+          ) : method === "web3" ? (
+            <WalletCheckout
+              plan={"premium" as PlanId}
+              onGranted={() => {
+                setStatus((prev) => (prev ? { ...prev, isPremium: true, hasAI: true, aiAccessSource: "premium" } : null))
+                updateSession({ isPremium: true })
+                router.push("/dashboard")
+              }}
+            />
           ) : (
             <button
               onClick={() => activate("premium")}
@@ -192,6 +246,14 @@ export default function PremiumPage() {
                 ? "Included with your Premium membership ✓"
                 : "AI subscription active ✓"}
             </div>
+          ) : method === "web3" ? (
+            <WalletCheckout
+              plan={"ai" as PlanId}
+              onGranted={() => {
+                setStatus((prev) => (prev ? { ...prev, hasAI: true, aiAccessSource: "standalone" } : null))
+                router.push("/ai-picks")
+              }}
+            />
           ) : (
             <button
               onClick={() => activate("ai")}
