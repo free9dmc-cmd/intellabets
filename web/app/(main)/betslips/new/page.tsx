@@ -4,21 +4,12 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
-import { SPORTS, SPORT_EMOJIS, formatOdds, americanToDecimal } from "@/lib/utils"
+import { SPORTS, SPORT_EMOJIS, formatOdds } from "@/lib/utils"
+import { calcBetslipTotals } from "@/lib/betslip/calculations"
+import { validateBetslipDraft } from "@/lib/betslip/validation"
+import type { BetDraft } from "@/lib/betslip/types"
 
-interface BetForm {
-  game: string
-  homeTeam: string
-  awayTeam: string
-  pick: string
-  odds: string
-  betType: string
-  line: string
-  sport: string
-  gameDate: string
-}
-
-const defaultBet: BetForm = {
+const defaultBet: BetDraft = {
   game: "", homeTeam: "", awayTeam: "", pick: "", odds: "-110",
   betType: "spread", line: "", sport: "NFL", gameDate: "",
 }
@@ -35,7 +26,7 @@ export default function NewBetslipPage() {
   const [league, setLeague] = useState("")
   const [stake, setStake] = useState("100")
   const [isPublic, setIsPublic] = useState(false)
-  const [bets, setBets] = useState<BetForm[]>([{ ...defaultBet }])
+  const [bets, setBets] = useState<BetDraft[]>([{ ...defaultBet }])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
 
@@ -52,34 +43,16 @@ export default function NewBetslipPage() {
 
   const addBet = () => setBets((prev) => [...prev, { ...defaultBet, sport }])
   const removeBet = (i: number) => setBets((prev) => prev.filter((_, idx) => idx !== i))
-  const updateBet = (i: number, field: keyof BetForm, val: string) => {
+  const updateBet = (i: number, field: keyof BetDraft, val: string) => {
     setBets((prev) => prev.map((b, idx) => idx === i ? { ...b, [field]: val } : b))
   }
 
-  const calcTotalOdds = () => {
-    try {
-      const decimal = bets.reduce((acc, bet) => {
-        const odds = parseFloat(bet.odds)
-        if (isNaN(odds)) return acc
-        return acc * americanToDecimal(odds)
-      }, 1)
-      if (decimal <= 1) return 0
-      const american = decimal >= 2 ? Math.round((decimal - 1) * 100) : Math.round(-100 / (decimal - 1))
-      return american
-    } catch { return 0 }
-  }
-
-  const totalOdds = calcTotalOdds()
-  const stakeNum = parseFloat(stake) || 100
-  const potentialReturn = stakeNum * americanToDecimal(totalOdds || -110)
+  const { totalOdds, stake: stakeNum, potentialReturn } = calcBetslipTotals(bets, stake)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!title.trim()) { setError("Title is required"); return }
-    if (bets.some((b) => !b.game || !b.pick || !b.odds)) {
-      setError("Fill in all bet details (game, pick, odds)")
-      return
-    }
+    const problem = validateBetslipDraft({ title, bets })
+    if (problem) { setError(problem); return }
     setSaving(true)
     setError("")
 
