@@ -37,7 +37,7 @@ export function createInitialDraft(): BetslipDraft {
 }
 
 /** Every top-level field except the list of legs, which has its own actions. */
-type DetailsField = Exclude<keyof BetslipDraft, "bets">
+export type DetailsField = Exclude<keyof BetslipDraft, "bets">
 
 /**
  * Everything that can happen to the form.

@@ -31,6 +31,9 @@ export interface BetslipDraft {
   bets: BetDraft[]
 }
 
+/** The form minus its legs: the fields that describe the betslip itself. */
+export type BetslipDetails = Omit<BetslipDraft, "bets">
+
 /** A leg as POST /api/betslips expects it: odds as a number. */
 export type BetPayload = Omit<BetDraft, "odds"> & { odds: number }
 
