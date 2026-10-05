@@ -1,24 +1,16 @@
 import { describe, expect, it } from "vitest"
 import { americanToDecimal } from "@/lib/utils"
-import {
-  DEFAULT_STAKE,
-  FALLBACK_ODDS,
-  calcBetslipTotals,
-  calcTotalOdds,
-  parseStake,
-} from "./calculations"
+import { calcBetslipTotals, calcTotalOdds, parseAmericanOdds, parseStake } from "./calculations"
 
 /**
- * These tests answer two different questions:
+ * These tests answer three different questions:
  *
  *  1. "Is the maths right?"  → hand-checked values from standard sportsbook payouts.
- *  2. "Did the refactor change behavior?" → compare against the ORIGINAL inline
- *     code from betslips/new/page.tsx, copied below verbatim as an oracle.
- *
- * The second kind is called a characterization test. It pins down what code
- * *does*, flaws included, so a refactor can be proven to be a pure refactor.
- * When a flaw is deliberately fixed later, the matching expectation changes
- * in that same commit — which makes the behavior change visible in review.
+ *  2. "Did valid input keep working exactly as before?" → compare against the
+ *     ORIGINAL inline code from betslips/new/page.tsx, copied below as an oracle
+ *     (a "characterization test").
+ *  3. "What happens to input that used to be silently papered over?" → each case
+ *     is listed explicitly, so the behavior change is visible in review.
  */
 
 // ─── oracle: original implementation, copied verbatim ─────────────────────────
@@ -57,27 +49,6 @@ describe("calcTotalOdds — known payouts", () => {
   ])("$legs → $expected ($note)", ({ legs, expected }) => {
     expect(calcTotalOdds(legs)).toBe(expected)
   })
-
-  it("skips legs that can't be parsed instead of failing", () => {
-    expect(calcTotalOdds(["-110", "", "abc"])).toBe(-110)
-  })
-
-  it("returns 0 when there is nothing to combine", () => {
-    expect(calcTotalOdds([])).toBe(0)
-    expect(calcTotalOdds(["", "abc"])).toBe(0)
-  })
-})
-
-describe("parseStake", () => {
-  it("parses ordinary and decimal stakes", () => {
-    expect(parseStake("50")).toBe(50)
-    expect(parseStake("12.5")).toBe(12.5)
-  })
-
-  it("falls back to DEFAULT_STAKE for empty or non-numeric input", () => {
-    expect(parseStake("")).toBe(DEFAULT_STAKE)
-    expect(parseStake("abc")).toBe(DEFAULT_STAKE)
-  })
 })
 
 describe("calcBetslipTotals", () => {
@@ -86,46 +57,74 @@ describe("calcBetslipTotals", () => {
     const totals = calcBetslipTotals([{ odds: "-110" }, { odds: "-110" }], "100")
     expect(totals).toEqual({ totalOdds: 264, stake: 100, potentialReturn: 364 })
   })
+})
 
-  it("estimates the return from FALLBACK_ODDS when no leg has usable odds", () => {
-    const totals = calcBetslipTotals([{ odds: "" }], "100")
-    expect(totals.totalOdds).toBe(0)
-    expect(totals.potentialReturn).toBeCloseTo(100 * americanToDecimal(FALLBACK_ODDS), 10)
+describe("parseAmericanOdds", () => {
+  it.each([
+    ["-110", -110],
+    ["+150", 150],
+    ["150", 150],
+    [" -110 ", -110],
+    ["100", 100],
+    ["-100", -100],
+    ["-110.5", -110.5],
+  ])("accepts %j", (input, expected) => {
+    expect(parseAmericanOdds(input)).toBe(expected)
+  })
+
+  it.each([
+    ["", "empty"],
+    ["   ", "whitespace"],
+    ["abc", "not a number"],
+    ["-110abc", "trailing text (parseFloat used to read this as -110)"],
+    ["−110", "typographic minus sign"],
+    ["0", "zero is not a price"],
+    ["50", "between -100 and +100 is not a real American price"],
+    ["-99", "between -100 and +100 is not a real American price"],
+    ["1e3", "scientific notation is not something to type into odds"],
+    ["1,000", "thousands separator"],
+    ["+-110", "double sign"],
+  ])("rejects %j (%s)", (input) => {
+    expect(parseAmericanOdds(input)).toBeNull()
   })
 })
 
-// ─── 2. did the refactor change behavior? ─────────────────────────────────────
+describe("parseStake", () => {
+  it.each([
+    ["50", 50],
+    ["12.5", 12.5],
+    [" 25 ", 25],
+    ["1e2", 100], // a number input can produce this
+  ])("accepts %j", (input, expected) => {
+    expect(parseStake(input)).toBe(expected)
+  })
 
-describe("matches the original inline implementation", () => {
-  // Deliberately includes inputs a user can really type, plus awkward ones.
-  const oddsCases: string[][] = [
+  it.each([["", "empty"], ["abc", "not a number"], ["0", "zero"], ["-5", "negative"], ["-0", "negative zero"]])(
+    "rejects %j (%s)",
+    (input) => {
+      expect(parseStake(input)).toBeNull()
+    }
+  )
+})
+
+// ─── 2. did valid input keep working exactly as before? ───────────────────────
+
+describe("valid input matches the original inline implementation", () => {
+  const validOdds: string[][] = [
     ["-110"],
     ["+150"],
     ["150"],
     ["-110", "-110"],
     ["+100", "+100", "+100"],
     ["-200", "+300", "-150"],
-    ["-110", "", "abc"],
-    ["", ""],
-    [],
-    ["0"], // not valid American odds, but typeable
-    ["-0"],
-    ["50"], // American odds can't be between -100 and +100
-    ["1e3"], // parseFloat reads scientific notation
-    ["−110"], // typographic minus sign: unparseable
     [" -110 "],
-    ["-110abc"], // parseFloat stops at the first bad character
+    ["-110", "-105", "+250", "-180"],
   ]
-  const stakeCases = ["100", "", "abc", "0", "-0", "50", "12.345", "-5", "1e2"]
+  const validStakes = ["100", "50", "12.345", "1e2", "0.01", "9999"]
 
-  it.each(oddsCases.map((legs) => ({ legs })))("odds $legs", ({ legs }) => {
-    const bets = legs.map((odds) => ({ odds }))
-    expect(calcTotalOdds(legs)).toBe(legacyCalcTotalOdds(bets))
-  })
-
-  it("totals for every odds/stake combination", () => {
-    for (const legs of oddsCases) {
-      for (const stake of stakeCases) {
+  it("totals for every valid odds/stake combination", () => {
+    for (const legs of validOdds) {
+      for (const stake of validStakes) {
         const bets = legs.map((odds) => ({ odds }))
         expect(
           calcBetslipTotals(bets, stake),
@@ -133,5 +132,46 @@ describe("matches the original inline implementation", () => {
         ).toEqual(legacyTotals(bets, stake))
       }
     }
+  })
+})
+
+// ─── 3. input that used to be silently papered over ───────────────────────────
+// Each of these used to produce a plausible-looking number from data nobody entered.
+
+describe("input that used to be silently substituted now reports 'unknown'", () => {
+  it("a missing or invalid stake is null, not a quiet $100", () => {
+    expect(calcBetslipTotals([{ odds: "-110" }], "").stake).toBeNull()
+    expect(calcBetslipTotals([{ odds: "-110" }], "abc").stake).toBeNull()
+    expect(calcBetslipTotals([{ odds: "-110" }], "0").stake).toBeNull() // used to become 100
+    expect(legacyTotals([{ odds: "-110" }], "").stake).toBe(100) // what it used to do
+  })
+
+  it("no usable odds means no total and no return, not a return estimated at -110", () => {
+    const totals = calcBetslipTotals([{ odds: "" }], "100")
+    expect(totals).toEqual({ totalOdds: null, stake: 100, potentialReturn: null })
+    expect(legacyTotals([{ odds: "" }], "100").potentialReturn).toBeCloseTo(190.909, 3) // what it used to show
+  })
+
+  it("one bad leg makes the total unknown instead of silently dropping that leg", () => {
+    expect(calcTotalOdds(["-110", "", "abc"])).toBeNull()
+    expect(legacyCalcTotalOdds([{ odds: "-110" }, { odds: "" }, { odds: "abc" }])).toBe(-110) // used to
+  })
+
+  it("odds that aren't real prices no longer produce Infinity", () => {
+    expect(calcTotalOdds(["0"])).toBeNull()
+    expect(calcTotalOdds(["50"])).toBeNull()
+    expect(legacyCalcTotalOdds([{ odds: "0" }])).toBe(Infinity) // used to
+  })
+
+  it("an empty betslip has no total", () => {
+    expect(calcTotalOdds([])).toBeNull()
+  })
+
+  it("a known stake alone doesn't invent a return", () => {
+    expect(calcBetslipTotals([{ odds: "nope" }], "50")).toEqual({
+      totalOdds: null,
+      stake: 50,
+      potentialReturn: null,
+    })
   })
 })

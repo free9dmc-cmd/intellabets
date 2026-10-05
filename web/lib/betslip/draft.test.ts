@@ -3,7 +3,6 @@ import {
   betslipDraftReducer,
   createEmptyBet,
   createInitialDraft,
-  toBetslipPayload,
 } from "./draft"
 
 describe("createInitialDraft", () => {
@@ -84,49 +83,5 @@ describe("betslipDraftReducer", () => {
     })
     expect(after.bets[0]).toBe(before.bets[0])
     expect(after.bets[1]).not.toBe(before.bets[1])
-  })
-})
-
-describe("toBetslipPayload", () => {
-  it("converts typed text to numbers and keeps the field set the API expects", () => {
-    let draft = createInitialDraft()
-    draft = betslipDraftReducer(draft, { type: "setField", field: "title", value: "Pack" })
-    draft = betslipDraftReducer(draft, { type: "setField", field: "stake", value: "25.5" })
-    draft = betslipDraftReducer(draft, { type: "updateBet", index: 0, field: "odds", value: "+150" })
-
-    const payload = toBetslipPayload(draft)
-
-    expect(payload.stake).toBe(25.5)
-    expect(payload.bets[0].odds).toBe(150)
-    expect(Object.keys(payload)).toEqual([
-      "title",
-      "description",
-      "sport",
-      "league",
-      "stake",
-      "isPublic",
-      "bets",
-    ])
-  })
-
-  it("saves every leg with the betslip's sport, even legs created before it was chosen", () => {
-    let draft = createInitialDraft() // leg 1 is created while the sport is still the default
-    draft = betslipDraftReducer(draft, { type: "setField", field: "sport", value: "NBA" })
-    draft = betslipDraftReducer(draft, { type: "addBet" })
-    expect(draft.bets[0].sport).toBe("NFL") // the draft itself still holds the stale value...
-
-    const payload = toBetslipPayload(draft)
-
-    expect(payload.sport).toBe("NBA")
-    expect(payload.bets.map((bet) => bet.sport)).toEqual(["NBA", "NBA"]) // ...the payload does not
-  })
-
-  it("keeps the title exactly as typed (validation trims, the payload does not)", () => {
-    const draft = betslipDraftReducer(createInitialDraft(), {
-      type: "setField",
-      field: "title",
-      value: "  Pack  ",
-    })
-    expect(toBetslipPayload(draft).title).toBe("  Pack  ")
   })
 })

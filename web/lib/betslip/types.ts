@@ -50,8 +50,10 @@ export interface BetslipPayload {
 
 /** The three figures shown in the betslip summary card. */
 export interface BetslipTotals {
-  /** Combined American odds across all legs; 0 when none can be computed. */
-  totalOdds: number
-  stake: number
-  potentialReturn: number
+  /** Combined American odds; null until every leg has valid odds. */
+  totalOdds: number | null
+  /** The stake as a number; null until it is a number above zero. */
+  stake: number | null
+  /** Stake x decimal odds; null unless both of the above are known. */
+  potentialReturn: number | null
 }

@@ -4,11 +4,10 @@ import { calcBetslipTotals } from "@/lib/betslip/calculations"
 import {
   betslipDraftReducer,
   createInitialDraft,
-  toBetslipPayload,
   type BetslipDraftAction,
   type DetailsField,
 } from "@/lib/betslip/draft"
-import { validateBetslipDraft } from "@/lib/betslip/validation"
+import { buildBetslipPayload } from "@/lib/betslip/payload"
 import type { BetDraft, BetslipDraft } from "@/lib/betslip/types"
 import { NETWORK_ERROR_MESSAGE } from "@/lib/messages"
 
@@ -50,9 +49,9 @@ export function useBetslipForm() {
   )
 
   const submit = async () => {
-    const problem = validateBetslipDraft(draft)
-    if (problem) {
-      setError(problem)
+    const built = buildBetslipPayload(draft)
+    if (!built.ok) {
+      setError(built.error)
       return
     }
     setSaving(true)
@@ -63,7 +62,7 @@ export function useBetslipForm() {
       res = await fetch("/api/betslips", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(toBetslipPayload(draft)),
+        body: JSON.stringify(built.payload),
       })
     } catch {
       // The request never completed (offline, dropped connection...).

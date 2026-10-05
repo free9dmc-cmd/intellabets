@@ -1,5 +1,4 @@
-import { parseStake } from "./calculations"
-import type { BetDraft, BetslipDraft, BetslipPayload } from "./types"
+import type { BetDraft, BetslipDraft } from "./types"
 
 export const BET_TYPES = ["moneyline", "spread", "total", "parlay", "prop"] as const
 
@@ -78,25 +77,5 @@ export function betslipDraftReducer(state: BetslipDraft, action: BetslipDraftAct
           i === action.index ? { ...bet, [action.field]: action.value } : bet
         ),
       }
-  }
-}
-
-/**
- * Convert the form into the request body for POST /api/betslips.
- * This is the one place text-typed form values become numbers.
- *
- * Every leg is saved with the betslip's sport. The form has no per-leg sport
- * control, and the first leg is created before the user picks a sport, so
- * without this a betslip could be saved as NBA with an NFL leg.
- */
-export function toBetslipPayload(draft: BetslipDraft): BetslipPayload {
-  return {
-    title: draft.title,
-    description: draft.description,
-    sport: draft.sport,
-    league: draft.league,
-    stake: parseStake(draft.stake),
-    isPublic: draft.isPublic,
-    bets: draft.bets.map((bet) => ({ ...bet, sport: draft.sport, odds: parseFloat(bet.odds) })),
   }
 }

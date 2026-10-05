@@ -1,46 +1,56 @@
 import { americanToDecimal, calcPotentialReturn, decimalToAmerican } from "@/lib/utils"
 import type { BetDraft, BetslipTotals } from "./types"
 
-/**
- * Used when the stake field is empty or not a positive-looking number.
- *
- * NOTE: this silently substitutes a value the user never typed. Kept as-is
- * for now so the refactor changes no behavior; see the follow-up fix.
- */
-export const DEFAULT_STAKE = 100
+/** A signed or unsigned decimal number, nothing else: "-110", "+150", "150". */
+const PLAIN_NUMBER = /^[+-]?\d+(\.\d+)?$/
+
+/** American odds start at +100 / -100; a number between those is not a real price. */
+const MIN_AMERICAN_ODDS_MAGNITUDE = 100
 
 /**
- * Odds used to estimate a return when no leg has usable odds.
- *
- * NOTE: like DEFAULT_STAKE, this shows a figure derived from odds nobody
- * entered. Kept as-is for now; see the follow-up fix.
+ * Read American odds typed into the form, or null if they aren't valid.
+ * Strict on purpose: "150abc" is rejected rather than quietly read as 150.
  */
-export const FALLBACK_ODDS = -110
+export function parseAmericanOdds(input: string): number | null {
+  const trimmed = input.trim()
+  if (!PLAIN_NUMBER.test(trimmed)) return null
+  const odds = Number(trimmed)
+  return Math.abs(odds) >= MIN_AMERICAN_ODDS_MAGNITUDE ? odds : null
+}
 
-/** Parse the stake input, falling back to DEFAULT_STAKE. */
-export function parseStake(input: string): number {
-  return parseFloat(input) || DEFAULT_STAKE
+/** Read the stake typed into the form, or null unless it is a number above zero. */
+export function parseStake(input: string): number | null {
+  const trimmed = input.trim()
+  if (trimmed === "") return null
+  const stake = Number(trimmed)
+  return Number.isFinite(stake) && stake > 0 ? stake : null
 }
 
 /**
- * Combine American odds typed into the form into one parlay price.
+ * Combine the legs' American odds into one parlay price.
  *
- * Legs that can't be parsed are skipped, and 0 means "no price available".
- * Parlay maths works in decimal odds: the decimal prices of independent legs
- * multiply, then the product is converted back to American.
+ * Returns null unless there is at least one leg and every leg has valid odds:
+ * a total that quietly ignored a bad leg would be a wrong number, not a
+ * partial one. Parlay maths works in decimal odds: the decimal prices of
+ * independent legs multiply, then the product is converted back to American.
  */
-export function calcTotalOdds(oddsInputs: readonly string[]): number {
-  const parlayDecimal = oddsInputs
-    .map((raw) => parseFloat(raw))
-    .filter((odds) => !Number.isNaN(odds))
-    .reduce((product, odds) => product * americanToDecimal(odds), 1)
+export function calcTotalOdds(oddsInputs: readonly string[]): number | null {
+  if (oddsInputs.length === 0) return null
 
-  // A product of 1 means no leg contributed (every input was unparseable).
-  if (parlayDecimal <= 1) return 0
+  let parlayDecimal = 1
+  for (const input of oddsInputs) {
+    const odds = parseAmericanOdds(input)
+    if (odds === null) return null
+    parlayDecimal *= americanToDecimal(odds)
+  }
   return decimalToAmerican(parlayDecimal)
 }
 
-/** Everything the summary card shows, derived from the current form values. */
+/**
+ * Everything the summary card shows, derived from the current form values.
+ * Any figure that can't be computed from what the user has actually entered
+ * is null, never a guess.
+ */
 export function calcBetslipTotals(
   bets: ReadonlyArray<Pick<BetDraft, "odds">>,
   stakeInput: string
@@ -50,6 +60,7 @@ export function calcBetslipTotals(
   return {
     totalOdds,
     stake,
-    potentialReturn: calcPotentialReturn(stake, totalOdds || FALLBACK_ODDS),
+    potentialReturn:
+      totalOdds !== null && stake !== null ? calcPotentialReturn(stake, totalOdds) : null,
   }
 }
