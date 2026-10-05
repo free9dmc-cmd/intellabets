@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { PREMIUM_PRICE, AI_PRICE } from "@/lib/utils"
-import { isNativePlatform, purchaseNative, IAP_PRODUCTS } from "@/lib/native-iap"
+import { runCheckout, subscriptionPlan, type SubscriptionType } from "@/lib/checkout"
 
 const TIPSTER_PERKS = [
   { icon: "📋", title: "Create Unlimited Betslips", desc: "Post single bets, parlays, and multi-leg picks across any sport" },
@@ -29,7 +29,8 @@ const REVENUE_EXAMPLES = [
 export default function PremiumPage() {
   const { data: session, update: updateSession } = useSession()
   const router = useRouter()
-  const [loading, setLoading] = useState<"premium" | "ai" | null>(null)
+  // Which plan's button is mid-purchase, so only that one shows "Activating...".
+  const [loading, setLoading] = useState<SubscriptionType | null>(null)
   const [error, setError] = useState("")
   const [status, setStatus] = useState<{
     isPremium: boolean
@@ -41,63 +42,45 @@ export default function PremiumPage() {
     fetch("/api/premium").then((r) => r.json()).then(setStatus)
   }, [])
 
-  const activate = async (type: "premium" | "ai") => {
+  const activate = async (type: SubscriptionType) => {
     if (!session) { router.push("/login"); return }
     setLoading(type)
     setError("")
 
-    // Native iOS/Android — use StoreKit / Play Billing via RevenueCat
-    if (await isNativePlatform()) {
-      const result = await purchaseNative(IAP_PRODUCTS[type])
-      if (result.cancelled) { setLoading(null); return }
-      if (result.error) { setError(result.error); setLoading(null); return }
-      router.push(`/checkout/success?type=${type}`)
-      return
+    const outcome = await runCheckout(subscriptionPlan(type))
+    switch (outcome.status) {
+      case "redirecting":
+        // The browser is leaving for the payment page; keep the button disabled.
+        return
+      case "purchased":
+        // Native purchase done. Stay disabled while the route changes.
+        router.push(`/checkout/success?type=${type}`)
+        return
+      case "cancelled":
+        setLoading(null)
+        return
+      case "failed":
+        setError(outcome.message)
+        setLoading(null)
+        return
+      case "demo-activated":
+        // Demo fallback (local dev with DEMO_BILLING=true)
+        setStatus((prev) => {
+          if (!prev) return null
+          const isPremium = type === "premium" || prev.isPremium
+          // Premium bundles AI Picks, so activating premium also grants AI.
+          const hasAI = type === "ai" || isPremium || prev.hasAI
+          return {
+            ...prev,
+            isPremium,
+            hasAI,
+            aiAccessSource: isPremium ? "premium" : hasAI ? "standalone" : "none",
+          }
+        })
+        if (type === "premium") await updateSession({ isPremium: true })
+        router.push(type === "premium" ? "/dashboard" : "/ai-picks")
+        setLoading(null)
     }
-
-    // Web — use Stripe checkout
-    const checkoutRes = await fetch("/api/checkout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type }),
-    })
-    const checkoutData = await checkoutRes.json().catch(() => ({}))
-    if (checkoutData.url) { window.location.href = checkoutData.url; return }
-
-    // Only fall back to demo activation when the server explicitly says so.
-    // In production that endpoint is a 404 by design, so surface the error.
-    if (!checkoutData.demo) {
-      setError(checkoutData.error ?? "Could not start checkout. Please try again.")
-      setLoading(null)
-      return
-    }
-
-    // Demo fallback (local dev with DEMO_BILLING=true)
-    const res = await fetch("/api/premium", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type }),
-    })
-    const data = await res.json().catch(() => ({}))
-    if (res.ok) {
-      setStatus((prev) => {
-        if (!prev) return null
-        const isPremium = type === "premium" || prev.isPremium
-        // Premium bundles AI Picks, so activating premium also grants AI.
-        const hasAI = type === "ai" || isPremium || prev.hasAI
-        return {
-          ...prev,
-          isPremium,
-          hasAI,
-          aiAccessSource: isPremium ? "premium" : hasAI ? "standalone" : "none",
-        }
-      })
-      if (type === "premium") await updateSession({ isPremium: true })
-      router.push(type === "premium" ? "/dashboard" : "/ai-picks")
-    } else {
-      setError(data.error ?? "Activation failed")
-    }
-    setLoading(null)
   }
 
   return (
