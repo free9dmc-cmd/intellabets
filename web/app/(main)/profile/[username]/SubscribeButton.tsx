@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { isNativePlatform, purchaseNative, tipsterProductId } from "@/lib/native-iap"
+import { runCheckout, tipsterPlan } from "@/lib/checkout"
 
 interface Props {
   tipsterId: string
@@ -42,48 +42,25 @@ export default function SubscribeButton({
         setError(d.error ?? "Failed")
       }
     } else {
-      // Native iOS/Android — StoreKit / Play Billing
-      if (await isNativePlatform()) {
-        const result = await purchaseNative(tipsterProductId(price), tipsterId)
-        if (result.cancelled) { setLoading(false); return }
-        if (result.error) { setError(result.error); setLoading(false); return }
-        // The subscription row is created authoritatively by the RevenueCat
-        // webhook (INITIAL_PURCHASE), which also records the tipster payout.
-        // Don't write it from the client — that path is unauthenticated intent.
-        setSubscribed(true)
-        router.refresh()
-        setLoading(false)
-        return
-      }
-
-      // Web — Stripe checkout
-      const checkoutRes = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "tipster", tipsterId }),
-      })
-      const checkoutData = await checkoutRes.json().catch(() => ({}))
-      if (checkoutData.url) { window.location.href = checkoutData.url; return }
-
-      // Only fall back to demo activation when the server says so.
-      if (!checkoutData.demo) {
-        setError(checkoutData.error ?? "Could not start checkout. Please try again.")
-        setLoading(false)
-        return
-      }
-
-      // Demo fallback (local dev with DEMO_BILLING=true)
-      const res = await fetch("/api/subscriptions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tipsterId }),
-      })
-      if (res.ok) {
-        setSubscribed(true)
-        router.refresh()
-      } else {
-        const d = await res.json().catch(() => ({}))
-        setError(d.error ?? "Failed")
+      const outcome = await runCheckout(tipsterPlan(tipsterId, price))
+      switch (outcome.status) {
+        case "redirecting":
+          // The browser is leaving for the payment page; keep the button disabled.
+          return
+        case "purchased":
+        case "demo-activated":
+          // After a native purchase the subscription row is created
+          // authoritatively by the RevenueCat webhook (INITIAL_PURCHASE), which
+          // also records the tipster payout. Don't write it from the client —
+          // that path is unauthenticated intent. This only updates the UI.
+          // ("demo-activated" is local dev with DEMO_BILLING=true.)
+          setSubscribed(true)
+          router.refresh()
+          break
+        case "failed":
+          setError(outcome.message)
+          break
+        // "cancelled": the user backed out, nothing to report.
       }
     }
 
