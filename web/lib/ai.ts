@@ -1,35 +1,13 @@
 import Anthropic from "@anthropic-ai/sdk"
 import { anthropicKey } from "./anthropic-key"
+import type { AIBet, AIBetslip } from "./ai-types"
+
+// Re-exported so existing imports from "@/lib/ai" keep working.
+export type { AIBet, AIBetslip }
 
 const anthropic = new Anthropic({
   apiKey: anthropicKey() ?? undefined,
 })
-
-export interface AIBet {
-  game: string
-  homeTeam: string
-  awayTeam: string
-  pick: string
-  odds: number
-  betType: string
-  line: string
-  sport: string
-  gameDate: string
-  reasoning: string
-}
-
-export interface AIBetslip {
-  title: string
-  description: string
-  sport: string
-  league: string
-  bets: AIBet[]
-  totalOdds: number
-  stake: number
-  potentialReturn: number
-  confidence: number
-  analysis: string
-}
 
 export async function generateAIBetslip(
   sport: string,
