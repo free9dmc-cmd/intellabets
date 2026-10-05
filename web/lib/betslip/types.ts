@@ -19,6 +19,32 @@ export interface BetDraft {
   gameDate: string
 }
 
+/** The whole create-betslip form: betslip details plus its legs. */
+export interface BetslipDraft {
+  title: string
+  description: string
+  sport: string
+  league: string
+  /** Kept as typed, like BetDraft fields, so editing never fights the cursor. */
+  stake: string
+  isPublic: boolean
+  bets: BetDraft[]
+}
+
+/** A leg as POST /api/betslips expects it: odds as a number. */
+export type BetPayload = Omit<BetDraft, "odds"> & { odds: number }
+
+/** Request body for POST /api/betslips. */
+export interface BetslipPayload {
+  title: string
+  description: string
+  sport: string
+  league: string
+  stake: number
+  isPublic: boolean
+  bets: BetPayload[]
+}
+
 /** The three figures shown in the betslip summary card. */
 export interface BetslipTotals {
   /** Combined American odds across all legs; 0 when none can be computed. */
