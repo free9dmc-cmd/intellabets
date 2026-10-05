@@ -20,8 +20,12 @@ interface Props {
 /** What a user without access sees: the pitch, the price, and a way to buy. */
 export default function AIAccessGate({ onAccessGranted }: Props) {
   const [error, setError] = useState("")
+  // Disables the button while a purchase is in flight, so a double-click can't
+  // start two checkouts.
+  const [loading, setLoading] = useState(false)
 
   const activate = async () => {
+    setLoading(true)
     setError("")
     const outcome = await runCheckout(subscriptionPlan("ai", "Failed to activate"))
     switch (outcome.status) {
@@ -32,9 +36,12 @@ export default function AIAccessGate({ onAccessGranted }: Props) {
       case "failed":
         setError(outcome.message)
         break
+      case "redirecting":
+        // The browser is leaving for the payment page; stay disabled until it does.
+        return
       // "cancelled": the user backed out, nothing to report.
-      // "redirecting": the browser is already leaving for the payment page.
     }
+    setLoading(false)
   }
 
   return (
@@ -65,10 +72,16 @@ export default function AIAccessGate({ onAccessGranted }: Props) {
       </p>
       <button
         onClick={activate}
+        disabled={loading}
         className="text-lg py-3 px-10 rounded-xl font-bold transition-all"
-        style={{ background: "rgba(6,182,212,0.15)", color: "#06b6d4", border: "2px solid rgba(6,182,212,0.4)" }}
+        style={{
+          background: "rgba(6,182,212,0.15)",
+          color: "#06b6d4",
+          border: "2px solid rgba(6,182,212,0.4)",
+          opacity: loading ? 0.8 : 1,
+        }}
       >
-        {`Activate AI Picks — $${AI_PRICE}/mo`}
+        {loading ? "Activating..." : `Activate AI Picks — $${AI_PRICE}/mo`}
       </button>
       {error && <p className="text-red-400 text-sm mt-3">{error}</p>}
     </div>

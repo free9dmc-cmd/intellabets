@@ -1,3 +1,4 @@
+import { NETWORK_ERROR_MESSAGE } from "@/lib/messages"
 import { IAP_PRODUCTS, isNativePlatform, purchaseNative, tipsterProductId } from "@/lib/native-iap"
 
 /** Plans sold through the subscription flow; keys of IAP_PRODUCTS. */
@@ -77,13 +78,23 @@ interface JsonBody {
   error?: string
 }
 
-function postJson(deps: CheckoutDeps, url: string, body: Record<string, string>) {
-  return deps.fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  })
+/**
+ * POST JSON. Resolves to null if the request never completed (offline, dropped
+ * connection...), so callers can tell "no answer" apart from "answered no".
+ */
+async function postJson(deps: CheckoutDeps, url: string, body: Record<string, string>) {
+  try {
+    return await deps.fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    })
+  } catch {
+    return null
+  }
 }
+
+const NETWORK_FAILURE: CheckoutOutcome = { status: "failed", message: NETWORK_ERROR_MESSAGE }
 
 /** Parse a response body, treating an unreadable one as empty. */
 async function readJson(res: Pick<Response, "json">): Promise<JsonBody> {
@@ -110,7 +121,9 @@ export async function runCheckout(
     return { status: "purchased" }
   }
 
-  const checkout = await readJson(await postJson(deps, "/api/checkout", plan.checkoutBody))
+  const checkoutRes = await postJson(deps, "/api/checkout", plan.checkoutBody)
+  if (!checkoutRes) return NETWORK_FAILURE
+  const checkout = await readJson(checkoutRes)
   if (checkout.url) {
     deps.redirect(checkout.url)
     return { status: "redirecting" }
@@ -126,6 +139,7 @@ export async function runCheckout(
   }
 
   const demoRes = await postJson(deps, plan.demo.url, plan.demo.body)
+  if (!demoRes) return NETWORK_FAILURE
   if (demoRes.ok) return { status: "demo-activated" }
   const demo = await readJson(demoRes)
   return { status: "failed", message: demo.error ?? plan.demo.failureMessage }

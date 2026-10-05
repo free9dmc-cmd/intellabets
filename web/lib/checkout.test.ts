@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
+import { NETWORK_ERROR_MESSAGE } from "./messages"
 import {
   runCheckout,
   subscriptionPlan,
@@ -107,6 +108,19 @@ describe("runCheckout — on the web", () => {
     })
   })
 
+  it("reports a network failure instead of throwing, so the UI never gets stuck", async () => {
+    const deps = makeDeps({
+      fetch: vi.fn(async () => {
+        throw new TypeError("Failed to fetch")
+      }),
+    })
+    expect(await runCheckout(plan, deps)).toEqual({
+      status: "failed",
+      message: NETWORK_ERROR_MESSAGE,
+    })
+    expect(deps.redirect).not.toHaveBeenCalled()
+  })
+
   it("never falls back to demo activation unless the server says demo: true", async () => {
     const deps = makeDeps({ fetch: vi.fn(async () => reply(true, { error: "nope" })) })
     await runCheckout(plan, deps)
@@ -140,6 +154,16 @@ describe("runCheckout — local-development demo fallback", () => {
       status: "failed",
       message: "Already active",
     })
+  })
+
+  it("reports a network failure on the demo call too", async () => {
+    const deps = makeDeps({
+      fetch: vi
+        .fn()
+        .mockResolvedValueOnce(reply(true, { demo: true }))
+        .mockRejectedValueOnce(new TypeError("Failed to fetch")),
+    })
+    expect(await runCheckout(plan, deps)).toEqual({ status: "failed", message: NETWORK_ERROR_MESSAGE })
   })
 
   it("falls back to the plan's own failure message when the reply is unreadable", async () => {

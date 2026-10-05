@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
 import type { AIBetslip } from "@/lib/ai-types"
+import { NETWORK_ERROR_MESSAGE } from "@/lib/messages"
 
 /** What the user chooses before generating picks. */
 export interface AIPickOptions {
@@ -31,23 +32,31 @@ export function useAIPicks() {
     setError("")
     setResult(null)
 
-    const res = await fetch("/api/ai-picks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(options),
-    })
+    try {
+      const res = await fetch("/api/ai-picks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(options),
+      })
 
-    const data = await res.json()
+      // An error page from a proxy or the platform isn't JSON.
+      const data = await res.json().catch(() => ({}))
 
-    if (!res.ok) {
-      // The server is the authority on access; if it says no, show the paywall.
-      if (data.code === "NO_AI_SUB") setHasAccess(false)
-      else setError(data.error ?? "Generation failed")
-    } else {
-      setResult(data.betslip)
+      if (!res.ok) {
+        // The server is the authority on access; if it says no, show the paywall.
+        if (data.code === "NO_AI_SUB") setHasAccess(false)
+        else setError(data.error ?? "Generation failed")
+      } else if (data.betslip) {
+        setResult(data.betslip)
+      } else {
+        setError("Generation failed")
+      }
+    } catch {
+      // The request never completed (offline, dropped connection...).
+      setError(NETWORK_ERROR_MESSAGE)
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
   }, [])
 
   const grantAccess = useCallback(() => setHasAccess(true), [])

@@ -10,6 +10,7 @@ import {
 } from "@/lib/betslip/draft"
 import { validateBetslipDraft } from "@/lib/betslip/validation"
 import type { BetDraft, BetslipDraft } from "@/lib/betslip/types"
+import { NETWORK_ERROR_MESSAGE } from "@/lib/messages"
 
 /**
  * Everything the create-betslip screen needs, so the page can stay a layout.
@@ -57,17 +58,26 @@ export function useBetslipForm() {
     setSaving(true)
     setError("")
 
-    const res = await fetch("/api/betslips", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(toBetslipPayload(draft)),
-    })
+    let res: Response
+    try {
+      res = await fetch("/api/betslips", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(toBetslipPayload(draft)),
+      })
+    } catch {
+      // The request never completed (offline, dropped connection...).
+      setError(NETWORK_ERROR_MESSAGE)
+      setSaving(false)
+      return
+    }
 
     if (res.ok) {
       const { betslip } = await res.json()
       router.push(`/betslips/${betslip.id}`)
     } else {
-      const body = await res.json()
+      // An error page from a proxy or the platform isn't JSON.
+      const body = await res.json().catch(() => ({}))
       setError(body.error ?? "Failed to save")
       setSaving(false)
     }
