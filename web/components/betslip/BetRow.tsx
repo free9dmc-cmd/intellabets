@@ -32,7 +32,7 @@ function BetRow({ bet, index, canRemove, onChange, onRemove }: Props) {
 
       <div className="grid grid-cols-2 gap-3">
         <TextField
-          size="sm"
+          variant="compact"
           className="col-span-2"
           label="Game *"
           value={bet.game}
@@ -41,7 +41,7 @@ function BetRow({ bet, index, canRemove, onChange, onRemove }: Props) {
           required
         />
         <TextField
-          size="sm"
+          variant="compact"
           label="Pick *"
           value={bet.pick}
           onChange={(value) => onChange(index, "pick", value)}
@@ -49,14 +49,14 @@ function BetRow({ bet, index, canRemove, onChange, onRemove }: Props) {
           required
         />
         <TextField
-          size="sm"
+          variant="compact"
           label="Odds (American) *"
           value={bet.odds}
           onChange={(value) => onChange(index, "odds", value)}
           placeholder="-110"
           required
         />
-        <FormField size="sm" label="Bet Type">
+        <FormField variant="compact" label="Bet Type">
           <select
             value={bet.betType}
             onChange={(e) => onChange(index, "betType", e.target.value)}
@@ -68,14 +68,14 @@ function BetRow({ bet, index, canRemove, onChange, onRemove }: Props) {
           </select>
         </FormField>
         <TextField
-          size="sm"
+          variant="compact"
           label="Line / Total"
           value={bet.line}
           onChange={(value) => onChange(index, "line", value)}
           placeholder="e.g. -4.5 or O/U 47.5"
         />
         <TextField
-          size="sm"
+          variant="compact"
           label="Game Date"
           type="date"
           value={bet.gameDate}

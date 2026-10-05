@@ -1,18 +1,20 @@
 import type { InputHTMLAttributes } from "react"
-import FormField, { type FormFieldSize } from "./FormField"
+import FormField from "./FormField"
 
-const INPUT_STYLES: Record<FormFieldSize, string> = {
-  md: "input-dark",
-  sm: "input-dark text-sm",
+type TextFieldVariant = "default" | "compact"
+
+const INPUT_STYLES: Record<TextFieldVariant, string> = {
+  default: "input-dark",
+  compact: "input-dark text-sm",
 }
 
 interface Props
-  extends Omit<InputHTMLAttributes<HTMLInputElement>, "size" | "value" | "onChange" | "className"> {
+  extends Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "className"> {
   label: string
   value: string
   /** Receives the new text directly, so callers never touch the DOM event. */
   onChange: (value: string) => void
-  size?: FormFieldSize
+  variant?: TextFieldVariant
   /** Classes for the wrapper around label and input, e.g. "col-span-2". */
   className?: string
 }
@@ -25,17 +27,17 @@ export default function TextField({
   label,
   value,
   onChange,
-  size = "md",
+  variant = "default",
   className,
   ...inputProps
 }: Props) {
   return (
-    <FormField label={label} size={size} className={className}>
+    <FormField label={label} variant={variant} className={className}>
       <input
         {...inputProps}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={INPUT_STYLES[size]}
+        className={INPUT_STYLES[variant]}
       />
     </FormField>
   )
