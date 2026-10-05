@@ -109,6 +109,18 @@ describe("toBetslipPayload", () => {
     ])
   })
 
+  it("saves every leg with the betslip's sport, even legs created before it was chosen", () => {
+    let draft = createInitialDraft() // leg 1 is created while the sport is still the default
+    draft = betslipDraftReducer(draft, { type: "setField", field: "sport", value: "NBA" })
+    draft = betslipDraftReducer(draft, { type: "addBet" })
+    expect(draft.bets[0].sport).toBe("NFL") // the draft itself still holds the stale value...
+
+    const payload = toBetslipPayload(draft)
+
+    expect(payload.sport).toBe("NBA")
+    expect(payload.bets.map((bet) => bet.sport)).toEqual(["NBA", "NBA"]) // ...the payload does not
+  })
+
   it("keeps the title exactly as typed (validation trims, the payload does not)", () => {
     const draft = betslipDraftReducer(createInitialDraft(), {
       type: "setField",

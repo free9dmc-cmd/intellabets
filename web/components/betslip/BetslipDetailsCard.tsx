@@ -1,7 +1,8 @@
-import { SPORTS, SPORT_EMOJIS } from "@/lib/utils"
 import type { DetailsField } from "@/lib/betslip/draft"
+import { SPORT_OPTIONS } from "@/lib/betslip/options"
 import type { BetslipDetails, BetslipDraft } from "@/lib/betslip/types"
 import FormField from "@/components/ui/FormField"
+import SelectField from "@/components/ui/SelectField"
 import TextField from "@/components/ui/TextField"
 
 interface Props {
@@ -35,19 +36,12 @@ export default function BetslipDetailsCard({ details, onFieldChange }: Props) {
       </FormField>
 
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Sport">
-          <select
-            value={details.sport}
-            onChange={(e) => onFieldChange("sport", e.target.value)}
-            className="input-dark text-sm"
-          >
-            {SPORTS.map((s) => (
-              <option key={s}>
-                {SPORT_EMOJIS[s]} {s}
-              </option>
-            ))}
-          </select>
-        </FormField>
+        <SelectField
+          label="Sport"
+          value={details.sport}
+          onChange={(value) => onFieldChange("sport", value)}
+          options={SPORT_OPTIONS}
+        />
         <TextField
           label="League (optional)"
           value={details.league}

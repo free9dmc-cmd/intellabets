@@ -1,7 +1,7 @@
 import { memo } from "react"
-import { BET_TYPES } from "@/lib/betslip/draft"
+import { BET_TYPE_OPTIONS } from "@/lib/betslip/options"
 import type { BetDraft } from "@/lib/betslip/types"
-import FormField from "@/components/ui/FormField"
+import SelectField from "@/components/ui/SelectField"
 import TextField from "@/components/ui/TextField"
 
 interface Props {
@@ -56,17 +56,13 @@ function BetRow({ bet, index, canRemove, onChange, onRemove }: Props) {
           placeholder="-110"
           required
         />
-        <FormField variant="compact" label="Bet Type">
-          <select
-            value={bet.betType}
-            onChange={(e) => onChange(index, "betType", e.target.value)}
-            className="input-dark text-sm"
-          >
-            {BET_TYPES.map((type) => (
-              <option key={type}>{type}</option>
-            ))}
-          </select>
-        </FormField>
+        <SelectField
+          variant="compact"
+          label="Bet Type"
+          value={bet.betType}
+          onChange={(value) => onChange(index, "betType", value)}
+          options={BET_TYPE_OPTIONS}
+        />
         <TextField
           variant="compact"
           label="Line / Total"

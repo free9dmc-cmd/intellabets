@@ -84,6 +84,10 @@ export function betslipDraftReducer(state: BetslipDraft, action: BetslipDraftAct
 /**
  * Convert the form into the request body for POST /api/betslips.
  * This is the one place text-typed form values become numbers.
+ *
+ * Every leg is saved with the betslip's sport. The form has no per-leg sport
+ * control, and the first leg is created before the user picks a sport, so
+ * without this a betslip could be saved as NBA with an NFL leg.
  */
 export function toBetslipPayload(draft: BetslipDraft): BetslipPayload {
   return {
@@ -93,6 +97,6 @@ export function toBetslipPayload(draft: BetslipDraft): BetslipPayload {
     league: draft.league,
     stake: parseStake(draft.stake),
     isPublic: draft.isPublic,
-    bets: draft.bets.map((bet) => ({ ...bet, odds: parseFloat(bet.odds) })),
+    bets: draft.bets.map((bet) => ({ ...bet, sport: draft.sport, odds: parseFloat(bet.odds) })),
   }
 }
