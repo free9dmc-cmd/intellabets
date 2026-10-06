@@ -4,6 +4,7 @@ import { Providers } from "./providers"
 import AgeGate from "@/components/AgeGate"
 import IAPProvider from "@/components/IAPProvider"
 import SupportChat from "@/components/SupportChat"
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 // No unsubstantiated claims here either — this text is what search engines and
 // link previews show, and it is reviewed during payment underwriting.
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
           <SupportChat />
         </Providers>
+        <SpeedInsights />
       </body>
     </html>
   )
