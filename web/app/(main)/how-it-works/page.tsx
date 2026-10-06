@@ -98,7 +98,9 @@ export default function HowItWorksPage() {
           sharp bettors actually track. We are accumulating CLV data under corrected settlement logic
           right now. We&apos;re not publishing an average yet because the sample is still too small and too
           new to be meaningful — we&apos;d rather say that plainly than publish a number early and have it
-          be wrong in either direction.
+          be wrong in either direction. See the{" "}
+          <Link href="/clv" className="text-purple-400 hover:underline">CLV explainer</Link> for a
+          worked example.
         </p>
       </section>
 
