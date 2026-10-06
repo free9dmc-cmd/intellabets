@@ -48,6 +48,7 @@ export default withAuth(
           "/contact",
           "/profile",
           "/how-it-works",
+          "/clv",
           "/sitemap.xml",
           "/robots.txt",
         ]
