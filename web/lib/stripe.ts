@@ -1,5 +1,11 @@
 import Stripe from "stripe"
-import { PLATFORM_FEE } from "./utils"
+
+// Pricing + the tipster payout split moved into the processor-agnostic billing
+// core (lib/billing/pricing.ts). Imported for use below AND re-exported so
+// existing imports of `PRICING` / `calcTipsterPayout` from "@/lib/stripe" keep
+// working unchanged.
+import { PRICING, calcTipsterPayout } from "./billing/pricing"
+export { PRICING, calcTipsterPayout }
 
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? "sk_test_placeholder", {
   apiVersion: "2025-02-24.acacia",
@@ -8,19 +14,6 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? "sk_test_place
 export function isStripeConfigured(): boolean {
   const key = process.env.STRIPE_SECRET_KEY ?? ""
   return (key.startsWith("sk_test_") || key.startsWith("sk_live_")) && key.length > 30
-}
-
-export const PRICING = {
-  premium: {
-    amount: 1999, // $19.99/mo
-    interval: "month" as const,
-    description: "IntellaBets Premium Tipster Membership",
-  },
-  ai: {
-    amount: 999, // $9.99/mo
-    interval: "month" as const,
-    description: "IntellaBets AI Picks Subscription",
-  },
 }
 
 /**
@@ -106,15 +99,6 @@ export async function createTipsterCheckout(
     cancel_url: cancelUrl,
   })
   return session
-}
-
-/**
- * Calculate tipster payout after platform fee
- */
-export function calcTipsterPayout(grossAmount: number) {
-  const fee = grossAmount * PLATFORM_FEE
-  const net = grossAmount - fee
-  return { gross: grossAmount, fee, net }
 }
 
 /**

@@ -28,7 +28,7 @@ export default function PrivacyPage() {
           <li><strong className="text-white">Account data:</strong> name, email address, username, and encrypted password when you register.</li>
           <li><strong className="text-white">Profile data:</strong> bio, sports specialties, subscription price, and performance statistics you choose to provide.</li>
           <li><strong className="text-white">Content:</strong> betslips and picks you create or purchase access to.</li>
-          <li><strong className="text-white">Payment data:</strong> payments are processed by Stripe (web), Apple In-App Purchase (iOS), or Google Play Billing (Android). We do not store full card numbers. We receive transaction identifiers and subscription status from these processors.</li>
+          <li><strong className="text-white">Payment data:</strong> web payments are processed by Authorize.Net (card), NOWPayments (custodial crypto), or paid directly on-chain from your own self-custody wallet (USDC on the Base network); mobile payments use Apple In-App Purchase (iOS) or Google Play Billing (Android). We do not store full card numbers. We receive transaction identifiers and subscription status from these processors. For self-custody wallet payments we record the public blockchain transaction hash and the wallet address you pay from, which are public on-chain data.</li>
           <li><strong className="text-white">Usage data:</strong> pages viewed, features used, IP address, browser/device type, and timestamps — collected via server logs.</li>
           <li><strong className="text-white">Communications:</strong> support requests or emails you send us.</li>
         </ul>
@@ -49,7 +49,9 @@ export default function PrivacyPage() {
       <section className="space-y-3">
         <h2 className="text-lg font-bold text-white">4. Third-Party Services</h2>
         <div className="space-y-2">
-          <p><strong className="text-white">Stripe</strong> — web payment processing. Governed by the <a href="https://stripe.com/privacy" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">Stripe Privacy Policy</a>.</p>
+          <p><strong className="text-white">Authorize.Net</strong> — web card payment processing. Governed by the <a href="https://www.authorize.net/about-us/privacy.html" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">Authorize.Net Privacy Policy</a>.</p>
+          <p><strong className="text-white">NOWPayments</strong> — custodial crypto payment processing. Governed by the <a href="https://nowpayments.io/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">NOWPayments Privacy Policy</a>.</p>
+          <p><strong className="text-white">Self-custody wallet payments</strong> — USDC transfers on the Base network settle directly between your wallet and ours on a public blockchain; there is no intermediary custodian, and the transaction is permanently recorded on-chain.</p>
           <p><strong className="text-white">Apple / Google</strong> — in-app purchase processing on mobile. Governed by Apple&apos;s and Google&apos;s respective privacy policies.</p>
           <p><strong className="text-white">RevenueCat</strong> — mobile subscription management. Governed by the <a href="https://www.revenuecat.com/privacy" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">RevenueCat Privacy Policy</a>.</p>
           <p><strong className="text-white">Anthropic</strong> — AI pick generation. No personally identifiable information is shared. Governed by the <a href="https://www.anthropic.com/privacy" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">Anthropic Privacy Policy</a>.</p>

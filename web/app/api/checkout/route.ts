@@ -3,12 +3,13 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { isDemoBillingEnabled } from "@/lib/billing-guard"
-import {
-  isStripeConfigured,
-  createPremiumCheckout,
-  createAICheckout,
-  createTipsterCheckout,
-} from "@/lib/stripe"
+import { billingUnavailableResponse, isBillingAuthError } from "@/lib/billing/degradation"
+import { resolveProvider } from "@/lib/billing/registry"
+import type { PlanId } from "@/lib/billing/types"
+import { isStripeConfigured, createTipsterCheckout } from "@/lib/stripe"
+
+// Prisma + node crypto inside the providers require the Node.js runtime.
+export const runtime = "nodejs"
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions)
@@ -16,43 +17,47 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  if (!isStripeConfigured()) {
-    // Locally (with DEMO_BILLING=true) the client falls back to the mock
-    // activation endpoints. In production that fallback is a 404 by design,
-    // so surface a real error instead of pretending checkout "worked".
-    if (isDemoBillingEnabled()) {
-      return NextResponse.json({ demo: true })
-    }
-    console.error("Checkout attempted but STRIPE_SECRET_KEY is not configured")
-    return NextResponse.json(
-      { error: "Payments are temporarily unavailable. Please try again later." },
-      { status: 503 }
-    )
-  }
-
-  const { type, tipsterId } = await req.json()
+  const { type, tipsterId, providerId, walletAddress } = await req.json()
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
 
-  try {
-    if (type === "premium") {
-      const stripeSession = await createPremiumCheckout(
-        session.user.id,
-        `${appUrl}/checkout/success?type=premium`,
-        `${appUrl}/premium`
-      )
-      return NextResponse.json({ url: stripeSession.url })
+  // ── First-party plans (premium / AI) go through the processor-agnostic rails.
+  if (type === "premium" || type === "ai") {
+    const plan = type as PlanId
+    const provider = resolveProvider(providerId)
+
+    if (!provider) {
+      // No rail configured. Locally (DEMO_BILLING=true) the client falls back to
+      // the mock activation endpoint; in production that endpoint is a 404 by
+      // design, so surface the clean 503 instead of pretending it worked.
+      if (isDemoBillingEnabled()) return NextResponse.json({ demo: true })
+      return billingUnavailableResponse()
     }
 
-    if (type === "ai") {
-      const stripeSession = await createAICheckout(
-        session.user.id,
-        `${appUrl}/checkout/success?type=ai`,
-        `${appUrl}/premium`
-      )
-      return NextResponse.json({ url: stripeSession.url })
+    try {
+      const result = await provider.createCheckout({
+        plan,
+        userId: session.user.id,
+        userEmail: session.user.email,
+        successUrl: `${appUrl}/checkout/success?type=${plan}`,
+        cancelUrl: `${appUrl}/premium`,
+        // web3: the browser-connected wallet, if the client sent one.
+        walletAddress: typeof walletAddress === "string" ? walletAddress : null,
+      })
+      return NextResponse.json({ ...result, providerId: provider.id })
+    } catch (err: unknown) {
+      console.error("Checkout error:", err)
+      if (isBillingAuthError(err)) return billingUnavailableResponse()
+      return NextResponse.json({ error: "Checkout creation failed" }, { status: 500 })
     }
+  }
 
-    if (type === "tipster" && tipsterId) {
+  // ── Tipster subscriptions remain on Stripe (Stripe Connect handles payouts).
+  if (type === "tipster" && tipsterId) {
+    if (!isStripeConfigured()) {
+      if (isDemoBillingEnabled()) return NextResponse.json({ demo: true })
+      return billingUnavailableResponse()
+    }
+    try {
       const tipster = await prisma.user.findUnique({
         where: { id: tipsterId },
         select: { username: true, subscriptionPrice: true },
@@ -67,12 +72,13 @@ export async function POST(req: Request) {
         `${appUrl}/checkout/success?type=tipster&tipsterId=${tipsterId}`,
         `${appUrl}/profile/${tipster.username}`
       )
-      return NextResponse.json({ url: stripeSession.url })
+      return NextResponse.json({ kind: "redirect", url: stripeSession.url })
+    } catch (err: unknown) {
+      console.error("Tipster checkout error:", err)
+      if (isBillingAuthError(err)) return billingUnavailableResponse()
+      return NextResponse.json({ error: "Checkout creation failed" }, { status: 500 })
     }
-
-    return NextResponse.json({ error: "Invalid type" }, { status: 400 })
-  } catch (err: unknown) {
-    console.error("Checkout error:", err)
-    return NextResponse.json({ error: "Checkout creation failed" }, { status: 500 })
   }
+
+  return NextResponse.json({ error: "Invalid type" }, { status: 400 })
 }

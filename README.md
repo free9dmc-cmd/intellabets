@@ -99,8 +99,10 @@ cd backend && npx prisma db push && npm run dev    # → localhost:4000
 
 > **Monorepo gotcha:** `web/` and `backend/` have different Prisma schemas that
 > generate into the same hoisted `node_modules/@prisma/client`. Running
-> `prisma generate` in one breaks type-checking in the other. Re-run it in
-> whichever package you are working on.
+> `prisma generate` in one breaks type-checking in the other. `npm run
+> dev`/`build`/`typecheck` (and `npm test` in `backend/`) now auto-run `prisma
+> generate` for the current package first, so you no longer need to re-run it by
+> hand — unless you invoke `tsc`/`nest`/`next` directly.
 
 Engine API docs: `http://localhost:4000/api/docs` (Swagger).
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { billingUnavailableResponse, isBillingAuthError } from "@/lib/billing/degradation"
 import {
   isStripeConfigured,
   ensureConnectAccount,
@@ -61,6 +62,9 @@ export async function POST() {
     return NextResponse.json({ url })
   } catch (err) {
     console.error("Connect onboarding failed:", err)
+    // A revoked/invalid Stripe key throws an auth error mid-call. Surface it as
+    // a clean 503, not an opaque 500, so it reads as a transient outage.
+    if (isBillingAuthError(err)) return billingUnavailableResponse()
     return NextResponse.json({ error: "Could not start payout setup" }, { status: 500 })
   }
 }

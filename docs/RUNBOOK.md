@@ -108,7 +108,7 @@ curl -s --max-time 60 https://api.intellabets.com/api/v1/predictions/strategies
 | Can't reach `/admin` | Your sign-in email isn't in `ADMIN_EMAILS` |
 | Vercel build stops with "services" | Root Directory isn't `web` |
 | `prisma db push` → `P1001` | Unquoted `&` in the URL (shell backgrounds it), or Neon compute asleep. Neon's SQL Editor sidesteps both |
-| Typecheck fails in `web/` after backend work | Shared `@prisma/client` was regenerated for the other schema. Re-run `npx prisma generate` in `web/` |
+| Typecheck fails in `web/` after backend work | Shared `@prisma/client` was regenerated for the other schema. `npm run dev`/`build`/`typecheck` now auto-run `prisma generate` for the current package, so no manual re-run is needed unless you invoke `tsc`/`nest`/`next` directly (then `npx prisma generate` in `web/`) |
 | Login/register return 500, `prisma...findUnique()` error mentions "does not exist in the current database" | `schema.prisma` has a column the production Neon DB doesn't have — someone committed a schema change without running `prisma db push` against production. `GET /api/admin/health` now catches this (`database` check runs a real `findFirst`, not just `count`). Fix: `cd web && DATABASE_URL="<neon url>" npx prisma db push`, or run the equivalent `ALTER TABLE` in Neon's SQL Editor |
 
 ---
