@@ -49,6 +49,7 @@ export default withAuth(
           "/profile",
           "/how-it-works",
           "/closing-line-value",
+          "/responsible-gambling",
           "/sitemap.xml",
           "/robots.txt",
         ]

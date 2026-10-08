@@ -170,11 +170,11 @@ underwriter reviewing the site will be looking for exactly it.
 
 - [x] **How it works** — `/how-it-works`, shipped 2026-09-24. De-vig explained with a worked numeric example (labeled illustrative, not a real game), why we don't publish a win rate, and an FAQ (legal, do we take bets, what if you lose). Linked from the homepage nav, homepage footer, and the picks-page caveat.
 - [x] **Why we don't publish a win rate** — folded into `/how-it-works` rather than a separate page, since it's the natural next paragraph after the de-vig explanation.
-- [x] **CLV explainer** — `/closing-line-value`, shipped 2026-10-07. Worked example labeled illustrative, limits of CLV, and an explicit statement that no average is published yet (sample too small under corrected settlement). Added to middleware publicRoutes and sitemap. Not yet linked from the nav; link it from `/how-it-works` next.
+- [x] **CLV explainer** — `/closing-line-value`, shipped 2026-10-07. Worked example labeled illustrative, limits of CLV, and an explicit statement that no average is published yet (sample too small under corrected settlement). Added to middleware publicRoutes and sitemap. Linked from `/how-it-works` footer 2026-10-08.
 - [x] **FAQ** — folded into `/how-it-works` (see above) rather than a separate page.
 - [ ] **Onboarding emails** — still open. Blocked in practice: there's no transactional email sending configured yet (P1), and no new users are being created right now (P0.1), so nothing would trigger them today anyway.
 - [x] **SEO metadata** — `/how-it-works` has full metadata + OG tags; added `app/sitemap.ts` and `app/robots.ts` (Next.js auto-generates `/sitemap.xml` and `/robots.txt` from these), listing only routes actually public per `middleware.ts`. Per-page metadata on the other marketing pages (terms/privacy/contact/premium) already existed before this run.
-- [ ] **Responsible gambling page** — still open as a *dedicated* page. 18+ and responsible-gambling wording already exists on the homepage footer, `/contact`, `/terms`, and now `/how-it-works`'s footer, all linking out to ncpgambling.org — a standalone page with self-exclusion resources per state/country is the remaining gap, useful for underwriting.
+- [x] **Responsible gambling page** — `/responsible-gambling`, added 2026-10-08 (not yet deployed/verified live at time of writing). Warning signs, control tips, US/UK help lines, no performance figures. In middleware publicRoutes and sitemap; linked from `/how-it-works`. Still to do: link from homepage footer and `/premium`.
 
 ### Channels, in order of fit
 
