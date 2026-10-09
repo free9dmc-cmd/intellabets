@@ -335,6 +335,11 @@ export default function PremiumPage() {
           ))}
         </div>
       </div>
+      <p className="text-gray-600 text-xs text-center">
+        18+ only. Picks show where a price beats the market consensus; they do not predict or
+        guarantee outcomes, and you can lose money. If gambling stops being fun, see our{" "}
+        <a href="/responsible-gambling" className="underline hover:text-gray-400">responsible gambling page</a>.
+      </p>
     </div>
   )
 }
