@@ -87,6 +87,15 @@ leaderboard, admin console) against local Postgres, and `api` with
   BullMQ scheduler stays idle, no games or predictions exist, and the picks pages
   (`/picks`, `/ai-picks`) render empty rather than erroring. This is the single
   credential worth adding to see the product do its actual job.
+- **With `THE_ODDS_API_KEY` set** the scheduler logs "Scheduled polling every 30m
+  and settlement every 60m for 5 sports", and the first poll lands on the next
+  30-minute cycle — so the picks pages stay empty for up to `POLL_INTERVAL_MIN`
+  after a boot. Nothing is wrong; check
+  `redis-cli zrange bull:ingestion:repeat 0 -1 withscores` in the `redis`
+  container for the next run time. `POST /api/v1/ingestion/poll?sport=…` forces
+  one immediately, but it is admin-gated on the engine's *own* user table, which
+  the sandbox does not seed — lower `POLL_INTERVAL_MIN` instead if you want a
+  faster cycle.
 - **No `ANTHROPIC_API_KEY`** → AI analyst passes bets through unfiltered; support
   chat answers with its fallback message.
 - **No payment keys** (Stripe/Authorize.Net/NOWPayments/web3) → each rail is
