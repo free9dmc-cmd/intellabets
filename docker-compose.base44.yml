@@ -1,0 +1,158 @@
+# Base44 sandbox stack for IntellaBets.
+#
+# Runs the *cloned source* with live reload — the Next.js web app (public entry
+# point, host port 3000) and the NestJS engine API (host port 4000, where
+# Swagger lives) — plus local Postgres and Redis. It is a development
+# environment, not a production deployment: production config lives in
+# render.yaml (API) and Vercel (web).
+#
+#   docker compose -f docker-compose.base44.yml up -d --build
+#
+# Notes for whoever reads this next (also in AGENTS.md):
+#   * Each app installs its own dependencies inside its own checkout directory.
+#     The two Prisma schemas generate into a shared client when hoisted, so the
+#     monorepo install cannot be used here (see AGENTS.md).
+#   * Secrets the user owns (THE_ODDS_API_KEY, ANTHROPIC_API_KEY, RESEND_API_KEY)
+#     arrive in /run/base44/app.env, which is listed LAST so it wins over the
+#     committed placeholders in .env.base44-defaults.
+#   * BASE44_PREVIEW_MODE is passed through untouched (bare entry) so a sandbox
+#     -only override can be gated on it later; nothing reads it today.
+
+name: intellabets
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: on-failure
+    environment:
+      # Local sandbox credentials only — nothing here reaches production.
+      POSTGRES_DB: intellabets_web
+      POSTGRES_USER: intellabets
+      POSTGRES_PASSWORD: intellabets_local_dev
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./.base44/init-databases.sql:/docker-entrypoint-initdb.d/10-engine-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U intellabets -d intellabets_web"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    restart: on-failure
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
+
+  # Prediction engine (NestJS) — de-vig, predictions, BullMQ ingestion.
+  api:
+    image: node:22
+    restart: on-failure
+    working_dir: /app
+    command: ["sh", "/base44/start-api.sh"]
+    volumes:
+      - ./backend:/app
+      - ./.base44:/base44:ro
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: development
+      PORT: "4000"
+      DATABASE_URL: postgresql://intellabets:intellabets_local_dev@db:5432/intellabets_engine?schema=public
+      REDIS_URL: redis://redis:6379
+      # Origin list for browser callers of the API (the web app itself talks to
+      # the engine server-to-server, so this only matters for direct calls).
+      APP_URL: https://3000-${BASE44_PUBLIC_HOST_SUFFIX:-}
+      ADMIN_WEB_URL: https://3000-${BASE44_PUBLIC_HOST_SUFFIX:-}
+      BASE44_PREVIEW_MODE:
+    env_file:
+      - path: ./.env.base44-defaults
+      - path: /run/base44/app.env
+        required: false
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:4000/api/docs -o /dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 420s
+
+  # Customer web app (Next.js) — the preview's public entry point.
+  web:
+    image: node:22
+    restart: on-failure
+    working_dir: /app
+    command: ["sh", "/base44/start-web.sh"]
+    volumes:
+      - ./web:/app
+      - ./.base44:/base44:ro
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      PORT: "3000"
+      DATABASE_URL: postgresql://intellabets:intellabets_local_dev@db:5432/intellabets_web?schema=public
+      # The preview serves this app over https on the platform's public host;
+      # next-auth and the server-action allowlist need to agree with it.
+      NEXTAUTH_URL: https://3000-${BASE44_PUBLIC_HOST_SUFFIX:-}
+      NEXT_PUBLIC_APP_URL: https://3000-${BASE44_PUBLIC_HOST_SUFFIX:-}
+      APP_URL: https://3000-${BASE44_PUBLIC_HOST_SUFFIX:-}
+      # Server-to-server call to the engine, inside the compose network.
+      ENGINE_API_URL: http://api:4000/api/v1
+      # Bind mounts in the sandbox can miss inotify events; poll instead.
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+      BASE44_PREVIEW_MODE:
+    env_file:
+      - path: ./.env.base44-defaults
+      - path: /run/base44/app.env
+        required: false
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3000/login -o /dev/null || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 420s
+
+  # One-shot demo seed for the web database (runs, prints, exits — no restart).
+  #
+  # web/prisma/seed.ts refuses to run against anything that is not on localhost,
+  # because it deletes every user before inserting demo tipsters. It shares the
+  # db container's network namespace so the database really is on localhost from
+  # its point of view, and no database port is published on the sandbox.
+  # It waits for `web` to be healthy because it borrows web's installed
+  # node_modules (installing into the same directory concurrently would corrupt
+  # it), and skips itself when the database already has users.
+  seed:
+    image: node:22
+    working_dir: /app
+    command: ["sh", "/base44/seed-web.sh"]
+    network_mode: "service:db"
+    volumes:
+      - ./web:/app
+      - ./.base44:/base44:ro
+    environment:
+      DATABASE_URL: postgresql://intellabets:intellabets_local_dev@localhost:5432/intellabets_web?schema=public
+    depends_on:
+      web:
+        condition: service_healthy
+
+volumes:
+  db_data:
+  redis_data:
