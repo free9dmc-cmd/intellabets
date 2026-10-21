@@ -1,0 +1,25 @@
+{
+  "previewPort": 3000,
+  "healthPath": "/",
+  "startCommand": "docker compose -f docker-compose.base44.yml up -d --build",
+  "secrets": [
+    {
+      "name": "THE_ODDS_API_KEY",
+      "description": "The Odds API key (theoddsapi.com dashboard, free tier available) — multi-book odds that the whole engine runs on. Without it odds ingestion stays idle, no games are stored, and the picks pages are empty.",
+      "requiredAtBoot": false,
+      "generatedForDevelopment": false
+    },
+    {
+      "name": "ANTHROPIC_API_KEY",
+      "description": "Anthropic API key (console.anthropic.com) — the AI analyst that filters value bets and the customer support chat. Without it the engine passes bets through unfiltered and support chat replies with its fallback message.",
+      "requiredAtBoot": false,
+      "generatedForDevelopment": false
+    },
+    {
+      "name": "RESEND_API_KEY",
+      "description": "Resend API key (resend.com) — password-reset email. Without it resets are accepted and answered identically, but no mail is delivered.",
+      "requiredAtBoot": false,
+      "generatedForDevelopment": false
+    }
+  ]
+}
