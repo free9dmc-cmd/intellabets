@@ -70,8 +70,8 @@ services:
       REDIS_URL: redis://redis:6379
       # Origin list for browser callers of the API (the web app itself talks to
       # the engine server-to-server, so this only matters for direct calls).
-      APP_URL: https://3000-${BASE44_PUBLIC_HOST_SUFFIX}
-      ADMIN_WEB_URL: https://3000-${BASE44_PUBLIC_HOST_SUFFIX}
+      APP_URL: https://3000-${BASE44_PUBLIC_HOST_SUFFIX:-}
+      ADMIN_WEB_URL: https://3000-${BASE44_PUBLIC_HOST_SUFFIX:-}
       BASE44_PREVIEW_MODE:
     env_file:
       - path: ./.env.base44-defaults
@@ -106,9 +106,9 @@ services:
       DATABASE_URL: postgresql://intellabets:intellabets_local_dev@db:5432/intellabets_web?schema=public
       # The preview serves this app over https on the platform's public host;
       # next-auth and the server-action allowlist need to agree with it.
-      NEXTAUTH_URL: https://3000-${BASE44_PUBLIC_HOST_SUFFIX}
-      NEXT_PUBLIC_APP_URL: https://3000-${BASE44_PUBLIC_HOST_SUFFIX}
-      APP_URL: https://3000-${BASE44_PUBLIC_HOST_SUFFIX}
+      NEXTAUTH_URL: https://3000-${BASE44_PUBLIC_HOST_SUFFIX:-}
+      NEXT_PUBLIC_APP_URL: https://3000-${BASE44_PUBLIC_HOST_SUFFIX:-}
+      APP_URL: https://3000-${BASE44_PUBLIC_HOST_SUFFIX:-}
       # Server-to-server call to the engine, inside the compose network.
       ENGINE_API_URL: http://api:4000/api/v1
       # Bind mounts in the sandbox can miss inotify events; poll instead.

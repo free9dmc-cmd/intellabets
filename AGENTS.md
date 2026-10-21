@@ -72,10 +72,22 @@ is reviewable, and are bind-mounted read-only into the containers.
   `.base44/init-databases.sql` creates the engine one on first boot of the `db`
   volume. Changing that script requires recreating `db_data`.
 - `NEXTAUTH_URL` / `NEXT_PUBLIC_APP_URL` are derived from
-  `${BASE44_PUBLIC_HOST_SUFFIX}` at compose time (never hardcode the resolved
-  host). `NEXT_PUBLIC_APP_URL` also feeds
+  `${BASE44_PUBLIC_HOST_SUFFIX:-}` at compose time (never hardcode the resolved
+  host). The empty default is deliberate: a `docker compose` invocation that
+  does not carry the variable — the platform's own health probe does not — then
+  resolves quietly instead of printing "variable is not set" on every run, and
+  the value is identical either way (every real service creation has it set).
+  `NEXT_PUBLIC_APP_URL` also feeds
   `experimental.serverActions.allowedOrigins` in `web/next.config.js`, which is
   what lets the preview origin post server actions.
+
+### Icons
+
+The brand mark lives in `web/app/favicon.ico` (16/32/48 PNG-in-ICO) and
+`web/app/icon.svg` — Next's app-router conventions, so `/favicon.ico` is served
+from the repo rather than 404ing on every page load. Both are generated art
+(violet→sky gradient, rising trend line) drawn to match the wordmark's
+`gradient-text`; keep the two files in step if the mark changes.
 
 ### What works without external credentials, and what does not
 
