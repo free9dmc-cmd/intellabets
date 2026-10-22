@@ -54,6 +54,29 @@ export class OddsAggregatorService {
     })
   }
 
+  /**
+   * The Odds API regions to request, from ODDS_REGIONS (comma-separated).
+   *
+   * Default "us", unchanged from before, so API quota does not silently grow.
+   * Each region costs 1 credit per market per call. "us,us2" adds most
+   * tier-2 books (theScore Bet, Hard Rock, Bally Bet, betPARX, Fliff) and
+   * roughly doubles credits per call. "us_ex" adds prediction exchanges.
+   */
+  regions(): string {
+    const raw = this.config.get<string>("ODDS_REGIONS", "us") ?? "us"
+    // US regions only. us_dfs (pick'em) is out of scope for the book comparison.
+    const allowed = new Set(["us", "us2", "us_ex"])
+    const picked = Array.from(
+      new Set(
+        raw
+          .split(",")
+          .map((r) => r.trim().toLowerCase())
+          .filter((r) => allowed.has(r))
+      )
+    )
+    return picked.length ? picked.join(",") : "us"
+  }
+
   isConfigured(): boolean {
     return this.apiKey.length > 10
   }
@@ -65,7 +88,7 @@ export class OddsAggregatorService {
   async fetchSlate(sportKey: string): Promise<GameBooks[]> {
     const { data } = await this.http.get<OddsApiGame[]>(`/sports/${sportKey}/odds`, {
       params: {
-        regions: "us",
+        regions: this.regions(),
         markets: "h2h,spreads,totals",
         oddsFormat: "american",
         // Ask for bookmaker deep links so we can send the user straight to a
@@ -153,7 +176,7 @@ export class OddsAggregatorService {
 
     const { data } = await this.http.get<OddsApiGame>(`/sports/${sportKey}/events/${eventId}/odds`, {
       params: {
-        regions: "us",
+        regions: this.regions(),
         markets: markets.join(","),
         oddsFormat: "american",
         includeLinks: "true",
@@ -188,6 +211,7 @@ export class OddsAggregatorService {
             sid: o.sid ?? undefined,
           })),
           lastUpdated: new Date(m.last_update),
+          ...bookLinkFields(bm, m),
         }
         const arr = booksByMarket.get(type) ?? []
         arr.push({ book: bm.key, line })
@@ -244,6 +268,7 @@ export class OddsAggregatorService {
               sid: o.sid ?? undefined,
             })),
             lastUpdated: new Date(m.last_update),
+            ...bookLinkFields(bm, m),
           }
           const arr = booksByMarket.get(key) ?? []
           arr.push({ book: bm.key, line })
@@ -285,9 +310,25 @@ const PROP_LABELS: Record<string, string> = {
 
 // ─── The Odds API response shapes ─────────────────────────────────────────────
 
-interface OddsApiOutcome { name: string; price: number; point?: number; description?: string; link?: string; sid?: string }
-interface OddsApiMarket { key: string; last_update: string; outcomes: OddsApiOutcome[]; link?: string }
-interface OddsApiBookmaker { key: string; title: string; markets: OddsApiMarket[] }
+// With includeLinks/includeSids, link and sid can appear at bookmaker (event),
+// market and outcome level, and any of them may be null
+// (https://the-odds-api.com/releases/deep-links.html).
+interface OddsApiOutcome { name: string; price: number; point?: number; description?: string; link?: string | null; sid?: string | null }
+interface OddsApiMarket { key: string; last_update: string; outcomes: OddsApiOutcome[]; link?: string | null; sid?: string | null }
+interface OddsApiBookmaker { key: string; title: string; markets: OddsApiMarket[]; link?: string | null; sid?: string | null }
+
+/**
+ * Market- and event-level link inputs for one book's market line. Only
+ * defined values are set, so snapshots without links keep their old shape.
+ */
+function bookLinkFields(bm: OddsApiBookmaker, m: OddsApiMarket): Partial<MarketLine> {
+  const out: Partial<MarketLine> = {}
+  if (typeof m.link === "string") out.marketLink = m.link
+  if (typeof m.sid === "string") out.marketSid = m.sid
+  if (typeof bm.link === "string") out.eventLink = bm.link
+  if (typeof bm.sid === "string") out.eventSid = bm.sid
+  return out
+}
 interface OddsApiGame {
   id: string
   sport_key: string

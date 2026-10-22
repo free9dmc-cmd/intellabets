@@ -14,6 +14,7 @@ import {
   type StrategyKey,
 } from "./strategies"
 import { buildPlacementGuide, compareBooks } from "./placement"
+import type { BookPriceInput } from "./placement"
 import type { BookMarket } from "./devig"
 import type { EngineConfig } from "./prediction.types"
 
@@ -377,7 +378,12 @@ export class PredictionsService {
    * alongside the best one and states the difference in dollars rather than
    * assuming they will open a new account.
    */
-  async compareBooksFor(predictionId: string, stake = 100, preferredBook?: string | null) {
+  async compareBooksFor(
+    predictionId: string,
+    stake = 100,
+    preferredBook?: string | null,
+    state?: string | null
+  ) {
     const p = await this.prisma.prediction.findUnique({
       where: { id: predictionId },
       include: { game: true },
@@ -390,18 +396,28 @@ export class PredictionsService {
       select: { markets: true, capturedAt: true },
     })
 
-    const pricesByBook = new Map<string, { decimal: number; link?: string | null }>()
+    const pricesByBook = new Map<string, BookPriceInput>()
     if (snap) {
-      const books = snap.markets as unknown as Record<
-        string,
-        { book: string; line: { outcomes: { id: string; odds: { decimal: number }; link?: string }[] } }[]
-      >
+      const books = snap.markets as unknown as Record<string, SnapshotBookMarket[]>
       for (const marketBooks of Object.values(books ?? {})) {
         if (!Array.isArray(marketBooks)) continue
         for (const bm of marketBooks) {
           const outcome = bm?.line?.outcomes?.find((o) => o.id === p.outcomeId)
           if (outcome && outcome.odds?.decimal > 1) {
-            pricesByBook.set(bm.book, { decimal: outcome.odds.decimal, link: outcome.link ?? null })
+            const line = bm.line
+            // Ingestion stores outcome.link as (outcome link ?? market link).
+            // When it equals the market link it is not a betslip, so it is
+            // passed as a market link instead.
+            const isMarketLink = !!outcome.link && outcome.link === line.marketLink
+            pricesByBook.set(bm.book, {
+              decimal: outcome.odds.decimal,
+              link: isMarketLink ? null : outcome.link ?? null,
+              outcomeSid: outcome.sid ?? null,
+              marketSid: line.marketSid ?? null,
+              marketLink: line.marketLink ?? null,
+              eventSid: line.eventSid ?? null,
+              eventLink: line.eventLink ?? null,
+            })
           }
         }
       }
@@ -413,6 +429,7 @@ export class PredictionsService {
       stake,
       pricesByBook,
       preferredBook,
+      state,
     })
 
     return {
@@ -572,6 +589,18 @@ type StoredBooks = Record<
  * The round-trip strips Dates to ISO strings (Prisma's InputJsonValue forbids
  * Date), which is exactly what we want for storage.
  */
+/** One book's market as stored in OddsSnapshot.markets (see serializeBooks). */
+interface SnapshotBookMarket {
+  book: string
+  line: {
+    outcomes: { id: string; odds: { decimal: number }; link?: string; sid?: string }[]
+    marketLink?: string
+    marketSid?: string
+    eventLink?: string
+    eventSid?: string
+  }
+}
+
 function serializeBooks(booksByMarket: Map<string, BookMarket[]>): object {
   const obj: Record<string, BookMarket[]> = {}
   for (const [k, v] of booksByMarket.entries()) obj[k] = v

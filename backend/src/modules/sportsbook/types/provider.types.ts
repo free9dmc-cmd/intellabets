@@ -54,6 +54,14 @@ export interface MarketLine {
   rawName: string         // original name from provider
   outcomes: Outcome[]
   lastUpdated: Date
+  /** Market-level link from The Odds API (includeLinks), if the book has one. */
+  marketLink?: string
+  /** Market-level bookmaker id from The Odds API (includeSids). */
+  marketSid?: string
+  /** Bookmaker-level link: this event's page at the book. */
+  eventLink?: string
+  /** Bookmaker-level id: this event's id at the book. */
+  eventSid?: string
 }
 
 export interface Market {

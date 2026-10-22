@@ -1,4 +1,6 @@
 import { decimalToAmerican } from "../sportsbook/utils/odds-normalizer"
+import { buildBetslipLink, getSportsbook, EXCLUDED_BOOK_KEYS, SPORTSBOOKS } from "./deeplinks"
+import type { BookKind, LinkKind, LinkSource, SportsbookEntry } from "./deeplinks"
 
 /**
  * Turns a prediction into step-by-step instructions for placing it yourself at
@@ -20,50 +22,73 @@ export interface Book {
   navHint: string
 }
 
-export const BOOKS: Record<string, Book> = {
+/**
+ * UI wording for books whose sportsbook we have described by hand. Every other
+ * registry book gets the generic labels and hint below.
+ */
+const BOOK_UI: Record<string, Pick<Book, "marketLabels" | "navHint">> = {
   draftkings: {
-    key: "draftkings",
-    name: "DraftKings",
-    url: "https://sportsbook.draftkings.com",
     marketLabels: { moneyline: "Moneyline", spread: "Spread", total: "Total", prop: "Player Props" },
     navHint: "Pick the sport in the left sidebar, then find the game. The three main columns are Spread, Total, Moneyline.",
   },
   fanduel: {
-    key: "fanduel",
-    name: "FanDuel",
-    url: "https://sportsbook.fanduel.com",
     marketLabels: { moneyline: "Moneyline", spread: "Spread", total: "Total Points", prop: "Player Props" },
     navHint: "Choose the sport from the top nav, then the game. Columns are Spread, Total, Moneyline.",
   },
   betmgm: {
-    key: "betmgm",
-    name: "BetMGM",
-    url: "https://sports.betmgm.com",
     marketLabels: { moneyline: "Moneyline", spread: "Spread", total: "Totals", prop: "Player Props" },
     navHint: "Select the league from the A-Z menu, then the game.",
   },
-  caesars: {
-    key: "caesars",
-    name: "Caesars",
-    url: "https://sportsbook.caesars.com",
+  williamhill_us: {
     marketLabels: { moneyline: "Moneyline", spread: "Spread", total: "Over/Under", prop: "Player Props" },
     navHint: "Pick the league in the left menu, then the matchup.",
   },
-  pointsbetus: {
-    key: "pointsbetus",
-    name: "PointsBet",
-    url: "https://pointsbet.com",
-    marketLabels: { moneyline: "Moneyline", spread: "Spread", total: "Total", prop: "Player Props" },
-    navHint: "Choose the sport, then the game.",
-  },
   betrivers: {
-    key: "betrivers",
-    name: "BetRivers",
-    url: "https://betrivers.com",
     marketLabels: { moneyline: "Moneyline", spread: "Spread", total: "Total", prop: "Player Props" },
     navHint: "Select the league, then the event.",
   },
 }
+
+const DEFAULT_MARKET_LABELS: Record<string, string> = {
+  moneyline: "Moneyline",
+  spread: "Spread",
+  total: "Total",
+  prop: "Player Props",
+}
+
+function bookFromEntry(e: SportsbookEntry): Book {
+  const ui = BOOK_UI[e.key]
+  return {
+    key: e.key,
+    name: e.name,
+    url: e.homeUrl,
+    marketLabels: ui?.marketLabels ?? DEFAULT_MARKET_LABELS,
+    navHint: ui?.navHint ?? "Choose the sport, then find the game.",
+  }
+}
+
+/**
+ * Display data for every registered book, in traffic order, derived from the
+ * deep-link registry so names and home URLs live in one place.
+ *
+ * Two legacy keys are kept for older callers: "caesars" maps to Caesars
+ * (The Odds API calls it "williamhill_us"), and "pointsbetus" covers PointsBet
+ * US, whose US business moved to Fanatics. Neither key appears in the
+ * current Odds API US list.
+ */
+export const BOOKS: Record<string, Book> = (() => {
+  const out: Record<string, Book> = {}
+  for (const e of SPORTSBOOKS) out[e.key] = bookFromEntry(e)
+  out.caesars = { ...out.williamhill_us, key: "caesars" }
+  out.pointsbetus = {
+    key: "pointsbetus",
+    name: "PointsBet",
+    url: "",
+    marketLabels: DEFAULT_MARKET_LABELS,
+    navHint: "Choose the sport, then the game.",
+  }
+  return out
+})()
 
 const GENERIC_BOOK: Book = {
   key: "unknown",
@@ -237,12 +262,40 @@ export interface BookOption {
   /** Total returned if it wins, including the stake back. */
   payout: number
   profit: number
-  /** Deep link to this book, ideally a pre-populated betslip. */
+  /**
+   * Validated link to this book, ideally a pre-populated betslip. Built by
+   * buildBetslipLink; null when the book is not in the registry.
+   */
   link: string | null
+  /** What `link` opens: a filled betslip, the event page, or the book's home page. */
+  linkKind: LinkKind | null
+  /** Where `link` came from: The Odds API, a sourced template, or the home-page fallback. */
+  linkSource: LinkSource | null
+  /** Traffic tier from the registry (1 = largest books); null if unregistered. */
+  tier: 1 | 2 | null
+  /** Traffic rank from the registry (1 = most traffic); null if unregistered. */
+  trafficRank: number | null
+  /** Sportsbook, prediction exchange or sweepstakes app; null if unregistered. */
+  bookKind: BookKind | null
   isBest: boolean
   isPreferred: boolean
   /** How much less this book pays than the best one, for the same stake. */
   lessThanBest: number
+}
+
+/** Sort key for books outside the registry: after every ranked book. */
+const UNRANKED = Number.MAX_SAFE_INTEGER
+
+/** One book's price for a selection, plus what is needed to build its link. */
+export interface BookPriceInput {
+  decimal: number
+  /** outcome.link from The Odds API. */
+  link?: string | null
+  outcomeSid?: string | null
+  marketSid?: string | null
+  marketLink?: string | null
+  eventSid?: string | null
+  eventLink?: string | null
 }
 
 export interface BookComparison {
@@ -269,16 +322,29 @@ export function compareBooks(params: {
   selection: string
   matchup: string
   stake: number
-  /** book key -> { decimal, link } from the latest odds snapshot */
-  pricesByBook: Map<string, { decimal: number; link?: string | null }>
+  /** book key -> price plus link inputs (links and sids) from the latest odds snapshot */
+  pricesByBook: Map<string, BookPriceInput>
   preferredBook?: string | null
+  /** User's 2-letter state, used to fill state-specific book links. */
+  state?: string | null
 }): BookComparison {
-  const { selection, matchup, stake, pricesByBook, preferredBook } = params
+  const { selection, matchup, stake, pricesByBook, preferredBook, state } = params
 
-  const raw = Array.from(pricesByBook.entries())
-    .filter(([, v]) => v.decimal > 1)
+  const raw: BookOption[] = Array.from(pricesByBook.entries())
+    // Offshore/unlicensed books are never shown or linked (see deeplinks.ts).
+    .filter(([book, v]) => v.decimal > 1 && !EXCLUDED_BOOK_KEYS.has(book.toLowerCase()))
     .map(([book, v]) => {
       const resolved = resolveBook(book)
+      const entry = getSportsbook(book)
+      const deepLink = buildBetslipLink(book, {
+        providerLink: v.link,
+        outcomeSid: v.outcomeSid,
+        marketSid: v.marketSid,
+        marketLink: v.marketLink,
+        eventSid: v.eventSid,
+        eventLink: v.eventLink,
+        state,
+      })
       const payout = Math.round(stake * v.decimal * 100) / 100
       return {
         book,
@@ -287,13 +353,23 @@ export function compareBooks(params: {
         oddsDecimal: v.decimal,
         payout,
         profit: Math.round((payout - stake) * 100) / 100,
-        link: v.link ?? null,
+        link: deepLink?.url ?? null,
+        linkKind: deepLink?.kind ?? null,
+        linkSource: deepLink?.source ?? null,
+        tier: entry?.tier ?? null,
+        trafficRank: entry?.trafficRank ?? null,
+        bookKind: entry?.kind ?? null,
         isBest: false,
         isPreferred: preferredBook ? book.toLowerCase() === preferredBook.toLowerCase() : false,
         lessThanBest: 0,
       }
     })
-    .sort((a, b) => b.payout - a.payout)
+    // Money first. On a tied payout the higher-traffic book wins, since the
+    // user is more likely to have an account there.
+    .sort(
+      (a, b) =>
+        b.payout - a.payout || (a.trafficRank ?? UNRANKED) - (b.trafficRank ?? UNRANKED)
+    )
 
   if (raw.length === 0) {
     return {

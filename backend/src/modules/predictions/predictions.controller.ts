@@ -67,14 +67,21 @@ export class PredictionsController {
   })
   @ApiQuery({ name: "stake", required: false, description: "Stake in USD (default 100)" })
   @ApiQuery({ name: "preferred", required: false, description: "Your usual book, e.g. fanduel" })
+  @ApiQuery({
+    name: "state",
+    required: false,
+    description: "Your 2-letter US state, e.g. NJ. Lets state-hosted books (BetMGM, Caesars, BetRivers) open a filled betslip",
+  })
   async books(
     @Param("id") id: string,
     @Query("stake") stake?: string,
-    @Query("preferred") preferred?: string
+    @Query("preferred") preferred?: string,
+    @Query("state") state?: string
   ) {
     const parsed = stake ? Number(stake) : 100
     const amount = Number.isFinite(parsed) && parsed > 0 ? parsed : 100
-    const result = await this.predictions.compareBooksFor(id, amount, preferred ?? null)
+    // Invalid state codes are ignored by the link builder (normalizeState).
+    const result = await this.predictions.compareBooksFor(id, amount, preferred ?? null, state ?? null)
     if (!result) throw new NotFoundException("Prediction not found")
     return result
   }
