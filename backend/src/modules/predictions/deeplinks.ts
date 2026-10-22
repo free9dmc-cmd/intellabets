@@ -324,6 +324,10 @@ export const SPORTSBOOKS: readonly SportsbookEntry[] = [
       "az", "co", "dc", "ia", "il", "in", "ks", "ky", "la", "ma", "md", "mi",
       "mo", "nc", "nj", "ny", "oh", "pa", "tn", "va", "wv", "wy",
     ],
+    // '-' separates the three ids in options=, so an id may not contain one
+    // except as a leading sign (option ids can be negative, e.g. -572869586).
+    // Otherwise "1-2" as a fixture id would be read as two ids.
+    idPattern: /^-?[A-Za-z0-9._:]{1,127}$/,
     betslip: {
       // Official BetMGM deep-link docs (TV1):
       // https://sportsapi.nj.betmgm.com/restapi/generatedeeplink.html
@@ -575,7 +579,10 @@ export function validateBookUrl(raw: unknown, entry: Pick<SportsbookEntry, "allo
   if (u.protocol !== "https:") return null
   if (u.username || u.password) return null
   if (u.port !== "") return null
-  if (!u.hostname || !hostAllowed(u.hostname, entry.allowedHosts)) return null
+  // A fully-qualified trailing dot ("sportsbook.fanduel.com.") reaches the same
+  // host but is a different origin: cookies and the user's login do not carry over.
+  if (!u.hostname || u.hostname.endsWith(".")) return null
+  if (!hostAllowed(u.hostname, entry.allowedHosts)) return null
   return u.href
 }
 

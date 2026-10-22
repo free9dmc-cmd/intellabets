@@ -102,6 +102,9 @@ describe("validateBookUrl", () => {
     ["username only", "https://sportsbook.fanduel.com@evil.com/"],
     ["non-default port", "https://sportsbook.fanduel.com:8443/"],
     ["look-alike host", "https://sportsbook.fanduel.com.evil.com/addToBetslip"],
+    ["trailing-dot host", "https://sportsbook.fanduel.com./addToBetslip?selectionId=1"],
+    ["backslash authority trick", "https://evil.com\\@sportsbook.fanduel.com/"],
+    ["host hidden in fragment", "https://evil.com#.sportsbook.fanduel.com"],
     ["other host", "https://evil-fanduel.com/"],
     ["unfilled placeholder", "https://sportsbook.fanduel.com/?x={state}"],
     ["encoded placeholder", "https://sportsbook.fanduel.com/?x=%7Bstate%7D"],
@@ -263,6 +266,15 @@ describe("template builders", () => {
     expect(
       buildBetslipLink("betmgm", { eventSid: "2:7828205", marketSid: "1", outcomeSid: "2", state: "nj" })?.url
     ).toBe("https://sports.nj.betmgm.com/en/sports?options=2%3A7828205-1-2&type=Single")
+  })
+
+  it("BetMGM: skips the template when an id contains the '-' separator", () => {
+    expect(
+      buildBetslipLink("betmgm", { eventSid: "1-2", marketSid: "3", outcomeSid: "4", state: "nj" })?.kind
+    ).toBe("home")
+    expect(
+      buildBetslipLink("betmgm", { eventSid: "1", marketSid: "3", outcomeSid: "4-5", state: "nj" })?.kind
+    ).toBe("home")
   })
 
   it("Caesars: selectionIds with a state", () => {
