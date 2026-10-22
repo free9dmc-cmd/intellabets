@@ -2,6 +2,17 @@
 
 import { useState } from "react"
 
+/**
+ * Say what the link really does. Only a betslip link adds the pick for the
+ * user; the others land on the game or the book's home page, and labelling
+ * those "Open betslip" would promise a prefilled slip that is not there.
+ */
+function linkLabel(kind: "betslip" | "event" | "home" | null | undefined, bookName: string): string {
+  if (kind === "event") return "Open game →"
+  if (kind === "home") return `Go to ${bookName} →`
+  return "Open betslip →"
+}
+
 interface BookOption {
   book: string
   bookName: string
@@ -13,6 +24,7 @@ interface BookOption {
   isBest: boolean
   isPreferred: boolean
   lessThanBest: number
+  linkKind?: "betslip" | "event" | "home" | null
 }
 
 interface Comparison {
@@ -169,7 +181,7 @@ export default function BookPicker({
                         className="btn-primary text-xs py-1.5 px-3 flex-1 text-center"
                         style={{ borderRadius: "6px" }}
                       >
-                        Open betslip →
+                        {linkLabel(o.linkKind, o.bookName)}
                       </a>
                     )}
                     <button

@@ -57,7 +57,8 @@ describe("compareBooks", () => {
         ["fanduel", { decimal: 1.95 }],
       ]),
     })
-    expect(r.options.map((o) => o.book)).toEqual(["fanduel", "draftkings", "betrivers", "somebook"])
+    // "somebook" is unregistered, so it is not offered at all.
+    expect(r.options.map((o) => o.book)).toEqual(["fanduel", "draftkings", "betrivers"])
     expect(r.best?.book).toBe("fanduel")
     expect(r.options.every((o) => o.lessThanBest === 0)).toBe(true)
   })
@@ -67,11 +68,54 @@ describe("compareBooks", () => {
       ...base,
       pricesByBook: prices([
         ["fanduel", { decimal: 1.9 }],
-        ["courtside", { decimal: 1.91 }],
+        ["betrivers", { decimal: 1.91 }],
       ]),
     })
-    expect(r.best?.book).toBe("courtside")
-    expect(r.best?.bookKind).toBe("sweepstakes")
+    expect(r.best?.book).toBe("betrivers")
+    expect(r.best?.trafficRank).toBeGreaterThan(1)
+  })
+
+  describe("non-sportsbook venues", () => {
+    const saved = process.env.INCLUDE_NON_SPORTSBOOK_VENUES
+    afterEach(() => {
+      if (saved === undefined) delete process.env.INCLUDE_NON_SPORTSBOOK_VENUES
+      else process.env.INCLUDE_NON_SPORTSBOOK_VENUES = saved
+    })
+    const venuePrices = () =>
+      prices([
+        ["fanduel", { decimal: 1.9 }],
+        ["courtside", { decimal: 2.2 }],
+        ["kalshi", { decimal: 2.1 }],
+      ])
+
+    it("hides sweepstakes apps and prediction exchanges by default, even at a better price", () => {
+      delete process.env.INCLUDE_NON_SPORTSBOOK_VENUES
+      const r = compareBooks({ ...base, pricesByBook: venuePrices() })
+      expect(r.options.map((o) => o.book)).toEqual(["fanduel"])
+    })
+
+    it("shows them, labelled by kind, only when explicitly enabled", () => {
+      process.env.INCLUDE_NON_SPORTSBOOK_VENUES = "true"
+      const r = compareBooks({ ...base, pricesByBook: venuePrices() })
+      expect(r.options.map((o) => [o.book, o.bookKind])).toEqual([
+        ["courtside", "sweepstakes"],
+        ["kalshi", "exchange"],
+        ["fanduel", "sportsbook"],
+      ])
+    })
+  })
+
+  it("matches a preferred book given by its everyday name", () => {
+    const r = compareBooks({
+      ...base,
+      preferredBook: "Caesars",
+      pricesByBook: prices([
+        ["fanduel", { decimal: 2.0 }],
+        ["williamhill_us", { decimal: 1.9 }],
+      ]),
+    })
+    expect(r.preferred?.book).toBe("williamhill_us")
+    expect(r.savingsVsPreferred).toBeGreaterThan(0)
   })
 
   it("drops offshore books entirely", () => {
@@ -86,12 +130,13 @@ describe("compareBooks", () => {
     expect(r.options.map((o) => o.book)).toEqual(["draftkings"])
   })
 
-  it("never passes through an unvalidated link for an unknown book", () => {
+  it("never offers an unknown book, so its unvalidated link can never reach a user", () => {
     const r = compareBooks({
       ...base,
       pricesByBook: prices([["somebook", { decimal: 1.9, link: "javascript:alert(1)" }]]),
     })
-    expect(r.options[0]).toMatchObject({ link: null, linkKind: null, tier: null, trafficRank: null })
+    expect(r.options).toEqual([])
+    expect(r.best).toBeNull()
   })
 
   it("passes the user's state to state-hosted books", () => {

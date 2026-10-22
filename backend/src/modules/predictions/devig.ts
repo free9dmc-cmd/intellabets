@@ -1,5 +1,6 @@
 import type { MarketLine } from "../sportsbook/types/provider.types"
 import type { BookPrice, ConsensusOutcome } from "./prediction.types"
+import { isRoutableBook } from "./deeplinks"
 
 /**
  * De-vigging (removing the bookmaker margin) and building multi-book consensus.
@@ -70,10 +71,16 @@ export function buildConsensus(books: BookMarket[]): ConsensusOutcome[] {
         ? 1 - Math.min(1, stdDev(fairProbs) / (fairProbability || 1))
         : 0.5
 
-    // Line shopping: the best price is the HIGHEST decimal odds across books.
+    // Line shopping: the best price is the HIGHEST decimal odds among books we
+    // may send a user to. Offshore and unregistered books still count toward
+    // the consensus above -- they are real prices -- but must never become the
+    // offered book: a pick saying "bet this at Bovada" routes a customer to an
+    // unlicensed operator. If no routable book prices the outcome, bestDecimal
+    // stays 0 and the engine produces no pick for it.
     let bestDecimal = 0
     let bestBook = "unknown"
     for (const p of prices) {
+      if (!isRoutableBook(p.book)) continue
       if (p.decimal > bestDecimal) {
         bestDecimal = p.decimal
         bestBook = p.book

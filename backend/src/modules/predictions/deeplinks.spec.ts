@@ -6,6 +6,7 @@ import {
   normalizeState,
   SPORTSBOOKS,
   validateBookUrl,
+  isRoutableBook,
 } from "./deeplinks"
 
 // Real link shapes from Odds API output, as cited in deeplinks.ts.
@@ -287,11 +288,11 @@ describe("template builders", () => {
     })
   })
 
-  it("BetRivers: Kambi coupon with a state", () => {
+  it("BetRivers: no SID template (unsourced mapping), so SIDs alone never claim a betslip", () => {
     expect(buildBetslipLink("betrivers", { eventSid: "1023475244", outcomeSid: "3720886157", state: "nj" })).toEqual({
-      url: "https://nj.betrivers.com/?page=sportsbook#event/1023475244?coupon=single|3720886157|",
-      kind: "betslip",
-      source: "template",
+      url: "https://nj.betrivers.com/?page=sportsbook",
+      kind: "home",
+      source: "fallback",
     })
   })
 
@@ -379,7 +380,8 @@ describe("fallback chain", () => {
   it("uses a state home page when the state is known", () => {
     expect(buildBetslipLink("williamhill_us", { state: "nj" })?.url).toBe("https://sportsbook.caesars.com/us/nj/bet/")
     expect(buildBetslipLink("betmgm", { state: "pa" })?.url).toBe("https://sports.pa.betmgm.com/en/sports")
-    expect(buildBetslipLink("betparx", { state: "md" })?.url).toBe("https://md.betparx.com/")
+    // betPARX state hosts redirect to the casino, so every state gets the main site.
+    expect(buildBetslipLink("betparx", { state: "nj" })?.url).toBe("https://www.betparx.com/")
     expect(buildBetslipLink("betparx", { state: "mi" })?.url).toBe("https://www.betparx.com/")
   })
 
@@ -389,5 +391,40 @@ describe("fallback chain", () => {
       expect(r).toMatchObject({ kind: "home", source: "fallback" })
       expect(r!.url.startsWith("https://")).toBe(true)
     }
+  })
+})
+
+
+describe("isRoutableBook", () => {
+  const saved = process.env.INCLUDE_NON_SPORTSBOOK_VENUES
+  afterEach(() => {
+    if (saved === undefined) delete process.env.INCLUDE_NON_SPORTSBOOK_VENUES
+    else process.env.INCLUDE_NON_SPORTSBOOK_VENUES = saved
+  })
+
+  it("allows registered sportsbooks", () => {
+    for (const k of ["fanduel", "draftkings", "betmgm", "williamhill_us", "FanDuel"]) {
+      expect(isRoutableBook(k)).toBe(true)
+    }
+  })
+
+  it("never allows offshore, unregistered or empty keys", () => {
+    delete process.env.INCLUDE_NON_SPORTSBOOK_VENUES
+    for (const k of ["bovada", "BetOnlineAG", "mybookieag", "lowvig", "somebook", "", null, undefined]) {
+      expect(isRoutableBook(k)).toBe(false)
+    }
+    process.env.INCLUDE_NON_SPORTSBOOK_VENUES = "true"
+    expect(isRoutableBook("bovada")).toBe(false)
+  })
+
+  it("keeps exchanges and sweepstakes apps off unless explicitly enabled", () => {
+    delete process.env.INCLUDE_NON_SPORTSBOOK_VENUES
+    expect(isRoutableBook("kalshi")).toBe(false)
+    expect(isRoutableBook("fliff")).toBe(false)
+    process.env.INCLUDE_NON_SPORTSBOOK_VENUES = "TRUE"
+    expect(isRoutableBook("kalshi")).toBe(false) // exact "true" only
+    process.env.INCLUDE_NON_SPORTSBOOK_VENUES = "true"
+    expect(isRoutableBook("kalshi")).toBe(true)
+    expect(isRoutableBook("fliff")).toBe(true)
   })
 })

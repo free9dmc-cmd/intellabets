@@ -1,5 +1,5 @@
 import { decimalToAmerican } from "../sportsbook/utils/odds-normalizer"
-import { buildBetslipLink, getSportsbook, EXCLUDED_BOOK_KEYS, SPORTSBOOKS } from "./deeplinks"
+import { buildBetslipLink, getSportsbook, isRoutableBook, SPORTSBOOKS } from "./deeplinks"
 import type { BookKind, LinkKind, LinkSource, SportsbookEntry } from "./deeplinks"
 
 /**
@@ -310,6 +310,15 @@ export interface BookComparison {
   note: string
 }
 
+/** User-facing book names / legacy keys -> The Odds API key. */
+const PREFERRED_ALIASES: Record<string, string> = {
+  caesars: "williamhill_us",
+  "caesars sportsbook": "williamhill_us",
+  thescore: "espnbet",
+  "thescore bet": "espnbet",
+  "espn bet": "espnbet",
+}
+
 /**
  * Rank every book offering this selection by what it actually pays.
  *
@@ -329,10 +338,13 @@ export function compareBooks(params: {
   state?: string | null
 }): BookComparison {
   const { selection, matchup, stake, pricesByBook, preferredBook, state } = params
+  // Users pick "Caesars"; The Odds API calls it williamhill_us. Resolve the
+  // preference through the registry so the alias matches.
+  const preferredKey = preferredBook ? (PREFERRED_ALIASES[preferredBook.toLowerCase()] ?? preferredBook.toLowerCase()) : null
 
   const raw: BookOption[] = Array.from(pricesByBook.entries())
     // Offshore/unlicensed books are never shown or linked (see deeplinks.ts).
-    .filter(([book, v]) => v.decimal > 1 && !EXCLUDED_BOOK_KEYS.has(book.toLowerCase()))
+    .filter(([book, v]) => v.decimal > 1 && isRoutableBook(book))
     .map(([book, v]) => {
       const resolved = resolveBook(book)
       const entry = getSportsbook(book)
@@ -360,7 +372,7 @@ export function compareBooks(params: {
         trafficRank: entry?.trafficRank ?? null,
         bookKind: entry?.kind ?? null,
         isBest: false,
-        isPreferred: preferredBook ? book.toLowerCase() === preferredBook.toLowerCase() : false,
+        isPreferred: preferredKey ? book.toLowerCase() === preferredKey : false,
         lessThanBest: 0,
       }
     })

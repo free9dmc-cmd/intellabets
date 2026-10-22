@@ -184,8 +184,13 @@ const HARD_ROCK_HOSTS = ["hardrock.bet"]
 /** Hard Rock betslip, observed in Odds API outcome links. */
 const hardRockBetslip: BetslipTemplate = {
   // https://app.hardrock.bet/?deep_link_value=betslip/{outcomeSid}
-  // outcome.sid matched the number in outcome.link in stored Odds API output:
+  // URL shape, from stored Odds API outcome links:
   // https://github.com/ItsDardanRexhepi/rixpicks/blob/c5a4c783fb49727d0019cf9261ef3411363a7d29/manifests/manifest-3a60b0a2da0f.json
+  // That file has no sid fields, so it does not show which id fills the slot.
+  // One stored response pairing outcome.sid with the betslip number (Jun 2025):
+  // https://github.com/tmash55/oddsmash/blob/25f4ef46dea5b3435fbe0f8e4a928361d6230098/REDIS_CACHE.md
+  // Single sample, not tested on a device: treat a miss as "opens Hard Rock with
+  // an empty slip", which is why the provider's own link is always tried first.
   build: ({ outcomeSid }, enc) =>
     outcomeSid ? `https://app.hardrock.bet/?deep_link_value=betslip/${enc(outcomeSid)}` : null,
   idMapping: "observed",
@@ -239,9 +244,11 @@ export const SPORTSBOOKS: readonly SportsbookEntry[] = [
     idPattern: /^[A-Za-z0-9._:#-]{1,128}$/,
     betslip: {
       // https://sportsbook.draftkings.com/?outcomes={outcomeSid}. This is the Sept 2026 shape
-      // of Odds API outcome links. outcome.sid equals the outcomes= value (observed):
+      // of Odds API outcome links (shape only; these files carry no sid fields):
       // https://github.com/ItsDardanRexhepi/rixpicks/blob/c5a4c783fb49727d0019cf9261ef3411363a7d29/manifests/manifest-3a60b0a2da0f.json
       // https://github.com/CoghillB/ApeOffside/blob/922714cfeb8b178e6f0b8eba120e08c468400200/server/odds/utils/sample_responses.py
+      // outcome.sid equals the outcomes= value in stored responses here:
+      // https://github.com/tmash55/oddsmash/blob/25f4ef46dea5b3435fbe0f8e4a928361d6230098/REDIS_CACHE.md
       build: ({ outcomeSid }, enc) =>
         outcomeSid ? `https://sportsbook.draftkings.com/?outcomes=${enc(outcomeSid)}` : null,
       idMapping: "observed",
@@ -332,9 +339,15 @@ export const SPORTSBOOKS: readonly SportsbookEntry[] = [
       // Official BetMGM deep-link docs (TV1):
       // https://sportsapi.nj.betmgm.com/restapi/generatedeeplink.html
       //   base-url/en/sports?options={fixtureId}-{marketId}-{optionId}&type=Single
-      // outcome.sid = optionId (observed). eventSid -> fixtureId and
-      // marketSid -> marketId are ASSUMED. The affiliate param wm is left
-      // out: IntellaBets has no BetMGM affiliate id.
+      // outcome.sid = optionId in one stored response:
+      // https://github.com/tmash55/oddsmash/blob/25f4ef46dea5b3435fbe0f8e4a928361d6230098/REDIS_CACHE.md
+      // eventSid -> fixtureId and marketSid -> marketId are ASSUMED, and no
+      // source shows The Odds API populating BetMGM event or market sids, so
+      // expect this template to stay dormant and the provider link to carry it.
+      // If it ever does fire: Odds API links show prefixed fixture ids like
+      // "2:7828205", which encodeURIComponent turns into "2%3A7828205" -- not
+      // the observed shape. Another reason not to rely on it.
+      // The affiliate param wm is left out: IntellaBets has no BetMGM affiliate id.
       build: ({ state, eventSid, marketSid, outcomeSid }, enc) =>
         state && eventSid && marketSid && outcomeSid
           ? `https://sports.${state}.betmgm.com/en/sports?options=${enc(eventSid)}-${enc(marketSid)}-${enc(outcomeSid)}&type=Single`
@@ -398,19 +411,13 @@ export const SPORTSBOOKS: readonly SportsbookEntry[] = [
     // The Odds API leaves {pickType} and {wagerAmount} in BetRivers links.
     // Other developers fill them with "single" and an empty stake.
     placeholderDefaults: { pickType: "single", wagerAmount: "" },
-    betslip: {
-      // Kambi coupon fragment seen in Odds API output:
-      //   https://{state}.betrivers.com/?page=sportsbook#event/{eventId}?coupon=single|{outcomeId}|
-      // https://github.com/CoghillB/ApeOffside/blob/922714cfeb8b178e6f0b8eba120e08c468400200/server/odds/utils/sample_responses.py
-      // eventSid -> eventId and outcomeSid -> outcomeId are ASSUMED.
-      build: ({ state, eventSid, outcomeSid }, enc) =>
-        state && eventSid && outcomeSid
-          ? `https://${state}.betrivers.com/?page=sportsbook#event/${enc(eventSid)}?coupon=single|${enc(outcomeSid)}|`
-          : null,
-      idMapping: "assumed",
-      source:
-        "https://github.com/CoghillB/ApeOffside/blob/922714cfeb8b178e6f0b8eba120e08c468400200/server/odds/utils/sample_responses.py",
-    },
+    // No betslip template. A Kambi coupon fragment was built here from SIDs,
+    // but a source audit (2026-10-22) found it unsupported: the cited sample
+    //   https://github.com/CoghillB/ApeOffside/blob/922714cfeb8b178e6f0b8eba120e08c468400200/server/odds/utils/sample_responses.py
+    // shows ...#event/{id}?coupon={pickType}|{outcomeId}|{wagerAmount} straight
+    // from The Odds API, and no sample anywhere shows BetRivers sids, so neither
+    // id mapping had evidence. BetRivers keeps the provider's own link (with the
+    // placeholders filled above), then the event page, then the state home.
     sources: [ODDS_API_BOOKMAKERS],
   },
   {
@@ -473,12 +480,10 @@ export const SPORTSBOOKS: readonly SportsbookEntry[] = [
     trafficRank: 16,
     kind: "sportsbook",
     homeUrl: "https://www.betparx.com",
-    stateHomeUrl: (st) => `https://${st}.betparx.com/`,
+    // No per-state home: on 2026-10-22 nj. and pa.betparx.com answered 301 to
+    // /casino, so a state link would put a sports bettor in the casino.
+    // www.betparx.com links to each state's site.
     allowedHosts: ["betparx.com"],
-    // State hosts linked from betparx.com that answered in our probe
-    // (2026-10-22). Michigan uses a separate app (Play Gun Lake), so it falls
-    // back to the generic home page.
-    states: ["md", "nj", "pa"],
     sources: [ODDS_API_BOOKMAKERS, "https://www.betparx.com/"],
   },
   {
@@ -544,6 +549,29 @@ export function getSportsbook(key: string | null | undefined): SportsbookEntry |
   const k = key.toLowerCase()
   if (EXCLUDED_BOOK_KEYS.has(k)) return null
   return BY_KEY.get(k) ?? null
+}
+
+/** Off unless explicitly enabled; see isRoutableBook. */
+export function nonSportsbookVenuesEnabled(): boolean {
+  return process.env.INCLUDE_NON_SPORTSBOOK_VENUES === "true"
+}
+
+/**
+ * Whether IntellaBets may send a user to place a bet at this venue.
+ *
+ * Only registered, licensed sportsbooks by default. Offshore and unregistered
+ * keys are never routable -- their prices may still inform the consensus, but
+ * we do not point a customer at them. Prediction exchanges and sweepstakes
+ * apps are registered (so the panel can label them) but stay off unless
+ * INCLUDE_NON_SPORTSBOOK_VENUES=true: several states have banned sweepstakes
+ * sportsbooks, prediction markets are contested by state regulators, and the
+ * partnership materials commit to licensed sportsbooks only. Turn it on only
+ * after a legal review, and add state gating when you do.
+ */
+export function isRoutableBook(key: string | null | undefined): boolean {
+  const entry = getSportsbook(key)
+  if (!entry) return false
+  return entry.kind === "sportsbook" || nonSportsbookVenuesEnabled()
 }
 
 // ─── Validation ───────────────────────────────────────────────────────────────

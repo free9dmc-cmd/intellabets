@@ -125,6 +125,12 @@ export interface BookOption {
   isBest: boolean
   isPreferred: boolean
   lessThanBest: number
+  /**
+   * What the link actually opens. "betslip" = the selection is added for the
+   * user; "event" = the game page; "home" = the book's home or state page.
+   * Optional so an older engine response (without it) still renders.
+   */
+  linkKind?: "betslip" | "event" | "home" | null
 }
 
 export interface BookComparison {
