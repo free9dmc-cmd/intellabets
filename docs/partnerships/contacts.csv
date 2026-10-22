@@ -1,0 +1,36 @@
+tier,rank,book,parent,channel,contact,source_url,confidence
+1,1,FanDuel Sportsbook,FanDuel (Flutter Entertainment),press,press@fanduel.com,https://www.fanduel.com/about,verified
+1,2,DraftKings Sportsbook,DraftKings Inc.,affiliate (form),https://forms.gle/rW2KTw2PgaJuFop36,https://www.draftkings.com/affiliates,verified
+1,2,DraftKings Sportsbook,DraftKings Inc.,partnerships/b2b,sportspartnerships@draftkings.com,https://www.draftkings.com/about,verified
+1,2,DraftKings Sportsbook,DraftKings Inc.,press,media@draftkings.com,https://www.draftkings.com/about,verified
+1,3,Fanatics Sportsbook,Fanatics Betting & Gaming (Fanatics Inc.),general-business (form),https://www.fanaticsinc.com/contact-us/,https://www.fanaticsinc.com/contact-us/,verified
+1,5,BetMGM,"BetMGM, LLC",affiliate,partners@betmgm.com,https://www.betmgmpartners.com/gvcHelp.do,verified
+1,5,BetMGM,"BetMGM, LLC",affiliate (form),https://www.betmgmpartners.com/gvcContactUs.do,https://www.betmgmpartners.com/gvcContactUs.do,verified
+1,5,BetMGM,"BetMGM, LLC",press,press@betmgm.com,https://www.betmgminc.com/who-we-are/press-room/,verified
+1,6,Caesars Sportsbook,"Caesars Entertainment, Inc.",affiliate,affiliates@CaesarsInteractive.com,http://www.caesarsaffiliates.com/help/,unconfirmed
+1,6,Caesars Sportsbook,"Caesars Entertainment, Inc.",press,PressLV@Caesars.com,https://newsroom.caesars.com/,verified
+1,6,Caesars Sportsbook,"Caesars Entertainment, Inc.",press,kwhiteley@caesars.com,https://s202.q4cdn.com/508919455/files/doc_news/Caesars-Entertainment-Inc--to-Report-2025-Fourth-Quarter-and-Full-Year-Results-on-February-17-2026-2026.pdf,verified
+1,7,bet365 (US),bet365 Group (Hillside (Sports) GP Limited),affiliate (form),https://www.bet365partners.com/en/contactus,https://www.bet365partners.com/en/contactus,verified
+2,8,BetRivers,"Rush Street Interactive, Inc.",affiliate,affiliates@rush-affiliates.com,https://rush-affiliates.com/,verified
+2,8,BetRivers,"Rush Street Interactive, Inc.",general-business (form),https://www.rushstreetinteractive.com/contact,https://www.rushstreetinteractive.com/contact,verified
+2,8,BetRivers,"Rush Street Interactive, Inc.",general-business,chicago@rushstreetinteractive.com,https://www.rushstreetinteractive.com/contact,likely
+2,8,BetRivers,"Rush Street Interactive, Inc.",press,lisa@lisajohnsoncommunications.com,https://ir.rushstreetinteractive.com/news/news-details/2026/Rush-Street-Interactive-Announces-Second-Quarter-2026-Results-and-Raises-Full-Year-Guidance/default.aspx,verified
+2,9,theScore Bet (formerly ESPN Bet),"PENN Entertainment, Inc. (Score Media and Gaming Inc.)",general-business (form),https://www.scoremediaandgaming.com/contact,https://www.scoremediaandgaming.com/contact,verified
+2,9,theScore Bet (formerly ESPN Bet),"PENN Entertainment, Inc. (Score Media and Gaming Inc.)",general-business,hello@thescore.com,https://www.scoremediaandgaming.com/contact,likely
+2,9,theScore Bet (formerly ESPN Bet),"PENN Entertainment, Inc. (Score Media and Gaming Inc.)",press,jeff.morris@pennentertainment.com,https://www.aol.com/articles/penn-entertainment-launches-thescore-bet-113000000.html,verified
+2,15,Bally Bet,Bally's Corporation,press,mediarelations@ballys.com,https://www.ballys.com/,verified
+2,15,Bally Bet,Bally's Corporation,general-business,info@ballys.com,https://www.ballys.com/,verified
+2,15,Bally Bet,Bally's Corporation,general-business (form),https://www.ballys.com/contact/default.aspx,https://www.ballys.com/,verified
+2,16,betPARX,Parx (operating entity unverified),affiliate (form),https://www.betparx.com/,https://www.betparx.com/,verified
+2,17,Circa Sports,Circa Sports (Circa Resort & Casino),general-business,info@circasports.com,https://www.circasports.com/support,likely
+2,18,Bet Desert Diamond,Desert Diamond Casinos & Entertainment (Tohono O'odham Gaming Enterprise),partnerships/b2b (form),https://www.ddcaz.com/vendor-form,https://www.ddcaz.com/vendor-form,verified
+2,20,Borgata Sportsbook,Borgata online (run under BetMGM),affiliate,partners@betmgm.com,https://www.betmgmpartners.com/gvcHelp.do,verified
+2,20,Borgata Sportsbook,Borgata online (run under BetMGM),press,press@betmgm.com,https://www.betmgminc.com/who-we-are/press-room/,likely
+2,22,ProphetX,ProphetX (Prophet Exchange),form (support),https://prophethelp.zendesk.com/hc/en-us/requests/new,https://www.prophetx.co/,verified
+2,23,Fliff,"Fliff, Inc.",press,press@getfliff.com,https://www.getfliff.com/contact,verified
+2,24,Betr,"Betr (Miami, FL)",affiliate (form),https://docs.google.com/forms/d/e/1FAIpQLSch0GPejNUUY0hh3Z06TnjmtdlytIUmB_1tnovKYM11Je4gYQ/viewform,https://www.betr.app/betr-partner-application,verified
+unranked,,Betway (exited US),Super Group (SGHC) Ltd,affiliate (form),https://account.superpartners.com/?form=ContactUs,https://www.superpartners.com/,verified
+unranked,,Betway (exited US),Super Group (SGHC) Ltd,partnerships/b2b,corp.dev@supergroup.com,https://supergroup.com/contact/,verified
+unranked,,Betway (exited US),Super Group (SGHC) Ltd,press,media@supergroup.com,https://supergroup.com/contact/,verified
+unranked,,Sporttrade,Sporttrade,partnerships/b2b,info@getsporttrade.com,https://getsporttrade.com/contact/,verified
+unranked,,Sporttrade,Sporttrade,press,media@getsporttrade.com,https://getsporttrade.com/contact/,verified
