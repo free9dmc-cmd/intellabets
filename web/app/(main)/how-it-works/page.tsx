@@ -143,7 +143,7 @@ export default function HowItWorksPage() {
       <section className="text-xs text-gray-500 border-t border-gray-800 pt-6 space-y-2">
         <p>
           For informational and entertainment purposes. IntellaBets is not a sportsbook and does not
-          accept wagers. You must be 18 or older (21 in some jurisdictions) to use this service. Gambling
+          accept wagers. You must be 21 or older to use this service. Gambling
           involves risk of loss; bet only what you can afford to lose.
         </p>
         <p>

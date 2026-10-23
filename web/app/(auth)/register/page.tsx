@@ -134,7 +134,7 @@ export default function RegisterPage() {
       </form>
 
       <p className="text-center text-gray-500 text-xs mt-4 leading-relaxed">
-        By signing up, you agree to our Terms of Service. You must be 18+ to use IntellaBets.
+        By signing up, you agree to our Terms of Service. You must be 21+ to use IntellaBets.
       </p>
 
       <p className="text-center text-gray-500 text-sm mt-4">

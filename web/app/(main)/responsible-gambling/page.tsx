@@ -17,7 +17,7 @@ export default function ResponsibleGamblingPage() {
       <div>
         <h1 className="text-3xl font-black text-white mb-2">Responsible Gambling</h1>
         <p className="text-gray-500">
-          You must be 18 or older (21 in some jurisdictions) to use IntellaBets. Gambling involves
+          You must be 21 or older to use IntellaBets. Gambling involves
           risk of loss, and nothing on this site guarantees any outcome.
         </p>
       </div>

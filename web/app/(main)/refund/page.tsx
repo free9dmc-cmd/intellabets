@@ -17,7 +17,7 @@ export default function RefundPage() {
       <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-300 text-sm">
         <strong>Important:</strong> IntellaBets sells sports analytics and tipster picks for informational
         and entertainment purposes only. We are not a sportsbook, do not accept bets, and are not responsible
-        for any wagering decisions you make. You must be 18 or older to use this service. Please gamble
+        for any wagering decisions you make. You must be 21 or older to use this service. Please gamble
         responsibly.
       </div>
 

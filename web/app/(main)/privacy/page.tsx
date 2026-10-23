@@ -93,8 +93,8 @@ export default function PrivacyPage() {
       <section className="space-y-3">
         <h2 className="text-lg font-bold text-white">9. Age Restriction</h2>
         <p>
-          IntellaBets is intended solely for users aged 18 or older. We do not knowingly collect personal
-          information from individuals under 18. If you believe a minor has created an account, contact us
+          IntellaBets is intended solely for users aged 21 or older. We do not knowingly collect personal
+          information from individuals under 21. If you believe someone under 21 has created an account, contact us
           and we will delete it promptly.
         </p>
       </section>

@@ -424,7 +424,7 @@ export default async function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
           <span className="text-xl font-black gradient-text">IntellaBets</span>
           <p className="text-gray-500 text-sm text-center">
-            For entertainment purposes. Please gamble responsibly. 18+ only.
+            For entertainment purposes. Please gamble responsibly. 21+ only.
           </p>
           {/* Must be real links: card networks and payment underwriters require
               terms, privacy, refund policy and contact details to be reachable. */}

@@ -222,7 +222,7 @@ export function buildPlacementGuide(
   const warnings: string[] = [
     `Odds move constantly. This edge was calculated at ${american}; at a materially worse price the bet may no longer be +EV.`,
     "Only bet what you can afford to lose. A positive expected value does not mean this individual bet wins.",
-    "You must be 18+ (21+ in some states) and located where sports betting is legal. Check your own jurisdiction.",
+    "You must be 21+ and located where sports betting is legal. Check your own jurisdiction.",
     "IntellaBets does not place bets, hold funds, or operate a sportsbook. You place your own bets on your own account.",
   ]
 

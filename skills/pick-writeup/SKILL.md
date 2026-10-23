@@ -71,7 +71,7 @@ terminated this business once over published claims it could not support.
   market only one or two books price is usually a stale line, not free money.
 - **Never imply IntellaBets takes wagers.** It publishes analysis. The reader
   places their own bets at their own sportsbook.
-- **Include 18+ and responsible gambling** in anything customer-facing.
+- **Include 21+ and responsible gambling** in anything customer-facing.
 
 ## Structure
 

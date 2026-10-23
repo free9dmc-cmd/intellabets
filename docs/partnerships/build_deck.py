@@ -443,9 +443,10 @@ for i, (title, body) in enumerate(rg):
     tb(s, x + 0.3, y + 0.95, gw - 0.6, gh - 1.1, body, size=14, color=MUTED, line_spacing=1.05)
 notes(s, (
     "Be precise about status: these are commitments that are being implemented now and are "
-    "required before we go live in any state. They are not all live on the site today; for "
-    "example, some pages still carry 18+ wording that is being changed to 21+. We will share "
-    "screenshots for your compliance team's review before launch.\n\n"
+    "required before we go live in any state. Done so far: the age gate and every page say 21+, "
+    "and offshore and unlicensed books can never be recommended or linked. Still in progress: "
+    "gating links by the user's state, a helpline beside every betslip link, and an affiliate "
+    "disclosure. We will share screenshots for your compliance team's review before launch.\n\n"
     "Sources behind each commitment: helpline on ads (VA 11VAC5-70-240(D), OH 3775-16-08(A)(3), "
     "IL 1900.340(e)(2)); 1-800-GAMBLER for NJ users (NJ DGE best practices); banned inducement "
     "language (AGA code; MA 205 CMR 256.04(6); NY 5329.37; OH 3775-16-09(C)); affiliate "

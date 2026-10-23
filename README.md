@@ -143,7 +143,7 @@ processor.
 - **No sportsbook credential storage, ever.** Storing a customer's sportsbook
   login or placing bets on their behalf violates every book's terms, likely
   violates the CFAA, and would require gaming licensure.
-- **18+ and responsible gambling** wording on anything customer-facing.
+- **21+ and responsible gambling** wording on anything customer-facing.
 
 ## Licence
 

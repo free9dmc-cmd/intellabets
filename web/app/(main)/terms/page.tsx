@@ -22,7 +22,7 @@ export default function TermsPage() {
       <section className="space-y-3">
         <h2 className="text-lg font-bold text-white">1. Eligibility</h2>
         <p>
-          You must be at least 18 years old (or the legal gambling age in your jurisdiction, whichever is
+          You must be at least 21 years old (or the legal gambling age in your jurisdiction, whichever is
           higher) to use IntellaBets. By accessing the platform you confirm you meet this requirement.
           You are solely responsible for complying with all laws in your jurisdiction regarding sports
           betting and online wagering services.

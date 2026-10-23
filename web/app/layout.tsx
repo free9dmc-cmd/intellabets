@@ -10,11 +10,11 @@ import SupportChat from "@/components/SupportChat"
 export const metadata: Metadata = {
   title: "IntellaBets — Sports Analytics & Tipster Picks",
   description:
-    "Sports betting analysis built on odds compared across every major sportsbook. Follow tipsters with publicly tracked records, or publish your own picks. 18+.",
+    "Sports betting analysis built on odds compared across every major sportsbook. Follow tipsters with publicly tracked records, or publish your own picks. 21+.",
   keywords: "sports analytics, betslips, tipster, sports picks, betting odds, expected value",
   openGraph: {
     title: "IntellaBets",
-    description: "Sports analytics built on real odds from every major sportsbook. 18+.",
+    description: "Sports analytics built on real odds from every major sportsbook. 21+.",
     type: "website",
   },
 }

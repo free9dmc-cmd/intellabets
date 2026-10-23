@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react"
 
-const STORAGE_KEY = "intellabets_age_verified"
+// Renamed when the minimum age moved from 18 to 21, so everyone who only
+// confirmed 18+ under the old key is asked again.
+const STORAGE_KEY = "intellabets_age_verified_21"
 
 export default function AgeGate() {
   const [visible, setVisible] = useState(false)
@@ -33,10 +35,10 @@ export default function AgeGate() {
         <div className="text-5xl mb-4">🎰</div>
         <h2 className="text-2xl font-black text-white mb-2">Age Verification</h2>
         <p className="text-gray-400 text-sm mb-6 leading-relaxed">
-          IntellaBets provides sports betting analysis and picks. You must be <strong className="text-white">18 years or older</strong> to access this site.
+          IntellaBets provides sports betting analysis and picks. You must be <strong className="text-white">21 years or older</strong> to access this site.
         </p>
         <p className="text-gray-500 text-xs mb-6">
-          Are you 18 or older and agree to our{" "}
+          Are you 21 or older and agree to our{" "}
           <a href="/terms" className="text-purple-400 hover:underline">Terms of Service</a>?
         </p>
 
@@ -46,13 +48,13 @@ export default function AgeGate() {
             className="btn-primary w-full py-3 font-bold"
             style={{ borderRadius: "10px" }}
           >
-            Yes, I am 18 or older
+            Yes, I am 21 or older
           </button>
           <button
             onClick={deny}
             className="w-full py-3 font-medium text-gray-500 hover:text-gray-300 transition-colors text-sm"
           >
-            No, I am under 18
+            No, I am under 21
           </button>
         </div>
 

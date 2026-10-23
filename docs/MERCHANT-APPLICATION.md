@@ -103,7 +103,7 @@ one-off sales because customers forget they signed up.
 >   support
 > - Staffed support at support@intellabets.com, answered from the same domain
 > - Published terms and refund policy, reachable without an account
-> - Age verification at signup; 18+ only
+> - Age verification at signup; 21+ only
 > - No claims of guaranteed outcomes or specific returns anywhere in marketing
 
 ## Compliance posture (drafted)
@@ -112,7 +112,7 @@ one-off sales because customers forget they signed up.
 >   placed for customers
 > - No performance claim is published that does not derive from settled,
 >   recorded results
-> - 18+ gate and responsible gambling resources on customer-facing pages
+> - 21+ gate and responsible gambling resources on customer-facing pages
 > - Terms, Privacy Policy and refund policy publicly reachable without an
 >   account
 > - Card data never touches our systems; payment pages are hosted by the
