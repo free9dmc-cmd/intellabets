@@ -4,7 +4,7 @@ The single source of truth for what ships next. Both daily automated runs read
 this first and update it. **Keep it honest** — a stale plan silently misdirects
 every run that follows.
 
-Last full inspection: 2026-09-24 (evening run). No commits landed on `main`
+Last full inspection: 2026-09-24 (evening run). 2026-10-23 evening run could NOT reach production (sandbox proxy returned 403 on CONNECT to intellabets.com; DNS fails in WebFetch), so nothing in this file's status table was re-verified that day. No commits landed on `main`
 today before this run — the scheduled morning run left no trace (no commits
 since 65322e9 on 2026-09-22, and this file was still dated 2026-09-22),
 so whatever it inspected was not verified against production and did not
@@ -172,6 +172,7 @@ underwriter reviewing the site will be looking for exactly it.
 - [x] **Why we don't publish a win rate** — folded into `/how-it-works` rather than a separate page, since it's the natural next paragraph after the de-vig explanation.
 - [x] **CLV explainer** — `/closing-line-value`, shipped 2026-10-07. Worked example labeled illustrative, limits of CLV, and an explicit statement that no average is published yet (sample too small under corrected settlement). Added to middleware publicRoutes and sitemap. Linked from `/how-it-works` footer 2026-10-08.
 - [x] **FAQ** — folded into `/how-it-works` (see above) rather than a separate page.
+- [x] **Line shopping explainer** — `/line-shopping`, added 2026-10-23 evening run (illustrative worked example, 21+ and responsible-gambling wording, no performance figures). In middleware publicRoutes and sitemap. **Not verified live**: the run's sandbox could not reach intellabets.com. Still to do: link it from `/how-it-works` and the homepage footer.
 - [ ] **Onboarding emails** — still open. Blocked in practice: there's no transactional email sending configured yet (P1), and no new users are being created right now (P0.1), so nothing would trigger them today anyway.
 - [x] **SEO metadata** — `/how-it-works` has full metadata + OG tags; added `app/sitemap.ts` and `app/robots.ts` (Next.js auto-generates `/sitemap.xml` and `/robots.txt` from these), listing only routes actually public per `middleware.ts`. Per-page metadata on the other marketing pages (terms/privacy/contact/premium) already existed before this run.
 - [x] **Responsible gambling page** — `/responsible-gambling`, added 2026-10-08 (not yet deployed/verified live at time of writing). Warning signs, control tips, US/UK help lines, no performance figures. In middleware publicRoutes and sitemap; linked from `/how-it-works`. Still to do: link from homepage footer and `/premium`.
