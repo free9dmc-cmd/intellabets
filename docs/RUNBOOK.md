@@ -231,6 +231,21 @@ until it is moved to a current Expo SDK or removed.
 
 ## Known issues
 
+**The whole website is offline: Vercel is returning `402 DEPLOYMENT_DISABLED`
+(found 2026-10-24, ~16:25 UTC).**
+- **What fails.** Every URL on the team returns "Payment required" and
+  `x-vercel-error: DEPLOYMENT_DISABLED`: `intellabets.com`, the
+  `*.vercel.app` aliases and every preview.
+- **Cause.** This is account-level billing state, not code. Note that a 402,
+  unlike `503 DEPLOYMENT_PAUSED`, is billing. It started after the last
+  successful build (`dfb4920`, ~04:14 UTC). The fix is the owner's job, in
+  Vercel → team "free9dmc-cmd's projects" → Settings → Billing: trial ended,
+  card declined, or spend limit reached.
+- **Engine.** Unaffected. `api.intellabets.com/api/docs` returns 200.
+- **Pushes while disabled.** No push creates a deployment, including `3da0838`
+  on `main`. Once billing is restored, ship `main` with an API redeploy, not
+  Promote (see "Symptoms → causes").
+
 **Login and registration are broken in production right now (found 2026-09-24).**
 `prisma.user.findUnique()` / `.create()` fail because `User.premiumStripeSubId`
 (schema change committed 2026-09-10, `payoutsEnabled` likely too) was never
