@@ -4,6 +4,10 @@
 
 set -euo pipefail
 
+# Capacitor reads capacitor.config.ts from the current directory, and the native
+# project lives at web/ios — so run from web/ wherever this is invoked from.
+cd "$(dirname "$0")/../web"
+
 BLUE='\033[0;34m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -18,7 +22,7 @@ err() { echo -e "${RED}✗ ${1}${NC}"; exit 1; }
 # ---- Prerequisites ----
 say "Checking prerequisites"
 
-command -v node >/dev/null 2>&1 || err "Node.js not installed. Install from https://nodejs.org (v20+)"
+command -v node >/dev/null 2>&1 || err "Node.js not installed. Install from https://nodejs.org (v22.12+)"
 command -v npm  >/dev/null 2>&1 || err "npm not found"
 command -v xcodebuild >/dev/null 2>&1 || err "Xcode not installed. Install from the Mac App Store"
 command -v pod >/dev/null 2>&1 || {
@@ -26,8 +30,8 @@ command -v pod >/dev/null 2>&1 || {
   sudo gem install cocoapods
 }
 
-NODE_MAJOR=$(node -v | sed 's/v\([0-9]*\).*/\1/')
-[ "$NODE_MAJOR" -ge 20 ] || err "Node 20+ required (you have $(node -v))"
+node -e 'const [a, b] = process.versions.node.split(".").map(Number); process.exit(a > 22 || (a === 22 && b >= 12) ? 0 : 1)' \
+  || err "Node 22.12+ required (you have $(node -v))"
 ok "Node $(node -v), Xcode $(xcodebuild -version | head -1 | awk '{print $2}'), CocoaPods $(pod --version)"
 
 # ---- Install npm dependencies ----
@@ -41,7 +45,7 @@ if [ -d "ios" ]; then
 else
   say "Adding iOS platform"
   npx cap add ios
-  ok "iOS platform created at ./ios"
+  ok "iOS platform created at web/ios"
 fi
 
 # ---- Sync web assets + native plugins ----

@@ -87,6 +87,8 @@ the picks pages load but come back empty, with no error explaining why.
 
 ## Running locally
 
+Requires Node 22.12+ (Vitest 5's floor; Vercel runs Node 24).
+
 ```bash
 npm install                       # workspace root — backend, web, admin-web, packages/* (mobile/ installs on its own)
 

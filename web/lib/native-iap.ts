@@ -66,8 +66,9 @@ export async function purchaseNative(
     await Purchases.purchaseStoreProduct({ product: products[0] })
     return { success: true }
   } catch (e: unknown) {
-    const err = e as { code?: string; message?: string }
-    if (err?.code === "PURCHASE_CANCELLED") return { success: false, cancelled: true }
+    const err = e as { code?: string; message?: string; userCancelled?: boolean | null }
+    // RevenueCat reports a user cancel as PURCHASES_ERROR_CODE.PURCHASE_CANCELLED_ERROR, whose value is "1"
+    if (err?.code === "1" || err?.userCancelled) return { success: false, cancelled: true }
     return { success: false, error: err?.message ?? "Purchase failed" }
   }
 }

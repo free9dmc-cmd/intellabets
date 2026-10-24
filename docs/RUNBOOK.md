@@ -151,19 +151,23 @@ local setup and no connection string to get wrong.
 ## Dependency security
 
 Last cleanup 2026-10-24. Root `npm audit` went from 139 vulnerable packages
-(10 critical, 59 high) to 30 (0 critical, 15 high). The backend's standalone
-install, which is exactly what Render's Docker build runs, audits at **0**.
+(10 critical, 59 high) to 21 (0 critical, 16 high, 5 moderate). Those 21 all
+trace back to just two advisories (below). The backend's standalone install,
+which is exactly what Render's Docker build runs, audits at **0**.
 Versions moved:
 
 | Package | From | To |
 |---|---|---|
 | Next.js | 14.2.16 | 15.5.28 |
 | React | 18 | 19 |
-| next-auth | 4.24.10 | 4.24.15 |
-| NestJS | 10 | 11 |
+| next-auth | 4.24.13 (`^4.24.10`) | 4.24.15 |
+| NestJS | 10.4.22 | 11 |
 | Vitest | 2 | 5 |
 | Capacitor | 6 | 7 |
 | Docker base image | `node:20-slim` | `node:22-slim` (Node 20 is end-of-life) |
+
+The workspace now needs **Node 22.12+** (root `engines`; Vitest 5 requires it).
+Vercel runs Node 24.
 
 Removed:
 - unused GraphQL/Apollo packages in `backend/`;
@@ -179,6 +183,15 @@ Removed:
 | `web/package.json` | The sandbox's standalone web install, which ignores the root |
 | `backend/package.json` | The Docker build, which also installs standalone |
 
+Most are scoped, semver-compatible security bumps:
+- `axios` under `authorizenet`;
+- `ws` under `viem`;
+- `postcss` under `next`;
+- `multer`, `js-yaml` and `uuid` under Nest, Swagger and bull;
+- `uuid` under the MetaMask packages;
+- `postcss-selector-parser` 7 under `tailwindcss`. This one was checked to
+  produce byte-identical CSS.
+
 Two of them are build fixes, not security patches. Do not drop them:
 - **`@reown/appkit-adapter-wagmi` → `@wagmi/connectors ^6.2.0`.** Without it
   npm resolves connectors 8.x, which needs `@wagmi/core` 3, and `next build`
@@ -187,17 +200,29 @@ Two of them are build fixes, not security patches. Do not drop them:
   copy is nested under WalletConnect.
 
 Overrides only take effect on a fresh resolve. After changing one, delete
-`package-lock.json` and every `node_modules`, then reinstall.
+`package-lock.json` and every `node_modules`, then reinstall. The sandbox
+scripts already wipe `node_modules` whenever `package.json` changes.
 
-**What is left, and why it is accepted for now.** The 30 entries all trace
-back to four advisories. None has a fix that doesn't break something:
+**What is left, and why it is accepted for now.**
 
-| Package | Severity | Where it comes from | Why it is accepted |
-|---|---|---|---|
-| `zod` <4.6.6 | High | Zod 3, inside the wallet-checkout chain (`@reown/appkit`, WalletConnect, `viem`/`abitype`, `@coinbase/cdp-sdk`) | Only flaw is memory exhaustion on oversized input. There is no Zod 3 patch, and the fix needs wagmi 3 plus a matching AppKit — a separate upgrade of the web3 payment rail. The code runs in the visitor's own browser. |
-| `uuid` <11.1.1 | Moderate | MetaMask SDK packages | Only exploitable when a caller passes a `buf` argument to v3/v5/v6. They do not. |
-| `decode-uri-component` | Moderate | `query-string`, in the browser | The fixed versions are ESM-only and would break `query-string`'s `require()`. |
-| `postcss-selector-parser` | Moderate | Tailwind 3 | Runs at build time on our own CSS only. |
+`zod` <4.6.6 (high):
+- **Source.** Zod 3, inside the wallet-checkout chain: `@reown/appkit-wallet`
+  pins `zod 3.22.4` exactly, and `@coinbase/cdp-sdk` requires `^3.25.76`.
+  Both are still true in their latest releases (AppKit 1.8.24, CDP SDK
+  1.60.0), so **there is no upstream fix yet**. Upgrading to wagmi 3 would not
+  clear it.
+- **Impact.** Memory exhaustion on oversized input, in code that runs in the
+  visitor's own browser.
+- **Next step.** Re-check when AppKit 2.x ships.
+
+`decode-uri-component` (moderate):
+- **Source.** It reaches the tree only through `@walletconnect/ethereum-provider`
+  2.21.1, which `@wagmi/connectors` 6.2.0 pins, via `query-string`.
+- **Impact.** Denial of service, in the browser.
+- **Possible fix.** Overriding the provider to ≥2.23 (latest 2.26.0) would drop
+  it, but that changes the WalletConnect provider version. Do it only with a
+  live wallet test, i.e. a WalletConnect project id. Fixed versions of the
+  package itself are ESM-only and would break `query-string`'s `require()`.
 
 `mobile/` is outside the root lockfile now. It keeps its own Expo 51 alerts
 until it is moved to a current Expo SDK or removed.

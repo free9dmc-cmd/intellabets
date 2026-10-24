@@ -75,7 +75,7 @@ All products will start as **"Ready to Submit"** — that's correct. They go liv
 
 ## Part C — Xcode (on your Mac, ~15 min)
 
-Requires Xcode 16+ and Node 20+ (Capacitor 7).
+Requires Xcode 16+ (Capacitor 7) and Node 22.12+ (the repo's `engines` floor).
 
 Run this in Terminal from the project root:
 ```bash
@@ -114,13 +114,11 @@ This will install dependencies, generate the iOS project, and open Xcode. Then:
   (Required even if unused — Apple scans for them.)
 
 ### 5. Set CAPACITOR_SERVER_URL in capacitor.config
-Before archiving, make sure your `.env` on the Mac has:
-```
-CAPACITOR_SERVER_URL=https://intellabets.vercel.app
-```
-Then run:
+Before archiving, re-sync with the production URL. Run it from `web/`, where
+`capacitor.config.ts` lives. Pass the variable inline, because the Capacitor CLI
+does not load `.env` files:
 ```bash
-npx cap sync ios
+cd web && CAPACITOR_SERVER_URL=https://intellabets.vercel.app npx cap sync ios
 ```
 
 ### 6. Archive

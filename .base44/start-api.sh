@@ -16,6 +16,9 @@ STAMP=node_modules/.base44-install-stamp
 WANT=$(md5sum package.json | cut -d' ' -f1)
 if [ ! -d node_modules ] || [ "$(cat "$STAMP" 2>/dev/null)" != "$WANT" ]; then
   echo "[base44] installing API dependencies"
+  # Start clean whenever package.json changes: an in-place install keeps the
+  # versions already installed, so new npm overrides would not take effect.
+  rm -rf node_modules
   npm install --workspaces=false --no-package-lock --legacy-peer-deps --no-audit --no-fund
   echo "$WANT" > "$STAMP"
 else

@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Capacitor 7 is already in devDependencies (pinned to match RevenueCat 11), so
+// Capacitor 7 (^7.6.0) and RevenueCat 11 are already in devDependencies, so
 // run from web/: npm install && npx cap add ios && npx cap add android && npx cap sync
 
 const config = {
