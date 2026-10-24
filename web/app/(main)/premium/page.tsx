@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
+import Link from "next/link"
 import { PREMIUM_PRICE, AI_PRICE } from "@/lib/utils"
 import { isNativePlatform, purchaseNative, IAP_PRODUCTS } from "@/lib/native-iap"
 import type { PlanId } from "@/lib/billing/types"
@@ -335,6 +336,14 @@ export default function PremiumPage() {
           ))}
         </div>
       </div>
+
+      <p className="text-gray-600 text-xs text-center">
+        21+ only. For entertainment. No bet is guaranteed to win. If gambling stops being fun,{" "}
+        <Link href="/responsible-gambling" className="underline hover:text-gray-400">
+          get help and set limits
+        </Link>
+        .
+      </p>
     </div>
   )
 }
