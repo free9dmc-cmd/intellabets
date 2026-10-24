@@ -75,6 +75,8 @@ All products will start as **"Ready to Submit"** — that's correct. They go liv
 
 ## Part C — Xcode (on your Mac, ~15 min)
 
+Requires Xcode 16+ and Node 20+ (Capacitor 7).
+
 Run this in Terminal from the project root:
 ```bash
 bash scripts/setup-ios.sh

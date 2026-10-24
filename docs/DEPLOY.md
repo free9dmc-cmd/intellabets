@@ -54,7 +54,7 @@ Open `https://intellabets-api.onrender.com/api/docs` — you should see Swagger.
 
 ## Part 3 — Deploy the web app to Vercel
 
-The consumer web app lives in `web/` (Next.js 14, App Router).
+The consumer web app lives in `web/` (Next.js 15, App Router).
 
 1. Go to **[vercel.com](https://vercel.com)** → **Add New → Project** → import the repo.
 2. **Root Directory:** set to **`web`** (critical — the Next.js app lives there, not at the repo root).
@@ -105,6 +105,12 @@ in the `sk_live_…` key and the live-mode webhook secret.
 ---
 
 ## Part 4 — Point the mobile app at production
+
+> **Not possible yet.** `mobile/` is an Expo shell with no screens, no
+> `app.json`/`app.config.*` and no `eas.json`, so there is nothing to build. It
+> also sits outside the npm workspace (it pins React 18.2 for React Native 0.74,
+> while `web/` runs React 19), so it needs its own `cd mobile && npm install`
+> once real screens land. The steps below are for that point.
 
 In the Expo app, set the API base URL to production before building:
 ```

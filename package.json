@@ -5,7 +5,6 @@
   "workspaces": [
     "backend",
     "web",
-    "mobile",
     "admin-web",
     "packages/*"
   ],
@@ -27,6 +26,32 @@
     "typescript": "^5.5.0"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.12.0"
+  },
+  "overrides": {
+    "authorizenet": {
+      "axios": "^1.20.0"
+    },
+    "viem": {
+      "ws": "^8.22.0"
+    },
+    "next": {
+      "postcss": "^8.5.31"
+    },
+    "@nestjs/platform-express": {
+      "multer": "^2.5.0"
+    },
+    "@nestjs/swagger": {
+      "js-yaml": "^5.5.0"
+    },
+    "bull": {
+      "uuid": "^11.1.1"
+    },
+    "valtio": {
+      "use-sync-external-store": "^1.4.0"
+    },
+    "@reown/appkit-adapter-wagmi": {
+      "@wagmi/connectors": "^6.2.0"
+    }
   }
 }

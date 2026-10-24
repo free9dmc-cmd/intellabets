@@ -11,7 +11,8 @@ import { getPlacementGuide, isEngineConfigured } from "@/lib/engine"
  * Entitlement is checked HERE against this app's own user table, then the
  * engine is called server-to-server. The service key never reaches the browser.
  */
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 

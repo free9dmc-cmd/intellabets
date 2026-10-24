@@ -1,6 +1,6 @@
 // @ts-nocheck
-// Run: npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/android
-// Then: npx cap add ios && npx cap add android && npx cap sync
+// Capacitor 7 is already in devDependencies (pinned to match RevenueCat 11), so
+// run from web/: npm install && npx cap add ios && npx cap add android && npx cap sync
 
 const config = {
   appId: "com.intellabets.app",

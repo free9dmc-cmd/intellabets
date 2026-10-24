@@ -2,7 +2,8 @@ import { NextResponse } from "next/server"
 import { requireAdminApi } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   const { error } = await requireAdminApi()
   if (error) return error
 

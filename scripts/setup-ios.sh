@@ -18,7 +18,7 @@ err() { echo -e "${RED}✗ ${1}${NC}"; exit 1; }
 # ---- Prerequisites ----
 say "Checking prerequisites"
 
-command -v node >/dev/null 2>&1 || err "Node.js not installed. Install from https://nodejs.org (v18+)"
+command -v node >/dev/null 2>&1 || err "Node.js not installed. Install from https://nodejs.org (v20+)"
 command -v npm  >/dev/null 2>&1 || err "npm not found"
 command -v xcodebuild >/dev/null 2>&1 || err "Xcode not installed. Install from the Mac App Store"
 command -v pod >/dev/null 2>&1 || {
@@ -27,7 +27,7 @@ command -v pod >/dev/null 2>&1 || {
 }
 
 NODE_MAJOR=$(node -v | sed 's/v\([0-9]*\).*/\1/')
-[ "$NODE_MAJOR" -ge 18 ] || err "Node 18+ required (you have $(node -v))"
+[ "$NODE_MAJOR" -ge 20 ] || err "Node 20+ required (you have $(node -v))"
 ok "Node $(node -v), Xcode $(xcodebuild -version | head -1 | awk '{print $2}'), CocoaPods $(pod --version)"
 
 # ---- Install npm dependencies ----

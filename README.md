@@ -47,7 +47,7 @@ hundreds of bets to separate skill from variance.
 
 ```
                     ┌──────────────────────┐
-  intellabets.com → │  web/  Next.js 14    │ ── NextAuth ──→ Neon Postgres
+  intellabets.com → │  web/  Next.js 15    │ ── NextAuth ──→ Neon Postgres
                     │  Vercel              │                 (users, betslips,
                     └──────────┬───────────┘                  placed bets)
                                │
@@ -65,11 +65,11 @@ hundreds of bets to separate skill from variance.
 
 | Package | Stack | Role |
 |---|---|---|
-| `web/` | Next.js 14 App Router, Prisma, NextAuth | Customer site, accounts, subscriptions, support chat |
+| `web/` | Next.js 15 App Router (React 19), Prisma, NextAuth | Customer site, accounts, subscriptions, support chat |
 | `backend/` | NestJS, Prisma, BullMQ | Odds ingestion, de-vig engine, predictions, settlement |
 | `skills/` | Agent Skills | `pick-writeup`, `bet-grading`, plus the analyst agent config |
-| `mobile/` | Expo / React Native | Shell only — no screens built yet |
-| `admin-web/` | React + Vite | Admin console (early) |
+| `mobile/` | Expo / React Native | Shell only — no screens built yet; outside the npm workspace (own install) |
+| `admin-web/` | React + Vite | Placeholder — no source yet; the live admin console is `web/app/admin` |
 
 ### The two-database split
 
@@ -88,7 +88,7 @@ the picks pages load but come back empty, with no error explaining why.
 ## Running locally
 
 ```bash
-npm install                       # workspace root — installs all packages
+npm install                       # workspace root — backend, web, admin-web, packages/* (mobile/ installs on its own)
 
 cp web/.env.example web/.env      # fill in DATABASE_URL, NEXTAUTH_SECRET, ...
 cd web && npx prisma db push && npm run dev        # → localhost:3000

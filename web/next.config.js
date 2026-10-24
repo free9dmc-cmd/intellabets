@@ -23,6 +23,9 @@ const nextConfig = {
     // optional peers (and pino-pretty, another optional WalletConnect logger dep)
     // to false so webpack treats them as empty modules instead of failing to
     // resolve them. This never runs at runtime; it only unblocks the build.
+    // The MetaMask SDK (same connector chain) likewise requires React Native's
+    // AsyncStorage, but only inside a try/catch on its React-Native-only code
+    // path, so it gets the same empty-module alias.
     config.resolve.alias = {
       ...config.resolve.alias,
       "@x402/core": false,
@@ -30,6 +33,7 @@ const nextConfig = {
       "@x402/extensions": false,
       "@x402/svm": false,
       "pino-pretty": false,
+      "@react-native-async-storage/async-storage": false,
     }
     return config
   },

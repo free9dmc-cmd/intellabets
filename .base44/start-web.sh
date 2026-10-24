@@ -9,9 +9,10 @@ set -e
 cd /app
 
 # ─── Dependencies ────────────────────────────────────────────────────────────
-# Installed from web/package.json rather than the repo-root lockfile: the root
-# lockfile is stale with respect to web/package.json (@reown/appkit is pinned at
-# 1.7.8 there while package.json requires 1.8.24), so `npm ci` fails against it.
+# Installed from web/package.json rather than the repo-root workspace: a
+# workspace install would share one hoisted Prisma client with backend/, whose
+# schema differs (see AGENTS.md). Root `overrides` do not apply here, so
+# web/package.json carries its own copy of the ones the web app needs.
 # This mirrors backend/Dockerfile, which installs from package.json alone.
 # --no-package-lock keeps npm from writing a lockfile into the checkout, and the
 # stamp makes a restart with unchanged dependencies a no-op.

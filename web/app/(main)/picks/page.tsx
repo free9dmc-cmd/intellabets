@@ -26,8 +26,9 @@ function americanFromDecimal(d: number): string {
 export default async function PicksPage({
   searchParams,
 }: {
-  searchParams: { strategy?: string }
+  searchParams: Promise<{ strategy?: string }>
 }) {
+  const { strategy } = await searchParams
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) redirect("/login")
 
@@ -58,7 +59,7 @@ export default async function PicksPage({
     )
   }
 
-  const active = STRATEGY_TABS.find((t) => t.key === searchParams.strategy)?.key ?? "value"
+  const active = STRATEGY_TABS.find((t) => t.key === strategy)?.key ?? "value"
 
   let result: StrategyResult | null = null
   if (isEngineConfigured()) {

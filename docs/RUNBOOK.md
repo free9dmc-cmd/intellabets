@@ -148,6 +148,62 @@ local setup and no connection string to get wrong.
 
 ---
 
+## Dependency security
+
+Last cleanup 2026-10-24. Root `npm audit` went from 139 vulnerable packages
+(10 critical, 59 high) to 30 (0 critical, 15 high). The backend's standalone
+install, which is exactly what Render's Docker build runs, audits at **0**.
+Versions moved:
+
+| Package | From | To |
+|---|---|---|
+| Next.js | 14.2.16 | 15.5.28 |
+| React | 18 | 19 |
+| next-auth | 4.24.10 | 4.24.15 |
+| NestJS | 10 | 11 |
+| Vitest | 2 | 5 |
+| Capacitor | 6 | 7 |
+| Docker base image | `node:20-slim` | `node:22-slim` (Node 20 is end-of-life) |
+
+Removed:
+- unused GraphQL/Apollo packages in `backend/`;
+- unused `@auth/prisma-adapter` in `web/`;
+- `mobile/` from the npm workspace. It pins React 18.2 for React Native 0.74
+  and would otherwise hoist an old React next to `next` (see README).
+
+**npm `overrides` live in three files and must stay in step.**
+
+| File | Covers |
+|---|---|
+| root `package.json` | Workspace installs: Vercel and local development |
+| `web/package.json` | The sandbox's standalone web install, which ignores the root |
+| `backend/package.json` | The Docker build, which also installs standalone |
+
+Two of them are build fixes, not security patches. Do not drop them:
+- **`@reown/appkit-adapter-wagmi` → `@wagmi/connectors ^6.2.0`.** Without it
+  npm resolves connectors 8.x, which needs `@wagmi/core` 3, and `next build`
+  fails on `@wagmi/core/tempo`.
+- **`valtio` → `use-sync-external-store ^1.4.0`.** Without it a second React 18
+  copy is nested under WalletConnect.
+
+Overrides only take effect on a fresh resolve. After changing one, delete
+`package-lock.json` and every `node_modules`, then reinstall.
+
+**What is left, and why it is accepted for now.** The 30 entries all trace
+back to four advisories. None has a fix that doesn't break something:
+
+| Package | Severity | Where it comes from | Why it is accepted |
+|---|---|---|---|
+| `zod` <4.6.6 | High | Zod 3, inside the wallet-checkout chain (`@reown/appkit`, WalletConnect, `viem`/`abitype`, `@coinbase/cdp-sdk`) | Only flaw is memory exhaustion on oversized input. There is no Zod 3 patch, and the fix needs wagmi 3 plus a matching AppKit — a separate upgrade of the web3 payment rail. The code runs in the visitor's own browser. |
+| `uuid` <11.1.1 | Moderate | MetaMask SDK packages | Only exploitable when a caller passes a `buf` argument to v3/v5/v6. They do not. |
+| `decode-uri-component` | Moderate | `query-string`, in the browser | The fixed versions are ESM-only and would break `query-string`'s `require()`. |
+| `postcss-selector-parser` | Moderate | Tailwind 3 | Runs at build time on our own CSS only. |
+
+`mobile/` is outside the root lockfile now. It keeps its own Expo 51 alerts
+until it is moved to a current Expo SDK or removed.
+
+---
+
 ## Known issues
 
 **Login and registration are broken in production right now (found 2026-09-24).**

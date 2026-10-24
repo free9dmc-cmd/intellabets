@@ -18,7 +18,7 @@ Services, all from the cloned source (no prebuilt images):
 
 | Service | What it is | Where |
 |---|---|---|
-| `web` | Next.js 14 dev server, the public preview entry point | host port 3000 |
+| `web` | Next.js 15 dev server, the public preview entry point | host port 3000 |
 | `api` | NestJS engine dev server, Swagger at `/api/docs` | host port 4000 |
 | `seed` | one-shot demo-data seed, exits when done | shares the `db` netns |
 | `db` | Postgres 16, holding **two** databases | internal only |
@@ -39,9 +39,12 @@ is reviewable, and are bind-mounted read-only into the containers.
    --no-package-lock`, the same shape as `backend/Dockerfile`, whose build
    context is the backend directory alone). That gives each app its own Prisma
    client, at the cost of a slower first boot.
-   The repo-root `package-lock.json` cannot drive the installs: it is stale with
-   respect to the workspace manifests (e.g. it pins `@reown/appkit@1.7.8` while
-   `web/package.json` requires `1.8.24`), so `npm ci` against it fails outright.
+   The repo-root `package-lock.json` is current (regenerated 2026-10-24; `npm ci`
+   at the root works), but a single workspace install would still share one
+   Prisma client between the two apps, so the sandbox keeps per-package
+   installs. Root `overrides` do not apply to those installs, which is why
+   `web/package.json` and `backend/package.json` carry their own copies (RUNBOOK
+   "Dependency security" — keep all three in step).
    Dependencies land in `web/node_modules` and `backend/node_modules`
    (gitignored, inside the checkout) — not in Docker volumes, so `rm -rf
    web/node_modules` is a clean reinstall.

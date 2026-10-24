@@ -22,39 +22,57 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.125.0",
-    "@auth/prisma-adapter": "^2.7.2",
     "@prisma/client": "^5.22.0",
     "@reown/appkit": "^1.8.24",
     "@reown/appkit-adapter-wagmi": "^1.8.24",
     "@tanstack/react-query": "^5.104.1",
+    "@wagmi/core": "^2.22.1",
     "authorizenet": "^1.0.10",
     "bcryptjs": "^2.4.3",
-    "next": "14.2.16",
-    "next-auth": "^4.24.10",
-    "react": "^18",
-    "react-dom": "^18",
+    "next": "15.5.28",
+    "next-auth": "^4.24.15",
+    "react": "^19",
+    "react-dom": "^19",
     "stripe": "^17.3.1",
     "viem": "^2.57.2",
     "wagmi": "^2.19.5"
   },
   "devDependencies": {
-    "@capacitor/android": "^6.0.0",
-    "@capacitor/cli": "^6.0.0",
-    "@capacitor/core": "^6.0.0",
-    "@capacitor/ios": "^6.0.0",
-    "@revenuecat/purchases-capacitor": "^9.0.0",
+    "@capacitor/android": "^7.6.0",
+    "@capacitor/cli": "^7.6.0",
+    "@capacitor/core": "^7.6.0",
+    "@capacitor/ios": "^7.6.0",
+    "@revenuecat/purchases-capacitor": "^11.3.3",
     "@types/bcryptjs": "^2.4.6",
-    "@types/node": "^20",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
     "autoprefixer": "^10.0.1",
     "eslint": "^8",
-    "eslint-config-next": "14.2.16",
+    "eslint-config-next": "15.5.28",
     "postcss": "^8",
     "prisma": "^5.22.0",
     "tailwindcss": "^3.4.0",
     "tsx": "^4.19.1",
     "typescript": "^5",
-    "vitest": "^2.1.9"
+    "vite": "^6.4.5",
+    "vitest": "^5.0.5"
+  },
+  "overrides": {
+    "@reown/appkit-adapter-wagmi": {
+      "@wagmi/connectors": "^6.2.0"
+    },
+    "valtio": {
+      "use-sync-external-store": "^1.4.0"
+    },
+    "authorizenet": {
+      "axios": "^1.20.0"
+    },
+    "viem": {
+      "ws": "^8.22.0"
+    },
+    "next": {
+      "postcss": "^8.5.31"
+    }
   }
 }
