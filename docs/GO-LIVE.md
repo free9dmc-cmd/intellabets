@@ -483,15 +483,25 @@ the billing provider files. (There is no `backend/.env.example`; the root
 
 ### Rollback
 
-- **Turn a rail off** — clear its env vars (or `BILLING_PROVIDER`) **and
-  redeploy**. `isConfigured()` is re-evaluated per request, but a running Vercel
-  deployment keeps the `process.env` it was built with, so the change only takes
-  effect once a new deployment goes live. After the redeploy the rail disappears
-  from `/api/billing/providers` and checkout reverts to the clean 503; clearing
-  **all** payment env and redeploying returns the whole billing surface to dormant
-  503. The kill switch is "clear env **+ redeploy**", not an env change alone —
-  removing keys without redeploying leaves the live deployment still accepting
-  payments.
+- **Turn a rail off** — remove **that rail's own credential env vars** so its
+  `isConfigured()` returns false (`AUTHNET_API_LOGIN_ID` + `AUTHNET_TRANSACTION_KEY`
+  for card; `NOWPAYMENTS_API_KEY` for custodial crypto; `WEB3_RECEIVING_ADDRESS` +
+  `WEB3_RPC_URL`, plus the public `NEXT_PUBLIC_*` web3 vars, for self-custody) **and
+  redeploy**. Clearing `BILLING_PROVIDER` is **not** a kill switch: it only selects
+  the *default* rail when the client doesn't specify one, so with it unset the
+  registry still falls back to `authorizenet` (or, if that is unconfigured, the
+  first still-configured rail), and `POST /api/checkout` — which honours a
+  client-supplied `providerId` — keeps creating payments on any rail whose keys
+  remain present (`resolveProvider` / `getDefaultProvider` in
+  `web/lib/billing/registry.ts`). `isConfigured()` is re-evaluated per request, but
+  a running Vercel deployment keeps the `process.env` it was built with, so the
+  change only takes effect once a new deployment goes live. After the redeploy the
+  rail disappears from `/api/billing/providers` and checkout reverts to the clean
+  503; removing **every** rail's credential env and redeploying returns the whole
+  billing surface to dormant 503 (`BILLING_UNAVAILABLE`). The kill switch is
+  "remove the rail's keys **+ redeploy**", not an env change alone and never
+  `BILLING_PROVIDER` on its own — removing keys without redeploying, or merely
+  clearing `BILLING_PROVIDER`, leaves the live deployment still accepting payments.
 - **Bad schema push** — `prisma db push` is additive here (new tables + nullable
   columns); it does not drop existing data for this change set. If the web app
   errors with "column … does not exist", the push was skipped — re-run §4.
