@@ -78,16 +78,25 @@ Every rail reads its env **lazily** and reports `isConfigured()` per request
   (`web/lib/billing/degradation.ts`), not a 500,
 - `GET /api/billing/providers` returns `{ providers: [], defaultProviderId: null }`.
 
-A rail turns on/off purely by presence of its keys — **no redeploy needed**. This
-is what makes **Stage A (free product live) safe without any payment setup**: the
-site is fully live and checkout degrades gracefully until Stage B.
+A rail turns on/off purely by the presence of its keys **in the running
+deployment's environment** — but on Vercel that environment is captured at deploy
+time. `isConfigured()` is re-read per request, yet `process.env` itself does not
+change until you **redeploy**: adding or removing a key in the Vercel dashboard
+has **no effect on the live deployment until it is redeployed** (promote a new
+deployment). This is what makes **Stage A (free product live) safe without any
+payment setup**: deploy with no payment env and the site is fully live, checkout
+degrading gracefully, until you set keys and redeploy for Stage B.
 
 ---
 
 ## 2. Stage A — free product live (no payments)
 
-Goal: the public product is fully usable — sign up, dashboard, picks, AI picks,
-support — with payments cleanly dormant.
+Goal: the public product is fully usable on the **free tier** — sign up,
+dashboard, engine picks (`/picks`), leaderboard, betslips, support chat, and the
+public legal/marketing pages — with payments cleanly dormant. **AI Picks and
+premium tipster features are paid-gated**: a free account sees an upgrade prompt
+on `/ai-picks` until it holds a subscription (see §A.5 for what is free vs. paid
+and how to grant a test entitlement before Stage B).
 
 ### A.1 Deploy the backend engine to Render
 
@@ -134,12 +143,16 @@ Environment Variables, Production):
 | `ANTHROPIC_API_KEY` | `sk-ant-…` | console.anthropic.com |
 | `ENGINE_API_URL` | `https://api.intellabets.com/api/v1` | Render service URL |
 | `ENGINE_SERVICE_KEY` | same value set on Render | must match Render exactly |
-| `RESEND_API_KEY` / `EMAIL_FROM` | optional | resend.com (password-reset email; flow still works without it) |
+| `RESEND_API_KEY` / `EMAIL_FROM` | **required for account recovery** | resend.com — sends the password-reset email. Omit `RESEND_API_KEY` and **no reset email is ever sent**: `/api/auth/forgot-password` still returns its generic "if an account exists, a link is on its way" response (identical by design, so the response can't reveal who has an account — `web/lib/email.ts`, `web/app/api/auth/forgot-password/route.ts`), so the UI *looks* successful but the user never receives the link and **cannot recover the account**. `EMAIL_FROM` must be on a domain verified with Resend (defaults to `support@intellabets.com`). |
 
 > A valid `ANTHROPIC_API_KEY` on **both** web and backend is what the Launch-Plan
-> flagged as the fix for AI picks + support chat (currently 503). The web key
-> powers `/ai-picks` and support chat; the backend key powers the analyst that
-> filters value bets.
+> flagged as the fix for the AI-picks / support-chat **infra 503s**. The web key
+> powers `/ai-picks` generation and support chat; the backend key powers the
+> analyst that filters value bets. Note the distinction: the key clears the 503
+> and powers the AI responses, but it does **not** grant AI Picks *access* —
+> `/ai-picks` still returns **403 `NO_AI_SUB`** without an active Premium or AI
+> subscription (`hasAIAccess()`, `web/lib/entitlements.ts`). Support chat needs no
+> entitlement (auth optional).
 
 ### A.3 Push the WEB database schema (the manual, easy-to-forget step)
 
@@ -183,8 +196,27 @@ verification.
 - [ ] Log in; `/dashboard` loads.
 - [ ] `/picks` loads real games/odds (needs `THE_ODDS_API_KEY` on Render +
       matching `ENGINE_SERVICE_KEY`; a sport out of season is empty, not broken).
-- [ ] `/ai-picks` and support chat return real AI responses (not the fallback
-      "something went wrong") — confirms the Anthropic keys.
+- [ ] **Support chat** returns real AI answers (not the "live chat is unavailable"
+      fallback) — confirms the web `ANTHROPIC_API_KEY`. Support chat is **free**:
+      `POST /api/support/chat` only requires `isSupportConfigured()` (a well-formed
+      Anthropic key); auth is optional and **no paid entitlement is needed**
+      (`web/app/api/support/chat/route.ts`).
+- [ ] `/ai-picks` as a brand-new **free** account shows the **"Unlock AI
+      Predictions" upgrade screen**, not generated betslips — this is correct.
+      AI Picks is **paid-gated**: `POST /api/ai-picks` returns **403 `NO_AI_SUB`**
+      unless the account has active Premium or a standalone AI subscription
+      (`hasAIAccess()`, `web/lib/entitlements.ts`). A valid `ANTHROPIC_API_KEY`
+      clears the infra 503 and powers the AI responses, but it does **not** grant
+      access — feature access still requires a subscription. In Stage A checkout
+      is dormant (503), so a free user cannot self-upgrade; use the admin grant
+      below to exercise the paid path before Stage B.
+- [ ] **Test the paid path pre-payments:** as an `ADMIN_EMAILS` account, grant a
+      test user Premium from `/admin` (or `PATCH /api/admin/users/<id>` with
+      `{ "isPremium": true }`, which sets `isPremium=true` and `premiumUntil` to
+      one year out — `web/app/api/admin/users/[id]/route.ts`). That user's
+      `/ai-picks` then generates real betslips. (`DEMO_BILLING=true` also grants
+      premium but is force-disabled when `NODE_ENV=production` — never use it in
+      prod.)
 - [ ] `/terms`, `/privacy`, `/refund`, `/contact` all load **signed out** (public
       per `web/middleware.ts`; underwriters and store review require this).
 - [ ] `GET /api/billing/providers` returns `{ providers: [], defaultProviderId: null }`
@@ -205,8 +237,10 @@ underwrite the card rail and to register NOWPayments). Once the entity is formed
 `/privacy`, `/refund`) so they match the merchant of record the underwriter
 reviews.
 
-Enable rails independently. Each one you configure turns on with **no redeploy**;
-the checkout picker (`GET /api/billing/providers`) only offers configured rails.
+Enable rails independently. Each one you configure turns on **after you redeploy**
+— set its env vars on Vercel, then redeploy/promote so a new deployment picks them
+up; the checkout picker (`GET /api/billing/providers`) then offers only the rails
+whose keys are present in that deployment.
 `BILLING_PROVIDER` (`authorizenet` | `nowpayments` | `web3`, default
 `authorizenet`) selects the default rail when the client doesn't specify one
 (`web/lib/billing/registry.ts`).
@@ -376,7 +410,7 @@ the billing provider files. (There is no `backend/.env.example`; the root
 | `ANTHROPIC_API_KEY` | A | Secret | console.anthropic.com — AI picks + support chat |
 | `ENGINE_API_URL` | A | Public-ish | `https://api.intellabets.com/api/v1` |
 | `ENGINE_SERVICE_KEY` | A | Secret | `openssl rand -hex 32`; **must match Render** |
-| `RESEND_API_KEY` / `EMAIL_FROM` | A (optional) | Secret / plain | resend.com — password-reset email |
+| `RESEND_API_KEY` / `EMAIL_FROM` | A (**required for password reset**) | Secret / plain | resend.com — sends the password-reset email; omit `RESEND_API_KEY` and no reset email is sent (the API still returns its generic success, so account recovery silently fails). `EMAIL_FROM` domain must be verified with Resend |
 | `BILLING_PROVIDER` | B (optional) | plain | `authorizenet`\|`nowpayments`\|`web3` (default `authorizenet`) |
 | `AUTHNET_API_LOGIN_ID` | B (card) | Secret | Authorize.Net merchant |
 | `AUTHNET_TRANSACTION_KEY` | B (card) | Secret | Authorize.Net API credentials |
@@ -416,7 +450,9 @@ the billing provider files. (There is no `backend/.env.example`; the root
 ## 6. Post-launch / recommended next
 
 - **Valid `ANTHROPIC_API_KEY`** on web + backend resolves the current AI-picks /
-  support-chat 503 (`docs/LAUNCH-PLAN.md` P1).
+  support-chat infra **503s** (`docs/LAUNCH-PLAN.md` P1). It powers the AI
+  responses but does not unlock AI Picks — access to `/ai-picks` still requires a
+  subscription (`hasAIAccess()`); support chat is free.
 - **Error monitoring** — add Sentry (or equivalent); production is otherwise blind
   to runtime errors.
 - **Dependency advisories** — ~94 npm vulnerabilities outstanding and a Next.js
@@ -447,10 +483,15 @@ the billing provider files. (There is no `backend/.env.example`; the root
 
 ### Rollback
 
-- **Turn a rail off** — remove its env vars. `isConfigured()` is re-evaluated per
-  request, so the rail disappears from `/api/billing/providers` and checkout
-  reverts to the clean 503 **with no redeploy**. Removing **all** payment env
-  returns the whole billing surface to dormant 503 — a safe, instant kill switch.
+- **Turn a rail off** — clear its env vars (or `BILLING_PROVIDER`) **and
+  redeploy**. `isConfigured()` is re-evaluated per request, but a running Vercel
+  deployment keeps the `process.env` it was built with, so the change only takes
+  effect once a new deployment goes live. After the redeploy the rail disappears
+  from `/api/billing/providers` and checkout reverts to the clean 503; clearing
+  **all** payment env and redeploying returns the whole billing surface to dormant
+  503. The kill switch is "clear env **+ redeploy**", not an env change alone —
+  removing keys without redeploying leaves the live deployment still accepting
+  payments.
 - **Bad schema push** — `prisma db push` is additive here (new tables + nullable
   columns); it does not drop existing data for this change set. If the web app
   errors with "column … does not exist", the push was skipped — re-run §4.
