@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { hasAIAccess } from "@/lib/entitlements"
 import { getBookComparison, isEngineConfigured } from "@/lib/engine"
+import { stateCode } from "@/lib/sportsbooks"
 
 /** Every book's price for a pick, defaulting the comparison to the user's own book. */
 export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
@@ -34,6 +35,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
   const comparison = await getBookComparison(params.id, {
     stake,
     preferred: searchParams.get("preferred") ?? user?.preferredBook ?? null,
+    state: stateCode(searchParams.get("state")),
   })
   if (!comparison) {
     return NextResponse.json({ error: "Could not load prices." }, { status: 502 })

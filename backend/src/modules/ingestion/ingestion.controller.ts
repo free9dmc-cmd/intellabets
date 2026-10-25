@@ -1,10 +1,41 @@
-import { Controller, Post, Query, UseGuards, BadRequestException } from "@nestjs/common"
+import { Controller, Get, Post, Query, UseGuards, BadRequestException } from "@nestjs/common"
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from "@nestjs/swagger"
 import { IngestionService } from "./ingestion.service"
 import { OddsAggregatorService } from "./odds-aggregator.service"
 import { PredictionsService } from "../predictions/predictions.service"
 import { JwtAuthGuard, RolesGuard } from "../auth/guards/jwt-auth.guard"
 import { RequireAdmin } from "../auth/decorators/current-user.decorator"
+import { ServiceOrPremiumGuard } from "../auth/guards/service-or-premium.guard"
+
+/**
+ * Whether odds are flowing, for the web app's admin health check. A separate
+ * controller because IngestionController's guards are admin-JWT only, and the
+ * web app authenticates with the service key.
+ */
+@ApiTags("ingestion")
+@Controller("ingestion")
+export class IngestionStatusController {
+  constructor(
+    private readonly aggregator: OddsAggregatorService,
+    private readonly predictions: PredictionsService
+  ) {}
+
+  @Get("status")
+  @UseGuards(ServiceOrPremiumGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "Odds feed health: last successful call, last error, credits left, and how fresh the data is",
+  })
+  async status() {
+    return {
+      configured: this.aggregator.isConfigured(),
+      activeSports: this.aggregator.activeSportKeys(),
+      regions: this.aggregator.regions(),
+      feed: this.aggregator.status(),
+      data: await this.predictions.feedStats(),
+    }
+  }
+}
 
 /**
  * Admin-only manual controls for the ingestion pipeline. Handy for testing:

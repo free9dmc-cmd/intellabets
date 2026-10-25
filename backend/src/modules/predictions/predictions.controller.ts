@@ -1,6 +1,6 @@
-import { Controller, Get, NotFoundException, Param, Query, UseGuards } from "@nestjs/common"
+import { BadRequestException, Controller, Get, NotFoundException, Param, Query, UseGuards } from "@nestjs/common"
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from "@nestjs/swagger"
-import { PredictionsService } from "./predictions.service"
+import { MAX_BETSLIP_LEGS, PredictionsService } from "./predictions.service"
 import { JwtAuthGuard, RolesGuard } from "../auth/guards/jwt-auth.guard"
 import { ServiceOrPremiumGuard } from "../auth/guards/service-or-premium.guard"
 import { RequirePremium } from "../auth/decorators/current-user.decorator"
@@ -47,6 +47,36 @@ export class PredictionsController {
       )
     }
     return this.predictions.listByStrategy(key, sport, limit ? parseInt(limit, 10) : 25)
+  }
+
+  @Get("betslip")
+  @UseGuards(ServiceOrPremiumGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      "Several picks priced at one sportsbook, with a betslip link per leg (and one parlay link where the book supports it)",
+  })
+  @ApiQuery({ name: "ids", required: true, description: "Comma-separated prediction ids, at most 8" })
+  @ApiQuery({ name: "book", required: false, description: "Your sportsbook, e.g. fanduel or caesars" })
+  @ApiQuery({ name: "state", required: false, description: "Your 2-letter US state, e.g. NJ" })
+  @ApiQuery({ name: "stake", required: false, description: "Stake in USD for the parlay payout (default 10)" })
+  betslip(
+    @Query("ids") ids: string,
+    @Query("book") book?: string,
+    @Query("state") state?: string,
+    @Query("stake") stake?: string
+  ) {
+    const list = (ids ?? "").split(",").map((s) => s.trim()).filter(Boolean)
+    if (list.length === 0) throw new BadRequestException("ids is required")
+    if (list.length > MAX_BETSLIP_LEGS) {
+      throw new BadRequestException(`At most ${MAX_BETSLIP_LEGS} legs per betslip`)
+    }
+    const parsed = stake ? Number(stake) : undefined
+    return this.predictions.betslipFor(list, {
+      book: book ?? null,
+      state: state ?? null,
+      stake: parsed !== undefined && Number.isFinite(parsed) && parsed > 0 ? parsed : undefined,
+    })
   }
 
   @Get("results")

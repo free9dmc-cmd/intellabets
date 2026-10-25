@@ -41,10 +41,16 @@ export default function BookPicker({
   predictionId,
   sport,
   marketType,
+  preferredBook,
+  state,
 }: {
   predictionId: string
   sport: string
   marketType: string
+  /** The user's sportsbook, marked "your book" in the list. */
+  preferredBook?: string | null
+  /** 2-letter state, so state-hosted books can open a filled betslip. */
+  state?: string | null
 }) {
   const [open, setOpen] = useState(false)
   const [data, setData] = useState<Comparison | null>(null)
@@ -56,9 +62,10 @@ export default function BookPicker({
   const load = async (amount: string) => {
     setLoading(true)
     setError("")
-    const res = await fetch(
-      `/api/engine/books/${predictionId}?stake=${encodeURIComponent(amount || "100")}`
-    )
+    const qs = new URLSearchParams({ stake: amount || "100" })
+    if (preferredBook) qs.set("preferred", preferredBook)
+    if (state) qs.set("state", state)
+    const res = await fetch(`/api/engine/books/${predictionId}?${qs}`)
     const json = await res.json().catch(() => ({}))
     if (res.ok) setData(json)
     else setError(json.error ?? "Could not load prices.")

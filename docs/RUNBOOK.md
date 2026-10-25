@@ -99,7 +99,9 @@ curl -s --max-time 60 https://api.intellabets.com/api/v1/predictions/strategies
 
 | Symptom | Almost always |
 |---|---|
-| Picks pages empty, no error | `ENGINE_SERVICE_KEY` differs between Vercel and Render |
+| Picks pages and AI Picks empty, `/api/admin/health` `odds-feed` failing with 401 | The Odds API rejects `THE_ODDS_API_KEY` (revoked key or plan out of credits). The engine logs `The Odds API 401 <error_code>` and the credits left. Fix the key or plan on the-odds-api.com, then update `THE_ODDS_API_KEY` on Render |
+| Picks go stale for hours, then recover | The engine is on Render's **free** plan and sleeps after 15 min without traffic; nothing polls while it sleeps. Move `intellabets-api` to Starter |
+| Picks pages empty, no error | `ENGINE_SERVICE_KEY` differs between Vercel and Render (`/api/admin/health` `engine` check now says so) |
 | Picks pages empty, engine healthy | Check `ACTIVE_SPORTS` on Render. A sport out of season has no games, so no odds and no picks. MLB alone goes dead from October to March |
 | Engine times out on first request | Render free tier cold start. Retry for 60s before escalating |
 | Support chat: "something went wrong" | `ANTHROPIC_API_KEY` invalid, revoked, or out of credit. Check `/api/admin/health` |
@@ -107,7 +109,7 @@ curl -s --max-time 60 https://api.intellabets.com/api/v1/predictions/strategies
 | Login redirects to a dead page | `NEXTAUTH_URL` points somewhere DNS doesn't serve |
 | Can't reach `/admin` | Your sign-in email isn't in `ADMIN_EMAILS` |
 | Vercel build stops with "services" | Root Directory isn't `web` |
-| Push builds green but the site does not change | The production deployment has no `intellabets.com` alias. Two causes found, check both: (1) **a manual Promote or Rollback turns off `autoAssignCustomDomains`** — turn it back on (Settings → Environments → Production, or the API) and stop promoting by hand; (2) **git-triggered production deploys still were not aliased with that setting on** (2026-10-23), while an API redeploy of the same commit was. Suspected but unconfirmed: a required deployment check is blocking promotion — the Cloudflare "Workers Builds: intellabets" check has failed on every commit since 2026-10-22. Disconnect that Cloudflare build (it is not part of this stack) and remove it from any required checks in Vercel. Until fixed, ship by redeploying the latest production deployment via the API, not by Promote. |
+| Push builds green but the site does not change | The production deployment has no `intellabets.com` alias. Two causes found, check both: (1) **a manual Promote or Rollback turns off `autoAssignCustomDomains`** — turn it back on (Settings → Environments → Production, or the API) and stop promoting by hand; (2) **git-triggered production deploys still were not aliased with that setting on** (2026-10-23), while an API redeploy of the same commit was. Suspected but unconfirmed: a required deployment check is blocking promotion — the Cloudflare "Workers Builds: intellabets" check has failed on every commit since 2026-10-22. Disconnect that Cloudflare build (it is not part of this stack) and remove it from any required checks in Vercel. Until fixed, ship by redeploying the latest production deployment via the API, not by Promote. **2026-10-25:** an API redeploy was not aliased either, so the domain was moved by assigning the `intellabets.com` alias to the new deployment directly (Vercel API `POST /v2/deployments/{id}/aliases`). Check which deployment serves the site with `curl -s https://intellabets.com/login \| grep -o 'dpl=dpl_[A-Za-z0-9]*' \| sort -u`. |
 | `prisma db push` → `P1001` | Unquoted `&` in the URL (shell backgrounds it), or Neon compute asleep. Neon's SQL Editor sidesteps both |
 | Typecheck fails in `web/` after backend work | Shared `@prisma/client` was regenerated for the other schema. `npm run dev`/`build`/`typecheck` now auto-run `prisma generate` for the current package, so no manual re-run is needed unless you invoke `tsc`/`nest`/`next` directly (then `npx prisma generate` in `web/`) |
 | Login/register return 500, `prisma...findUnique()` error mentions "does not exist in the current database" | `schema.prisma` has a column the production Neon DB doesn't have — someone committed a schema change without running `prisma db push` against production. `GET /api/admin/health` now catches this (`database` check runs a real `findFirst`, not just `count`). Fix: `cd web && DATABASE_URL="<neon url>" npx prisma db push`, or run the equivalent `ALTER TABLE` in Neon's SQL Editor |
@@ -231,20 +233,27 @@ until it is moved to a current Expo SDK or removed.
 
 ## Known issues
 
-**The whole website is offline: Vercel is returning `402 DEPLOYMENT_DISABLED`
-(found 2026-10-24, ~16:25 UTC).**
-- **What fails.** Every URL on the team returns "Payment required" and
-  `x-vercel-error: DEPLOYMENT_DISABLED`: `intellabets.com`, the
-  `*.vercel.app` aliases and every preview.
-- **Cause.** This is account-level billing state, not code. Note that a 402,
-  unlike `503 DEPLOYMENT_PAUSED`, is billing. It started after the last
-  successful build (`dfb4920`, ~04:14 UTC). The fix is the owner's job, in
-  Vercel → team "free9dmc-cmd's projects" → Settings → Billing: trial ended,
-  card declined, or spend limit reached.
-- **Engine.** Unaffected. `api.intellabets.com/api/docs` returns 200.
-- **Pushes while disabled.** No push creates a deployment, including `3da0838`
-  on `main`. Once billing is restored, ship `main` with an API redeploy, not
-  Promote (see "Symptoms → causes").
+**No live odds since 2026-09-14: The Odds API rejects the engine's key (found 2026-10-25).**
+- **What fails.** Every poll returns `401` for every sport, so there are no
+  upcoming games or picks. The Engine Picks page and AI Picks are empty, and AI
+  Picks says live odds are unavailable rather than inventing games.
+- **Fix (owner).** On the-odds-api.com check the plan and credits, create a new
+  key (the old one was also exposed in a chat), and set `THE_ODDS_API_KEY` on
+  Render. The engine redeploys and polls on the next 30-minute boundary;
+  `/api/admin/health` → `odds-feed` shows when odds last arrived and the
+  credits left.
+- **Plan size.** At the defaults (3 markets x 1 region per `/odds` call, 5
+  sports, every 30 min, plus `/scores` settlement hourly) the engine uses
+  roughly 28,000 credits a month while awake, more than the 20K plan. Use the
+  100K plan, or cut `ACTIVE_SPORTS` / raise `POLL_INTERVAL_MIN`.
+- **Also.** The engine is on Render's free plan, which sleeps after 15 minutes
+  without traffic, and nothing polls while it sleeps. Move it to Starter for
+  odds that stay current.
+
+**Resolved 2026-10-25: the site was offline (`402 DEPLOYMENT_DISABLED`) on
+2026-10-24** because of Vercel account billing. The owner fixed billing. The
+security upgrade (`baac150`) was then deployed by API and the `intellabets.com`
+alias assigned by hand (see "Symptoms → causes").
 
 **Login and registration are broken in production right now (found 2026-09-24).**
 `prisma.user.findUnique()` / `.create()` fail because `User.premiumStripeSubId`

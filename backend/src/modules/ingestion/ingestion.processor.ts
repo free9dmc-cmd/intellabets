@@ -2,6 +2,7 @@ import { Processor, Process } from "@nestjs/bull"
 import { Logger } from "@nestjs/common"
 import type { Job } from "bull"
 import { PredictionsService } from "../predictions/predictions.service"
+import { OddsApiError } from "./odds-aggregator.service"
 
 export const INGESTION_QUEUE = "ingestion"
 
@@ -21,9 +22,7 @@ export class IngestionProcessor {
     try {
       return await this.predictions.ingestAndPredict(sportKey)
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      this.logger.error(`Poll failed for ${sportKey}: ${msg}`)
-      throw err // let Bull retry with backoff
+      await this.failJob(job, `Poll failed for ${sportKey}`, err)
     }
   }
 
@@ -34,9 +33,22 @@ export class IngestionProcessor {
     try {
       return await this.predictions.settleSport(sportKey)
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      this.logger.error(`Settle failed for ${sportKey}: ${msg}`)
-      throw err
+      await this.failJob(job, `Settle failed for ${sportKey}`, err)
     }
+  }
+
+  /**
+   * Log the failure and rethrow so Bull marks the job failed. A rejected key or
+   * an exhausted quota is not retried: the retries would fail the same way.
+   */
+  private async failJob(job: Job, label: string, err: unknown): Promise<never> {
+    const msg = err instanceof Error ? err.message : String(err)
+    if (err instanceof OddsApiError && err.isAuthFailure) {
+      this.logger.error(`${label}: ${msg} — not retrying; check THE_ODDS_API_KEY and the plan's credits`)
+      await job.discard()
+    } else {
+      this.logger.error(`${label}: ${msg}`)
+    }
+    throw err
   }
 }

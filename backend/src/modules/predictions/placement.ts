@@ -319,6 +319,13 @@ const PREFERRED_ALIASES: Record<string, string> = {
   "espn bet": "espnbet",
 }
 
+/** The Odds API key for a book name or key a user gave us, e.g. "Caesars" -> "williamhill_us". */
+export function resolveBookKey(book: string | null | undefined): string | null {
+  const k = book?.trim().toLowerCase()
+  if (!k) return null
+  return PREFERRED_ALIASES[k] ?? k
+}
+
 /**
  * Rank every book offering this selection by what it actually pays.
  *
@@ -340,7 +347,7 @@ export function compareBooks(params: {
   const { selection, matchup, stake, pricesByBook, preferredBook, state } = params
   // Users pick "Caesars"; The Odds API calls it williamhill_us. Resolve the
   // preference through the registry so the alias matches.
-  const preferredKey = preferredBook ? (PREFERRED_ALIASES[preferredBook.toLowerCase()] ?? preferredBook.toLowerCase()) : null
+  const preferredKey = resolveBookKey(preferredBook)
 
   const raw: BookOption[] = Array.from(pricesByBook.entries())
     // Offshore/unlicensed books are never shown or linked (see deeplinks.ts).

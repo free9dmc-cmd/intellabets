@@ -1,4 +1,4 @@
-import { BOOKS, compareBooks, resolveBook } from "./placement"
+import { BOOKS, compareBooks, resolveBook, resolveBookKey } from "./placement"
 import type { BookPriceInput } from "./placement"
 
 function prices(entries: [string, BookPriceInput][]) {
@@ -25,6 +25,16 @@ describe("BOOKS / resolveBook", () => {
   it("falls back for unknown and empty keys", () => {
     expect(resolveBook("somebook").name).toBe("somebook")
     expect(resolveBook(null).name).toBe("your sportsbook")
+  })
+})
+
+describe("resolveBookKey", () => {
+  it("maps the names users pick to The Odds API keys", () => {
+    expect(resolveBookKey("Caesars")).toBe("williamhill_us")
+    expect(resolveBookKey(" theScore Bet ")).toBe("espnbet")
+    expect(resolveBookKey("FanDuel")).toBe("fanduel")
+    expect(resolveBookKey("")).toBeNull()
+    expect(resolveBookKey(null)).toBeNull()
   })
 })
 

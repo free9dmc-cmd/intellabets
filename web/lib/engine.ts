@@ -21,6 +21,9 @@ export interface StrategyDef {
 
 export interface EnginePrediction {
   id: string
+  /** Engine game id; legs of a parlay should come from different games. */
+  gameId: string
+  outcomeId: string
   marketType: string
   selection: string
   outcomeName: string
@@ -33,6 +36,7 @@ export interface EnginePrediction {
   confidence: number
   reasoning: string | null
   game: {
+    id: string
     sport: string
     league: string
     homeTeam: string
@@ -158,11 +162,13 @@ export interface PredictionResult {
 
 export function getBookComparison(
   predictionId: string,
-  opts: { stake?: number; preferred?: string | null } = {}
+  opts: { stake?: number; preferred?: string | null; state?: string | null } = {}
 ): Promise<BookComparison | null> {
   const qs = new URLSearchParams()
   if (opts.stake) qs.set("stake", String(opts.stake))
   if (opts.preferred) qs.set("preferred", opts.preferred)
+  // Lets state-hosted books (BetMGM, Caesars, BetRivers) open a filled betslip.
+  if (opts.state) qs.set("state", opts.state)
   const suffix = qs.toString() ? `?${qs}` : ""
   return engineFetch(`/predictions/${encodeURIComponent(predictionId)}/books${suffix}`)
 }
@@ -171,4 +177,81 @@ export function getBookComparison(
 export function getPredictionResults(ids: string[]): Promise<{ results: PredictionResult[] } | null> {
   if (ids.length === 0) return Promise.resolve({ results: [] })
   return engineFetch(`/predictions/results?ids=${encodeURIComponent(ids.join(","))}`)
+}
+
+/** One book's price for a betslip leg. */
+export interface LegPrice {
+  book: string
+  bookName: string
+  oddsDecimal: number
+  oddsAmerican: string
+  link: string | null
+  linkKind: "betslip" | "event" | "home" | null
+}
+
+export interface BetslipLeg {
+  predictionId: string
+  gameId: string
+  sport: string
+  matchup: string
+  commenceTime: string
+  started: boolean
+  marketType: string
+  selection: string
+  fairProbability: number
+  confidence: number
+  /** The chosen book's price and link; null when that book does not price this leg. */
+  atBook: LegPrice | null
+  best: LegPrice | null
+}
+
+export interface EngineBetslip {
+  book: { key: string; name: string } | null
+  stake: number
+  legs: BetslipLeg[]
+  /** Legs multiplied together at the chosen book; null unless it prices every leg. */
+  combinedDecimal: number | null
+  payout: number | null
+  /** One link that loads every leg, for books with a sourced multi-selection format. */
+  parlayLink: { url: string; kind: "betslip" | "event" | "home"; source: string } | null
+  note: string
+  pricesAsOf: string | null
+  disclaimer: string
+}
+
+/** Several picks priced at one sportsbook, with a betslip link per leg. */
+export function getBetslip(
+  predictionIds: string[],
+  opts: { book?: string | null; state?: string | null; stake?: number } = {}
+): Promise<EngineBetslip | null> {
+  const qs = new URLSearchParams({ ids: predictionIds.join(",") })
+  if (opts.book) qs.set("book", opts.book)
+  if (opts.state) qs.set("state", opts.state)
+  if (opts.stake) qs.set("stake", String(opts.stake))
+  return engineFetch(`/predictions/betslip?${qs}`)
+}
+
+export interface IngestionStatus {
+  configured: boolean
+  activeSports: string[]
+  regions: string
+  feed: {
+    lastSuccessAt: string | null
+    lastError: { at: string; status: number | null; code: string | null; message: string; path: string } | null
+    quota: { remaining: number; used: number | null; lastCost: number | null; at: string } | null
+  }
+  data: {
+    lastSnapshotAt: string | null
+    lastPickAt: string | null
+    upcomingGames: number
+    livePicks: number
+  }
+}
+
+/**
+ * Whether odds are flowing into the engine. Requires the service key, so a
+ * successful response also proves ENGINE_SERVICE_KEY matches the engine's.
+ */
+export function getIngestionStatus(): Promise<IngestionStatus | null> {
+  return engineFetch("/ingestion/status")
 }

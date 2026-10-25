@@ -13,8 +13,10 @@ import {
   scoreForStrategy,
   type StrategyKey,
 } from "./strategies"
-import { buildPlacementGuide, compareBooks } from "./placement"
-import type { BookPriceInput } from "./placement"
+import { buildPlacementGuide, compareBooks, resolveBookKey } from "./placement"
+import type { BookOption, BookPriceInput } from "./placement"
+import { buildParlayLink, getSportsbook } from "./deeplinks"
+import type { DeepLink } from "./deeplinks"
 import type { BookMarket } from "./devig"
 import type { EngineConfig } from "./prediction.types"
 
@@ -309,7 +311,14 @@ export class PredictionsService {
     const def = STRATEGIES[strategy]
 
     const candidates = await this.prisma.prediction.findMany({
-      where: { userId: null, status: "pending", ...(sport ? { game: { sport } } : {}) },
+      // Pregame picks stay "pending" until settlement, so without the time
+      // filter a game already under way (whose pregame price is long gone)
+      // would still be offered as a bet.
+      where: {
+        userId: null,
+        status: "pending",
+        game: { commenceTime: { gt: new Date() }, ...(sport ? { sport } : {}) },
+      },
       include: { game: true },
       orderBy: [{ confidence: "desc" }],
       // Pull a wider pool than we return, since strategies filter it down.
@@ -396,38 +405,11 @@ export class PredictionsService {
       select: { markets: true, capturedAt: true },
     })
 
-    const pricesByBook = new Map<string, BookPriceInput>()
-    if (snap) {
-      const books = snap.markets as unknown as Record<string, SnapshotBookMarket[]>
-      for (const marketBooks of Object.values(books ?? {})) {
-        if (!Array.isArray(marketBooks)) continue
-        for (const bm of marketBooks) {
-          const outcome = bm?.line?.outcomes?.find((o) => o.id === p.outcomeId)
-          if (outcome && outcome.odds?.decimal > 1) {
-            const line = bm.line
-            // Ingestion stores outcome.link as (outcome link ?? market link).
-            // When it equals the market link it is not a betslip, so it is
-            // passed as a market link instead.
-            const isMarketLink = !!outcome.link && outcome.link === line.marketLink
-            pricesByBook.set(bm.book, {
-              decimal: outcome.odds.decimal,
-              link: isMarketLink ? null : outcome.link ?? null,
-              outcomeSid: outcome.sid ?? null,
-              marketSid: line.marketSid ?? null,
-              marketLink: line.marketLink ?? null,
-              eventSid: line.eventSid ?? null,
-              eventLink: line.eventLink ?? null,
-            })
-          }
-        }
-      }
-    }
-
     const comparison = compareBooks({
       selection: p.selection,
       matchup: `${p.game.awayTeam} @ ${p.game.homeTeam}`,
       stake,
-      pricesByBook,
+      pricesByBook: snap ? pricesFromSnapshot(snap.markets, p.outcomeId) : new Map(),
       preferredBook,
       state,
     })
@@ -439,6 +421,111 @@ export class PredictionsService {
       // way a user ends up taking a bet that is no longer +EV.
       disclaimer:
         "Prices change constantly. Confirm the number in your sportsbook before placing — if it has moved against you, the edge may be gone.",
+    }
+  }
+
+  /**
+   * Several picks priced at ONE sportsbook: the betslip a user builds there.
+   *
+   * A parlay can only be placed at a single book, so this answers "what does my
+   * book pay for these legs, and what do I tap to add each one". Each leg also
+   * carries the best price anywhere for comparison. A leg the book does not
+   * price comes back with atBook: null instead of being dropped, so the caller
+   * can say which one to swap. The combined parlay price and the one-tap parlay
+   * link exist only when the book prices every leg.
+   */
+  async betslipFor(
+    ids: string[],
+    opts: { book?: string | null; state?: string | null; stake?: number } = {}
+  ) {
+    const unique = Array.from(new Set(ids.filter(Boolean))).slice(0, MAX_BETSLIP_LEGS)
+    const stake = opts.stake && Number.isFinite(opts.stake) && opts.stake > 0 ? opts.stake : 10
+    const preds = await this.prisma.prediction.findMany({
+      where: { id: { in: unique } },
+      include: { game: true },
+    })
+    const byId = new Map(preds.map((p) => [p.id, p]))
+    const now = Date.now()
+
+    const legs: BetslipLeg[] = []
+    const linkInputs: (BookPriceInput | null)[] = []
+    let oldestPrices: Date | null = null
+    for (const id of unique) {
+      const p = byId.get(id)
+      if (!p) continue
+      const snap = await this.prisma.oddsSnapshot.findFirst({
+        where: { gameId: p.gameId },
+        orderBy: { capturedAt: "desc" },
+        select: { markets: true, capturedAt: true },
+      })
+      if (snap && (!oldestPrices || snap.capturedAt < oldestPrices)) oldestPrices = snap.capturedAt
+      const prices = snap ? pricesFromSnapshot(snap.markets, p.outcomeId) : new Map<string, BookPriceInput>()
+      const comparison = compareBooks({
+        selection: p.selection,
+        matchup: `${p.game.awayTeam} @ ${p.game.homeTeam}`,
+        stake,
+        pricesByBook: prices,
+        preferredBook: opts.book ?? null,
+        state: opts.state ?? null,
+      })
+      const atBook = comparison.preferred
+      legs.push({
+        predictionId: p.id,
+        gameId: p.gameId,
+        sport: p.game.sport,
+        matchup: comparison.matchup,
+        commenceTime: p.game.commenceTime.toISOString(),
+        started: p.game.commenceTime.getTime() <= now,
+        marketType: p.marketType,
+        selection: p.selection,
+        fairProbability: p.fairProbability,
+        confidence: p.confidence,
+        atBook: atBook ? legPrice(atBook) : null,
+        best: comparison.best ? legPrice(comparison.best) : null,
+      })
+      linkInputs.push(atBook ? prices.get(atBook.book) ?? null : null)
+    }
+
+    const bookKey = resolveBookKey(opts.book)
+    const entry = getSportsbook(bookKey)
+    const allPriced = legs.length > 0 && legs.every((l) => l.atBook)
+    const combinedDecimal = allPriced
+      ? Math.round(legs.reduce((acc, l) => acc * l.atBook!.oddsDecimal, 1) * 1000) / 1000
+      : null
+    const parlayLink =
+      allPriced && legs.length > 1 && bookKey
+        ? buildParlayLink(
+            bookKey,
+            linkInputs.map((li) => ({
+              outcomeSid: li?.outcomeSid ?? null,
+              marketSid: li?.marketSid ?? null,
+              eventSid: li?.eventSid ?? null,
+            })),
+            opts.state ?? null
+          )
+        : null
+
+    const missing = legs.filter((l) => !l.atBook).length
+    const bookName = entry?.name ?? opts.book ?? null
+    let note: string
+    if (!bookKey) note = "Pick your sportsbook to see its prices and betslip links."
+    else if (legs.length === 0) note = "None of these picks were found."
+    else if (missing > 0) note = `${bookName} has no current price for ${missing} of these ${legs.length} legs. Swap those legs or use another book.`
+    else if (legs.length > 1 && !parlayLink)
+      note = `Tap each leg to add it to your ${bookName} betslip, then choose Parlay there. ${bookName} sets the final parlay price.`
+    else note = `Prices shown are ${bookName}'s.`
+
+    return {
+      book: bookKey ? { key: bookKey, name: bookName } : null,
+      stake,
+      legs,
+      combinedDecimal,
+      payout: combinedDecimal ? Math.round(stake * combinedDecimal * 100) / 100 : null,
+      parlayLink,
+      note,
+      pricesAsOf: oldestPrices?.toISOString() ?? null,
+      disclaimer:
+        "Prices change constantly. Confirm every leg in your sportsbook before placing — if a price has moved against you, the edge may be gone.",
     }
   }
 
@@ -503,6 +590,29 @@ export class PredictionsService {
             ? `${r.game.awayTeam} ${r.game.awayScore} - ${r.game.homeScore} ${r.game.homeTeam}`
             : null,
       })),
+    }
+  }
+
+  /** How fresh the stored odds and picks are, for the ingestion status endpoint. */
+  async feedStats() {
+    const now = new Date()
+    const [lastSnapshot, upcomingGames, livePicks, lastPick] = await Promise.all([
+      this.prisma.oddsSnapshot.findFirst({ orderBy: { capturedAt: "desc" }, select: { capturedAt: true } }),
+      this.prisma.game.count({ where: { commenceTime: { gt: now } } }),
+      this.prisma.prediction.count({
+        where: { userId: null, status: "pending", game: { commenceTime: { gt: now } } },
+      }),
+      this.prisma.prediction.findFirst({
+        where: { userId: null },
+        orderBy: { createdAt: "desc" },
+        select: { createdAt: true },
+      }),
+    ])
+    return {
+      lastSnapshotAt: lastSnapshot?.capturedAt.toISOString() ?? null,
+      lastPickAt: lastPick?.createdAt.toISOString() ?? null,
+      upcomingGames,
+      livePicks,
     }
   }
 
@@ -599,6 +709,79 @@ interface SnapshotBookMarket {
     eventLink?: string
     eventSid?: string
   }
+}
+
+/** Most legs a betslip request may price; matches the largest AI parlay. */
+export const MAX_BETSLIP_LEGS = 8
+
+/** One book's price for a betslip leg. */
+export interface LegPrice {
+  book: string
+  bookName: string
+  oddsDecimal: number
+  oddsAmerican: string
+  link: string | null
+  linkKind: DeepLink["kind"] | null
+}
+
+export interface BetslipLeg {
+  predictionId: string
+  gameId: string
+  sport: string
+  matchup: string
+  commenceTime: string
+  /** The game has started, so its pregame price no longer applies. */
+  started: boolean
+  marketType: string
+  selection: string
+  fairProbability: number
+  confidence: number
+  /** The requested book's price and link, or null if it does not price this leg. */
+  atBook: LegPrice | null
+  best: LegPrice | null
+}
+
+function legPrice(o: BookOption): LegPrice {
+  return {
+    book: o.book,
+    bookName: o.bookName,
+    oddsDecimal: o.oddsDecimal,
+    oddsAmerican: o.oddsAmerican,
+    link: o.link,
+    linkKind: o.linkKind,
+  }
+}
+
+/**
+ * Every book's price for one outcome in a stored snapshot, plus the links and
+ * sids needed to send the user to it.
+ */
+function pricesFromSnapshot(markets: unknown, outcomeId: string): Map<string, BookPriceInput> {
+  const pricesByBook = new Map<string, BookPriceInput>()
+  const books = markets as Record<string, SnapshotBookMarket[]> | null
+  for (const marketBooks of Object.values(books ?? {})) {
+    if (!Array.isArray(marketBooks)) continue
+    for (const bm of marketBooks) {
+      const outcome = bm?.line?.outcomes?.find((o) => o.id === outcomeId)
+      if (outcome && outcome.odds?.decimal > 1) {
+        const line = bm.line
+        // Ingestion stores outcome.link as (outcome link ?? market link).
+        // When it equals the market link it is not a betslip, so it is
+        // passed as a market link instead.
+        const isMarketLink = !!outcome.link && outcome.link === line.marketLink
+        pricesByBook.set(bm.book, {
+          decimal: outcome.odds.decimal,
+          link: isMarketLink ? null : outcome.link ?? null,
+          outcomeSid: outcome.sid ?? null,
+          marketSid: line.marketSid ?? null,
+          marketLink: line.marketLink ?? null,
+          eventSid: line.eventSid ?? null,
+          eventLink: line.eventLink ?? null,
+        })
+      }
+    }
+  }
+  return pricesByBook
 }
 
 function serializeBooks(booksByMarket: Map<string, BookMarket[]>): object {

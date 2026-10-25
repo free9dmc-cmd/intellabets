@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import Anthropic from "@anthropic-ai/sdk"
 import { requireAdminApi } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
-import { isEngineConfigured, listStrategies } from "@/lib/engine"
+import { getIngestionStatus, isEngineConfigured, listStrategies } from "@/lib/engine"
 import { anthropicKey, anthropicKeyProblem } from "@/lib/anthropic-key"
 import { isEmailConfigured } from "@/lib/email"
 
@@ -110,24 +110,66 @@ async function checkEmail(): Promise<Check> {
   }
 }
 
-async function checkEngine(): Promise<Check> {
+async function checkEngine(): Promise<Check[]> {
   if (!isEngineConfigured()) {
-    return {
-      name: "engine",
-      status: "misconfigured",
-      detail: "ENGINE_SERVICE_KEY not set or too short - the picks pages will be empty",
-    }
+    return [
+      {
+        name: "engine",
+        status: "misconfigured",
+        detail: "ENGINE_SERVICE_KEY not set or too short - the picks pages will be empty",
+      },
+    ]
   }
-  const result = await listStrategies()
-  if (!result) {
+  // /ingestion/status needs the service key, so success proves the key matches
+  // the engine's. /predictions/strategies is public and proves only that the
+  // engine is up.
+  const status = await getIngestionStatus()
+  if (!status) {
+    const up = await listStrategies()
+    return [
+      {
+        name: "engine",
+        status: "failing",
+        detail: up
+          ? "the engine is up but rejected our key (or predates /ingestion/status) - make ENGINE_SERVICE_KEY identical in Vercel and Render"
+          : "no response from the engine - check ENGINE_API_URL and that the Render service is running",
+      },
+    ]
+  }
+  return [
+    { name: "engine", status: "ok", detail: "reachable, service key accepted" },
+    checkOddsFeed(status),
+  ]
+}
+
+/** Whether fresh odds are arriving. Picks are only as current as the last snapshot. */
+function checkOddsFeed(status: NonNullable<Awaited<ReturnType<typeof getIngestionStatus>>>): Check {
+  const { configured, feed, data } = status
+  const credits = feed.quota ? `; ${feed.quota.remaining} API credits left` : ""
+  if (!configured) {
+    return { name: "odds-feed", status: "misconfigured", detail: "THE_ODDS_API_KEY not set on Render - no odds, no picks" }
+  }
+  const lastSnap = data.lastSnapshotAt ? new Date(data.lastSnapshotAt) : null
+  const ageHours = lastSnap ? (Date.now() - lastSnap.getTime()) / 3_600_000 : Infinity
+  const err = feed.lastError
+  const errIsLatest = err && (!feed.lastSuccessAt || err.at > feed.lastSuccessAt)
+  if (errIsLatest && (err.status === 401 || err.status === 403)) {
     return {
-      name: "engine",
+      name: "odds-feed",
       status: "failing",
-      detail:
-        "no response from the engine - check ENGINE_API_URL, and that ENGINE_SERVICE_KEY matches the value set in Render",
+      detail: `The Odds API rejected the key (${err.status}${err.code ? ` ${err.code}` : ""}: ${err.message}) - replace THE_ODDS_API_KEY on Render or top up the plan's credits${credits}`,
     }
   }
-  return { name: "engine", status: "ok", detail: `${result.strategies.length} strategies available` }
+  const age = lastSnap ? `last odds ${ageHours < 1 ? `${Math.round(ageHours * 60)} min` : `${ageHours.toFixed(1)} h`} ago` : "no odds stored yet"
+  const summary = `${age}; ${data.upcomingGames} upcoming games, ${data.livePicks} live picks${credits}`
+  if (ageHours > 3) {
+    return {
+      name: "odds-feed",
+      status: "failing",
+      detail: `${summary}${errIsLatest ? `; last error ${err.status ?? ""} ${err.message}` : ""} - the engine may be asleep or polling is failing`,
+    }
+  }
+  return { name: "odds-feed", status: "ok", detail: summary }
 }
 
 function message(err: unknown): string {
@@ -138,13 +180,9 @@ export async function GET() {
   const { error } = await requireAdminApi()
   if (error) return error
 
-  const checks = await Promise.all([
-    checkDatabase(),
-    checkRateLimitTable(),
-    checkAnthropic(),
-    checkEngine(),
-    checkEmail(),
-  ])
+  const checks = (
+    await Promise.all([checkDatabase(), checkRateLimitTable(), checkAnthropic(), checkEngine(), checkEmail()])
+  ).flat()
 
   const healthy = checks.every((c) => c.status === "ok")
   return NextResponse.json(

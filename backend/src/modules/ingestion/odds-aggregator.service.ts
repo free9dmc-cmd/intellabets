@@ -21,6 +21,40 @@ export interface GameBooks {
   booksByMarket: Map<string, BookMarket[]>
 }
 
+/** A failed call to The Odds API, with the status and error code it returned. */
+export class OddsApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number | null,
+    readonly code: string | null
+  ) {
+    super(message)
+    this.name = "OddsApiError"
+  }
+
+  /** A rejected key or an exhausted quota: retrying in seconds cannot succeed. */
+  get isAuthFailure(): boolean {
+    return this.status === 401 || this.status === 403
+  }
+}
+
+export interface OddsFeedStatus {
+  lastSuccessAt: string | null
+  lastError: {
+    at: string
+    status: number | null
+    code: string | null
+    message: string
+    path: string
+  } | null
+  quota: {
+    remaining: number
+    used: number | null
+    lastCost: number | null
+    at: string
+  } | null
+}
+
 /**
  * Multi-book odds source.
  *
@@ -45,6 +79,9 @@ export class OddsAggregatorService {
     mma_mixed_martial_arts: "UFC",
   }
 
+  /** What the last calls to The Odds API returned, for the status endpoint. */
+  private feed: OddsFeedStatus = { lastSuccessAt: null, lastError: null, quota: null }
+
   constructor(private readonly config: ConfigService) {
     this.apiKey = config.get<string>("THE_ODDS_API_KEY", "")
     this.http = axios.create({
@@ -52,6 +89,59 @@ export class OddsAggregatorService {
       timeout: 12_000,
       params: { apiKey: this.apiKey },
     })
+    this.http.interceptors.response.use(
+      (res) => {
+        this.recordQuota(res.headers)
+        this.feed.lastSuccessAt = new Date().toISOString()
+        return res
+      },
+      (err: unknown) => {
+        throw this.describeFailure(err)
+      }
+    )
+  }
+
+  status(): OddsFeedStatus {
+    return { ...this.feed }
+  }
+
+  /** The Odds API reports credits on every response, including most errors. */
+  private recordQuota(headers: unknown) {
+    const h = (headers ?? {}) as Record<string, unknown>
+    const num = (k: string) => {
+      const n = Number(h[k])
+      return Number.isFinite(n) ? n : null
+    }
+    const remaining = num("x-requests-remaining")
+    if (remaining === null) return
+    this.feed.quota = {
+      remaining,
+      used: num("x-requests-used"),
+      lastCost: num("x-requests-last"),
+      at: new Date().toISOString(),
+    }
+  }
+
+  /**
+   * Turn an axios failure into an OddsApiError that says what went wrong. Axios
+   * alone reports "Request failed with status code 401", which reads the same
+   * for an exhausted quota and a revoked key.
+   */
+  private describeFailure(err: unknown): Error {
+    if (!axios.isAxiosError(err)) return err instanceof Error ? err : new Error(String(err))
+    const status = err.response?.status ?? null
+    if (err.response) this.recordQuota(err.response.headers)
+    const body = (err.response?.data ?? {}) as { message?: unknown; error_code?: unknown }
+    const code = typeof body.error_code === "string" ? body.error_code : null
+    const detail = typeof body.message === "string" ? body.message : err.message
+    const path = err.config?.url ?? ""
+    const error = new OddsApiError(
+      `The Odds API ${status ?? "network error"}${code ? ` ${code}` : ""} on ${path}: ${detail}`,
+      status,
+      code
+    )
+    this.feed.lastError = { at: new Date().toISOString(), status, code, message: detail, path }
+    return error
   }
 
   /**

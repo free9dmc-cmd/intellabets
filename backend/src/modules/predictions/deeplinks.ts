@@ -102,7 +102,18 @@ export interface SportsbookEntry {
   /** Per-book id pattern, when the default is too strict for real ids. */
   idPattern?: RegExp
   betslip?: BetslipTemplate
+  /** Multi-selection betslip (parlay) link; only for books with a sourced format. */
+  parlay?: ParlayTemplate
   sources: string[]
+}
+
+interface ParlayTemplate {
+  /** Returns the unencoded URL, or null when any leg is missing a required id. */
+  build: (legs: TemplateIds[], enc: (v: string) => string) => string | null
+  idMapping: "observed" | "assumed"
+  /** Most selections the book's link accepts. */
+  maxLegs: number
+  source: string
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -693,4 +704,33 @@ export function buildBetslipLink(bookKey: string | null | undefined, ctx: DeepLi
 
   // (e)
   return null
+}
+
+/**
+ * One link that loads every leg onto a book's betslip, or null.
+ *
+ * Unlike buildBetslipLink there is no fallback chain: a parlay link either
+ * carries every leg or is not offered, and the caller falls back to one link
+ * per leg. Null when the book has no sourced multi-selection format, when any
+ * leg lacks a valid id, or when there are more legs than the book accepts.
+ */
+export function buildParlayLink(
+  bookKey: string | null | undefined,
+  legs: DeepLinkContext[],
+  state?: string | null
+): DeepLink | null {
+  const entry = getSportsbook(bookKey)
+  if (!entry?.parlay || legs.length < 2 || legs.length > entry.parlay.maxLegs) return null
+
+  const stateSlug = bookStateSlug(entry, state)
+  const idPattern = entry.idPattern ?? DEFAULT_ID_PATTERN
+  const ids: TemplateIds[] = legs.map((leg) => ({
+    outcomeSid: cleanId(leg.outcomeSid, idPattern),
+    marketSid: cleanId(leg.marketSid, idPattern),
+    eventSid: cleanId(leg.eventSid, idPattern),
+    state: entry.states ? stateSlug ?? undefined : undefined,
+  }))
+  const built = entry.parlay.build(ids, encodeURIComponent)
+  const url = built ? validateBookUrl(built, entry) : null
+  return url ? { url, kind: "betslip", source: "template" } : null
 }

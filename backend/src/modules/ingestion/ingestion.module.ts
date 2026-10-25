@@ -3,7 +3,7 @@ import { BullModule } from "@nestjs/bull"
 import { ConfigModule } from "@nestjs/config"
 import { IngestionProcessor, INGESTION_QUEUE } from "./ingestion.processor"
 import { IngestionService } from "./ingestion.service"
-import { IngestionController } from "./ingestion.controller"
+import { IngestionController, IngestionStatusController } from "./ingestion.controller"
 import { OddsModule } from "./odds.module"
 import { PredictionsModule } from "../predictions/predictions.module"
 
@@ -14,7 +14,7 @@ import { PredictionsModule } from "../predictions/predictions.module"
     OddsModule,
     PredictionsModule,
   ],
-  controllers: [IngestionController],
+  controllers: [IngestionStatusController, IngestionController],
   providers: [IngestionProcessor, IngestionService],
   exports: [IngestionService],
 })
