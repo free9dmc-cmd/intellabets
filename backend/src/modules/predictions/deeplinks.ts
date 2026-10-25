@@ -107,9 +107,12 @@ export interface SportsbookEntry {
   sources: string[]
 }
 
+/** One parlay leg: its validated ids plus its raw Odds API outcome link. */
+type ParlayLegIds = TemplateIds & { providerLink?: string }
+
 interface ParlayTemplate {
   /** Returns the unencoded URL, or null when any leg is missing a required id. */
-  build: (legs: TemplateIds[], enc: (v: string) => string) => string | null
+  build: (legs: ParlayLegIds[], enc: (v: string) => string) => string | null
   idMapping: "observed" | "assumed"
   /** Most selections the book's link accepts. */
   maxLegs: number
@@ -240,6 +243,31 @@ export const SPORTSBOOKS: readonly SportsbookEntry[] = [
       idMapping: "assumed",
       source: ODDS_API_DEEPLINKS,
     },
+    parlay: {
+      // Multi-leg addToBetslip: 0-based marketId[i]/selectionId[i] pairs. Format from
+      // FanDuel's own web client (main bundle + DeepLinkAddToBetSlipScreen chunk, fetched
+      // 2026-10-25), which parses name[i] keys into pairs and also generates these links.
+      // FanDuel's market.sid is null in Odds API data, so each pair is copied from that
+      // leg's own outcome.link (observed shape), and its selectionId must equal outcome.sid.
+      build: (legs) => {
+        const pairs = allOrNull(
+          legs.map((l) => {
+            const marketId = linkParam(l.providerLink, "marketId")
+            const selectionId = linkParam(l.providerLink, "selectionId")
+            if (!marketId || !selectionId) return null
+            if (!/^\d{1,4}\.\d{1,15}$/.test(marketId) || !/^\d{1,15}$/.test(selectionId)) return null
+            if (l.outcomeSid && l.outcomeSid !== selectionId) return null
+            return { marketId, selectionId }
+          })
+        )
+        if (!pairs) return null
+        const query = pairs.map((p, i) => `marketId[${i}]=${p.marketId}&selectionId[${i}]=${p.selectionId}`).join("&")
+        return `https://sportsbook.fanduel.com/addToBetslip?${query}`
+      },
+      idMapping: "observed",
+      maxLegs: 12,
+      source: "https://sportsbook.fanduel.com/ (web client DeepLinkAddToBetSlipScreen, 2026-10-25)",
+    },
     sources: [ODDS_API_DEEPLINKS, ODDS_API_BOOKMAKERS],
   },
   {
@@ -265,6 +293,20 @@ export const SPORTSBOOKS: readonly SportsbookEntry[] = [
       idMapping: "observed",
       source:
         "https://github.com/ItsDardanRexhepi/rixpicks/blob/c5a4c783fb49727d0019cf9261ef3411363a7d29/manifests/manifest-3a60b0a2da0f.json",
+    },
+    parlay: {
+      // Several outcome ids in one outcomes= value, joined by a literal "+". DraftKings
+      // publishes "+ Add to Bet Slip" parlay buttons in exactly this form, e.g.
+      // https://dknetwork.draftkings.com/2026/10/24/nfl-week-7-touchdown-scorer-parlays/
+      // and its web betslip (betslip/2633.4.1/dkBetSlip.js) splits outcomes= on "+"
+      // and caps a slip at 20 selections. outcome.sid = the outcomes= id (observed above).
+      build: (legs, enc) => {
+        const sids = allOrNull(legs.map((l) => l.outcomeSid))
+        return sids ? `https://sportsbook.draftkings.com/?outcomes=${sids.map(enc).join("+")}` : null
+      },
+      idMapping: "observed",
+      maxLegs: 20,
+      source: "https://dknetwork.draftkings.com/2026/10/24/nfl-week-7-touchdown-scorer-parlays/",
     },
     sources: [ODDS_API_BOOKMAKERS],
   },
@@ -366,6 +408,27 @@ export const SPORTSBOOKS: readonly SportsbookEntry[] = [
       idMapping: "assumed",
       source: "https://sportsapi.nj.betmgm.com/restapi/generatedeeplink.html",
     },
+    parlay: {
+      // BetMGM's affiliate docs: "Multiple selections can be chained by using , as a
+      // separator", e.g. ...?options=8689063-371487979-1110490716,9007445-396437496-1180454222&type=combo
+      // https://sportsapi.nj.betmgm.com/restapi/generatedeeplink.html
+      // Each leg's triplet is copied from its own outcome.link (observed shape
+      // options=<fixture>-<market>-<option>&type=Single), so no sid mapping is assumed.
+      build: (legs) => {
+        const state = legs[0]?.state
+        if (!state) return null
+        const triplets = allOrNull(
+          legs.map((l) => {
+            const t = linkParam(l.providerLink, "options")
+            return t && /^(?:\d{1,3}:)?\d{1,12}-\d{1,12}--?\d{1,12}(?:-\d{1,12})?$/.test(t) ? t : null
+          })
+        )
+        return triplets ? `https://sports.${state}.betmgm.com/en/sports?options=${triplets.join(",")}&type=combo` : null
+      },
+      idMapping: "observed",
+      maxLegs: 10,
+      source: "https://sportsapi.nj.betmgm.com/restapi/generatedeeplink.html",
+    },
     sources: [
       "https://sportsapi.nj.betmgm.com/restapi/generatedeeplink.html",
       ODDS_API_BOOKMAKERS,
@@ -399,6 +462,26 @@ export const SPORTSBOOKS: readonly SportsbookEntry[] = [
       idMapping: "assumed",
       source:
         "https://github.com/MattMorris247/CBS_Site/blob/7674672bebbdce757d5290dc22037b0ae7c063eb/assets/json/oldtest.json",
+    },
+    parlay: {
+      // selectionIds takes several comma-separated selection UUIDs: Caesars' own web client
+      // (main.4cfea7ea.js behind /us/nj/bet/betslip, fetched 2026-10-25) reads every
+      // selectionIds value on its /betslip route. Each UUID is copied from that leg's own
+      // outcome.link (observed shape), so no sid mapping is assumed.
+      build: (legs) => {
+        const state = legs[0]?.state
+        if (!state) return null
+        const uuids = allOrNull(
+          legs.map((l) => {
+            const v = linkParam(l.providerLink, "selectionIds")
+            return v && UUID.test(v) ? v : null
+          })
+        )
+        return uuids ? `https://sportsbook.caesars.com/us/${state}/bet/betslip?selectionIds=${uuids.join(",")}` : null
+      },
+      idMapping: "observed",
+      maxLegs: 10,
+      source: "https://sportsbook.caesars.com/us/nj/bet/betslip (web client main.4cfea7ea.js, 2026-10-25)",
     },
     sources: [ODDS_API_BOOKMAKERS],
   },
@@ -658,6 +741,28 @@ function fillProviderPlaceholders(link: string, entry: SportsbookEntry, stateSlu
   return out
 }
 
+/**
+ * One query parameter of a provider link, read as text and percent-decoded.
+ * Text, not new URL(): links can still hold "{state}", which URL rejects.
+ */
+function linkParam(link: string | undefined, name: string): string | undefined {
+  if (!link) return undefined
+  const m = link.match(new RegExp(`[?&]${name}=([^&#]*)`))
+  if (!m) return undefined
+  try {
+    return decodeURIComponent(m[1])
+  } catch {
+    return undefined
+  }
+}
+
+/** Every leg's value, or null if any leg lacks one. */
+function allOrNull<T>(values: (T | null | undefined)[]): T[] | null {
+  return values.every((v) => v !== null && v !== undefined) ? (values as T[]) : null
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 // ─── Builder ──────────────────────────────────────────────────────────────────
 
 /**
@@ -724,11 +829,12 @@ export function buildParlayLink(
 
   const stateSlug = bookStateSlug(entry, state)
   const idPattern = entry.idPattern ?? DEFAULT_ID_PATTERN
-  const ids: TemplateIds[] = legs.map((leg) => ({
+  const ids: ParlayLegIds[] = legs.map((leg) => ({
     outcomeSid: cleanId(leg.outcomeSid, idPattern),
     marketSid: cleanId(leg.marketSid, idPattern),
     eventSid: cleanId(leg.eventSid, idPattern),
     state: entry.states ? stateSlug ?? undefined : undefined,
+    providerLink: leg.providerLink ?? undefined,
   }))
   const built = entry.parlay.build(ids, encodeURIComponent)
   const url = built ? validateBookUrl(built, entry) : null

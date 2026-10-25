@@ -43,6 +43,8 @@ export default function BookPicker({
   marketType,
   preferredBook,
   state,
+  trackable = true,
+  initialStake = "100",
 }: {
   predictionId: string
   sport: string
@@ -51,10 +53,13 @@ export default function BookPicker({
   preferredBook?: string | null
   /** 2-letter state, so state-hosted books can open a filled betslip. */
   state?: string | null
+  /** Show "I placed this". Off for parlay legs, which are not single bets. */
+  trackable?: boolean
+  initialStake?: string
 }) {
   const [open, setOpen] = useState(false)
   const [data, setData] = useState<Comparison | null>(null)
-  const [stake, setStake] = useState("100")
+  const [stake, setStake] = useState(initialStake)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [loggedBook, setLoggedBook] = useState<string | null>(null)
@@ -191,14 +196,16 @@ export default function BookPicker({
                         {linkLabel(o.linkKind, o.bookName)}
                       </a>
                     )}
-                    <button
-                      onClick={() => logBet(o)}
-                      disabled={loggedBook === o.book}
-                      className="btn-secondary text-xs py-1.5 px-3 flex-1"
-                      style={{ borderRadius: "6px", opacity: loggedBook === o.book ? 0.6 : 1 }}
-                    >
-                      {loggedBook === o.book ? "✓ Tracked" : "I placed this"}
-                    </button>
+                    {trackable && (
+                      <button
+                        onClick={() => logBet(o)}
+                        disabled={loggedBook === o.book}
+                        className="btn-secondary text-xs py-1.5 px-3 flex-1"
+                        style={{ borderRadius: "6px", opacity: loggedBook === o.book ? 0.6 : 1 }}
+                      >
+                        {loggedBook === o.book ? "✓ Tracked" : "I placed this"}
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}

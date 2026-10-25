@@ -39,7 +39,7 @@ Both deploy automatically from `main`.
 | `NEXTAUTH_URL` | Auth callback base | Login appears to work, then redirects to a dead page |
 | `NEXT_PUBLIC_APP_URL` | Absolute links | Broken links in emails and redirects |
 | `ADMIN_EMAILS` | Comma-separated admin list | Nobody can reach `/admin`. Matched against the sign-in email |
-| `ANTHROPIC_API_KEY` | AI picks + support chat | Support chat returns "something went wrong"; AI picks fail |
+| `ANTHROPIC_API_KEY` | AI picks + support chat | Support chat returns "something went wrong". AI Picks still builds slips, but from the engine's ranking, labelled "Engine Analysis" with no write-up; Vercel logs `AI picks: ... using the engine's ranking` |
 | `ENGINE_API_URL` | Engine base URL | Picks pages empty |
 | `ENGINE_SERVICE_KEY` | Service-to-service auth | Picks pages empty, **no error shown** |
 | `STRIPE_SECRET_KEY` | *(dead — account terminated)* | See Known issues |
@@ -120,6 +120,13 @@ curl -s --max-time 60 https://api.intellabets.com/api/v1/predictions/strategies
 
 Push to `main`. Both platforms build automatically.
 
+**When a web change calls a new engine route, ship the engine first.** Let
+Render finish, then confirm each new route answers 403 without a key (it
+exists) rather than 404, e.g.
+`curl -s -o /dev/null -w '%{http_code}' https://api.intellabets.com/api/v1/predictions/board`.
+Only then deploy Vercel or move the `intellabets.com` alias. If the Render
+build fails, leave the web alias where it is.
+
 Before pushing anything in `web/`:
 
 ```bash
@@ -149,6 +156,35 @@ If that can't connect, Neon's dashboard SQL Editor runs the same DDL with no
 local setup and no connection string to get wrong.
 
 ---
+
+## AI Picks
+
+AI Picks builds betslips from the engine's **board**
+(`GET /api/v1/predictions/board`): every upcoming bet that licensed books
+price, ranked by price against the engine's fair probability. It is not
+limited to +EV picks, so most legs are priced slightly below fair (the
+book's margin). The page says so on every leg.
+
+How a slip is built:
+1. The user picks sport, bet type, risk level, sportsbook, state and stake.
+2. The web app takes the board at that book, keeps the risk band (the
+   engine's win chance), and lets Claude choose the legs by label and write
+   the explanation. If Claude is unavailable, slow (25 s cap), refuses,
+   breaks a rule, or writes banned words (`copyProblem` in
+   `web/lib/ai-picks.ts`), the engine's own ranking is used.
+3. `GET /predictions/betslip?refs=...` turns each chosen leg into a
+   `Prediction` with `source = "board"` and returns its price, link and
+   edge at the user's book, plus a one-tap parlay link where the book has a
+   sourced format (DraftKings, FanDuel, BetMGM, Caesars).
+
+`source = "board"` predictions are settled like any other, but never appear
+on Engine Picks and never count in the engine's scoreboard
+(`/predictions/performance`).
+
+Which books can be chosen depends on `ODDS_REGIONS` on Render. `us` covers
+DraftKings, FanDuel, BetMGM, BetRivers and, when The Odds API lists them,
+Caesars and Fanatics. `us2` adds Hard Rock, theScore Bet, Bally Bet and
+betPARX. If a book has no prices, AI Picks names the books that do.
 
 ## Dependency security
 
@@ -233,7 +269,9 @@ until it is moved to a current Expo SDK or removed.
 
 ## Known issues
 
-**No live odds since 2026-09-14: The Odds API rejects the engine's key (found 2026-10-25).**
+**Resolved 2026-10-25: no live odds from 2026-09-14 to 2026-10-25.** The owner
+replaced the key, moved The Odds API to the 100K plan and the engine to
+Render Starter; odds resumed at 09:00 UTC. Kept for reference:
 - **What fails.** Every poll returns `401` for every sport, so there are no
   upcoming games or picks. The Engine Picks page and AI Picks are empty, and AI
   Picks says live odds are unavailable rather than inventing games.

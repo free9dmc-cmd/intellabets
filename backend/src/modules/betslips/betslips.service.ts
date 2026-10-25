@@ -28,6 +28,7 @@ export class BetslipsService {
     const preds = await this.prisma.prediction.findMany({
       where: {
         userId: null,
+        source: "engine",
         status: "pending",
         confidence: { gte: minConfidence },
         game: { commenceTime: { gt: new Date() }, ...(dto.sport ? { sport: dto.sport } : {}) },
@@ -150,6 +151,7 @@ export class BetslipsService {
     const preds = await this.prisma.prediction.findMany({
       where: {
         userId: null,
+        source: "engine",
         status: "pending",
         confidence: { gte: minConfidence },
         AND: [

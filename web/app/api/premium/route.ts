@@ -90,5 +90,7 @@ export async function GET(req: Request) {
     hasAI: hasAIAccess(user),
     aiAccessSource: aiAccessSource(user),
     aiExpiresAt: user?.aiSubscription?.expiresAt,
+    // The sportsbook AI Picks last used, so a new browser starts on it.
+    preferredBook: user?.preferredBook ?? null,
   })
 }

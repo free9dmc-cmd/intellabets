@@ -1,17 +1,35 @@
 /**
- * Rules for building an AI Picks betslip out of the engine's real picks.
+ * Rules for building an AI Picks betslip out of the engine's board: every real,
+ * upcoming bet licensed books price, with the engine's honest win chance.
  *
  * Pure functions only (no network, no DB), so the money logic is unit-tested
  * in isolation. The model only chooses among candidates these functions allow
  * and writes the explanation; every price and probability comes from here.
  */
-import type { EnginePrediction } from "./engine"
+
+/** What the slip rules need from a bet. The engine's BoardCandidate satisfies it. */
+export interface SlipCandidate {
+  /** Unique per bet; the board ref. */
+  id: string
+  gameId: string
+  outcomeId: string
+  marketType: string
+  selection: string
+  fairProbability: number
+  /** Decimal price at the chosen book (or the best licensed price). */
+  offeredOdds: number
+  offeredBook: string
+  /** Expected return at offeredOdds, in %. Usually negative. */
+  edgePercent: number
+  confidence: number
+  game: { sport: string; homeTeam: string; awayTeam: string; commenceTime: string }
+}
 
 export type BetType = "single" | "parlay" | "same-game-parlay"
 export type RiskLevel = "low" | "medium" | "high"
 
-/** Sports the engine can ingest. Which ones have live picks depends on ACTIVE_SPORTS. */
-export const AI_SPORTS = ["NFL", "NCAAF", "NBA", "NCAAB", "NHL", "MLB", "Soccer", "UFC"] as const
+/** Sports the engine ingests in production (ACTIVE_SPORTS in render.yaml). */
+export const AI_SPORTS = ["NFL", "NCAAF", "NBA", "NHL", "MLB"] as const
 export type AISport = (typeof AI_SPORTS)[number]
 
 export const BET_TYPES: readonly BetType[] = ["single", "parlay", "same-game-parlay"]
@@ -29,14 +47,15 @@ export const LEG_COUNT: Record<RiskLevel, Record<BetType, number>> = {
 }
 
 /**
- * The engine strategy whose picks fit each risk level (backend strategies.ts):
- * safe = the engine rates the outcome at least 60% likely, longshot = at most
- * 40%, value = every +EV pick ranked by edge.
+ * Which bets fit each risk level, by the engine's win chance: favorites it rates
+ * at least 60% likely, coin-flip-ish bets, and underdogs at 40% or less. The
+ * floor on underdogs keeps out lottery tickets whose prices are least reliable.
  */
-export const RISK_STRATEGY: Record<RiskLevel, "safe" | "value" | "longshot"> = {
-  low: "safe",
-  medium: "value",
-  high: "longshot",
+export function inRiskBand(c: { fairProbability: number }, risk: RiskLevel): boolean {
+  const p = c.fairProbability
+  if (risk === "low") return p >= 0.6
+  if (risk === "medium") return p >= 0.4 && p < 0.62
+  return p >= 0.15 && p <= 0.4
 }
 
 /**
@@ -51,8 +70,11 @@ function conflictsInGame(marketType: string, others: string[]): boolean {
   )
 }
 
-/** Most candidates shown to the model. The engine ranks them, so these are its best. */
+/** Most candidates shown to the model. The board ranks them, so these are its best. */
 export const MAX_CANDIDATES = 20
+
+/** For a regular parlay, at most this many candidates per game, so 20 cover 10+ games. */
+const PER_GAME_FOR_PARLAY = 2
 
 export const isBetType = (v: unknown): v is BetType => BET_TYPES.includes(v as BetType)
 export const isRiskLevel = (v: unknown): v is RiskLevel => RISK_LEVELS.includes(v as RiskLevel)
@@ -66,12 +88,12 @@ export const isAISport = (v: unknown): v is AISport => (AI_SPORTS as readonly st
  * otherwise every pick qualifies and the one-leg-per-game rule is enforced
  * when the legs are chosen.
  */
-export function eligibleCandidates(
-  preds: EnginePrediction[],
+export function eligibleCandidates<C extends SlipCandidate>(
+  preds: C[],
   betType: BetType,
   legs: number,
   now: number
-): EnginePrediction[] {
+): C[] {
   const seen = new Set<string>()
   const upcoming = preds.filter((p) => {
     if (seen.has(p.outcomeId)) return false
@@ -79,9 +101,19 @@ export function eligibleCandidates(
     return new Date(p.game.commenceTime).getTime() > now
   })
 
-  if (betType !== "same-game-parlay") return upcoming.slice(0, MAX_CANDIDATES)
+  if (betType === "single") return upcoming.slice(0, MAX_CANDIDATES)
+  if (betType === "parlay") {
+    const perGame = new Map<string, number>()
+    return upcoming
+      .filter((p) => {
+        const n = perGame.get(p.gameId) ?? 0
+        perGame.set(p.gameId, n + 1)
+        return n < PER_GAME_FOR_PARLAY
+      })
+      .slice(0, MAX_CANDIDATES)
+  }
 
-  const byGame = new Map<string, EnginePrediction[]>()
+  const byGame = new Map<string, C[]>()
   for (const p of upcoming) {
     const group = byGame.get(p.gameId) ?? []
     // One leg per market (both sides of a market cannot be combined), and no
@@ -96,7 +128,7 @@ export function eligibleCandidates(
 }
 
 /** Whether `picks` is a legal slip of `legs` legs for this bet type; null if so, else why not. */
-export function slipProblem(picks: EnginePrediction[], betType: BetType, legs: number): string | null {
+export function slipProblem(picks: SlipCandidate[], betType: BetType, legs: number): string | null {
   if (picks.length !== legs) return `needs exactly ${legs} leg${legs === 1 ? "" : "s"}, got ${picks.length}`
   if (new Set(picks.map((p) => p.id)).size !== picks.length) return "repeats a leg"
   if (betType === "parlay" && new Set(picks.map((p) => p.gameId)).size !== picks.length) {
@@ -116,17 +148,17 @@ export function slipProblem(picks: EnginePrediction[], betType: BetType, legs: n
  * The engine's own choice when the model is unavailable or its answer breaks a
  * rule: the highest-ranked legs that form a legal slip, or null if none do.
  */
-export function defaultSelection(
-  candidates: EnginePrediction[],
+export function defaultSelection<C extends SlipCandidate>(
+  candidates: C[],
   betType: BetType,
   legs: number
-): EnginePrediction[] | null {
+): C[] | null {
   if (betType === "same-game-parlay") {
     const gameId = candidates[0]?.gameId
     const picks = candidates.filter((c) => c.gameId === gameId).slice(0, legs)
     return slipProblem(picks, betType, legs) ? null : picks
   }
-  const picks: EnginePrediction[] = []
+  const picks: C[] = []
   const games = new Set<string>()
   for (const c of candidates) {
     if (betType === "parlay" && games.has(c.gameId)) continue
@@ -161,4 +193,33 @@ export function americanFromDecimal(d: number): string {
   if (!(d > 1)) return "—"
   const a = d >= 2 ? Math.round((d - 1) * 100) : Math.round(-100 / (d - 1))
   return a > 0 ? `+${a}` : `${a}`
+}
+
+/** Distinct upcoming games in a pool, for telling the user why a parlay was impossible. */
+export function upcomingGameCount(preds: SlipCandidate[], now: number): number {
+  return new Set(preds.filter((p) => new Date(p.game.commenceTime).getTime() > now).map((p) => p.gameId)).size
+}
+
+/**
+ * Words the slip text must not contain, or null. Inducements a licensed
+ * operator's partners commit not to use, and claims the model has no data for
+ * (it gets prices and probabilities only, so any injury, weather, lineup or
+ * record talk is invented).
+ */
+export function copyProblem(text: string): string | null {
+  const banned: [RegExp, string][] = [
+    [/\blocks?\b/i, "\"lock\""],
+    [/\brisk[- ]?free\b/i, "\"risk-free\""],
+    [/\bfree bets?\b/i, "\"free bet\""],
+    [/\bsure thing\b/i, "\"sure thing\""],
+    [/\b(can'?t|cannot) lose\b/i, "\"can't lose\""],
+    [/\bguarantee[sd]?\b/i, "a guarantee"],
+    [/\binjur(y|ies|ed)\b/i, "injuries"],
+    [/\blineups?\b/i, "lineups"],
+    [/\bweather\b/i, "weather"],
+    [/\bstreaks?\b/i, "streaks"],
+    [/\blast \d+ (games|meetings)\b/i, "past results"],
+  ]
+  for (const [re, what] of banned) if (re.test(text)) return `mentions ${what}`
+  return null
 }

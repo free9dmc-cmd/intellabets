@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import Anthropic from "@anthropic-ai/sdk"
 import { requireAdminApi } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
-import { getIngestionStatus, isEngineConfigured, listStrategies } from "@/lib/engine"
+import { getIngestionStatusDetailed, isEngineConfigured, type IngestionStatus } from "@/lib/engine"
 import { anthropicKey, anthropicKeyProblem } from "@/lib/anthropic-key"
 import { isEmailConfigured } from "@/lib/email"
 
@@ -121,29 +121,29 @@ async function checkEngine(): Promise<Check[]> {
     ]
   }
   // /ingestion/status needs the service key, so success proves the key matches
-  // the engine's. /predictions/strategies is public and proves only that the
-  // engine is up.
-  const status = await getIngestionStatus()
-  if (!status) {
-    const up = await listStrategies()
-    return [
-      {
-        name: "engine",
-        status: "failing",
-        detail: up
-          ? "the engine is up but rejected our key (or predates /ingestion/status) - make ENGINE_SERVICE_KEY identical in Vercel and Render"
-          : "no response from the engine - check ENGINE_API_URL and that the Render service is running",
-      },
-    ]
+  // the engine's; each failure status means something different.
+  const res = await getIngestionStatusDetailed()
+  if (!res.ok) {
+    const detail =
+      res.status === 401 || res.status === 403
+        ? "the engine rejected our key - make ENGINE_SERVICE_KEY identical in Vercel and Render"
+        : res.status === 404
+          ? "the engine predates /ingestion/status - redeploy the engine"
+          : res.status === 429
+            ? "the engine is rate-limiting this server - check its throttler settings"
+            : res.status === null
+              ? "no response from the engine within 10s - check ENGINE_API_URL and that the Render service is running"
+              : `the engine returned ${res.status} - check its logs on Render`
+    return [{ name: "engine", status: "failing", detail }]
   }
   return [
     { name: "engine", status: "ok", detail: "reachable, service key accepted" },
-    checkOddsFeed(status),
+    checkOddsFeed(res.data),
   ]
 }
 
 /** Whether fresh odds are arriving. Picks are only as current as the last snapshot. */
-function checkOddsFeed(status: NonNullable<Awaited<ReturnType<typeof getIngestionStatus>>>): Check {
+function checkOddsFeed(status: IngestionStatus): Check {
   const { configured, feed, data } = status
   const credits = feed.quota ? `; ${feed.quota.remaining} API credits left` : ""
   if (!configured) {

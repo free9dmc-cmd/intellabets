@@ -1,5 +1,6 @@
 import {
   buildBetslipLink,
+  buildParlayLink,
   EXCLUDED_BOOK_KEYS,
   getSportsbook,
   hostAllowed,
@@ -426,5 +427,66 @@ describe("isRoutableBook", () => {
     process.env.INCLUDE_NON_SPORTSBOOK_VENUES = "true"
     expect(isRoutableBook("kalshi")).toBe(true)
     expect(isRoutableBook("fliff")).toBe(true)
+  })
+})
+
+describe("buildParlayLink", () => {
+  const FD1 = "https://sportsbook.fanduel.com/addToBetslip?marketId=42.448600011&selectionId=29165"
+  const FD2 = "https://sportsbook.fanduel.com/addToBetslip?marketId=42.448600012&selectionId=29166"
+
+  it("joins DraftKings outcome ids with a literal + and encodes #", () => {
+    const link = buildParlayLink("draftkings", [
+      { outcomeSid: "0QA1#2_13L1Q1-1Q20" },
+      { outcomeSid: "0HC79948377N1350_1" },
+    ])
+    expect(link).toEqual({
+      url: "https://sportsbook.draftkings.com/?outcomes=0QA1%232_13L1Q1-1Q20+0HC79948377N1350_1",
+      kind: "betslip",
+      source: "template",
+    })
+  })
+
+  it("builds FanDuel's indexed pairs from each leg's own link", () => {
+    const link = buildParlayLink("fanduel", [
+      { providerLink: FD1, outcomeSid: "29165" },
+      { providerLink: FD2, outcomeSid: "29166" },
+    ])
+    expect(link?.url).toBe(
+      "https://sportsbook.fanduel.com/addToBetslip?marketId[0]=42.448600011&selectionId[0]=29165&marketId[1]=42.448600012&selectionId[1]=29166"
+    )
+  })
+
+  it("refuses a FanDuel leg whose sid disagrees with its link", () => {
+    expect(buildParlayLink("fanduel", [{ providerLink: FD1, outcomeSid: "99999" }, { providerLink: FD2 }])).toBeNull()
+  })
+
+  it("chains BetMGM triplets from the provider links on the user's state host", () => {
+    const l1 = "https://sports.{state}.betmgm.com/en/sports?options=17571143-1312755715--572869586&type=Single"
+    const l2 = "https://sports.{state}.betmgm.com/en/sports?options=19972077-1562098168-2306&type=Single"
+    expect(buildParlayLink("betmgm", [{ providerLink: l1 }, { providerLink: l2 }], "NJ")?.url).toBe(
+      "https://sports.nj.betmgm.com/en/sports?options=17571143-1312755715--572869586,19972077-1562098168-2306&type=combo"
+    )
+    // No state, no state host: no link.
+    expect(buildParlayLink("betmgm", [{ providerLink: l1 }, { providerLink: l2 }])).toBeNull()
+  })
+
+  it("joins Caesars selection UUIDs and needs a state", () => {
+    const u1 = "d5703855-6437-36b5-b3f3-2a20aaf9699a"
+    const u2 = "a1b2c3d4-0000-4000-8000-123456789abc"
+    const legs = [
+      { providerLink: `https://sportsbook.caesars.com/us/{state}/bet/betslip?selectionIds=${u1}` },
+      { providerLink: `https://sportsbook.caesars.com/us/{state}/bet/betslip?selectionIds=${u2}` },
+    ]
+    expect(buildParlayLink("williamhill_us", legs, "pa")?.url).toBe(
+      `https://sportsbook.caesars.com/us/pa/bet/betslip?selectionIds=${u1},${u2}`
+    )
+    expect(buildParlayLink("williamhill_us", legs, null)).toBeNull()
+  })
+
+  it("gives no link when any leg is missing its id, for a single leg, or for books without a format", () => {
+    expect(buildParlayLink("draftkings", [{ outcomeSid: "0HC1N1_1" }, {}])).toBeNull()
+    expect(buildParlayLink("draftkings", [{ outcomeSid: "0HC1N1_1" }])).toBeNull()
+    expect(buildParlayLink("fanatics", [{ outcomeSid: "1" }, { outcomeSid: "2" }])).toBeNull()
+    expect(buildParlayLink("bovada", [{ outcomeSid: "1" }, { outcomeSid: "2" }])).toBeNull()
   })
 })

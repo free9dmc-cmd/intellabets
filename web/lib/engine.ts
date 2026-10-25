@@ -76,13 +76,15 @@ export function isEngineConfigured(): boolean {
   return Boolean(process.env.ENGINE_SERVICE_KEY && process.env.ENGINE_SERVICE_KEY.length >= 16)
 }
 
-async function engineFetch<T>(path: string): Promise<T | null> {
+async function engineFetch<T>(path: string, opts: { timeoutMs?: number } = {}): Promise<T | null> {
   if (!isEngineConfigured()) return null
   try {
     const res = await fetch(`${ENGINE_URL}${path}`, {
       headers: { "x-engine-key": process.env.ENGINE_SERVICE_KEY as string },
       // Picks move with the market; never serve a cached slate.
       cache: "no-store",
+      // A deadline lands in the catch below, so callers get null, not a hang.
+      signal: opts.timeoutMs ? AbortSignal.timeout(opts.timeoutMs) : undefined,
     })
     if (!res.ok) {
       console.error(`Engine ${path} -> ${res.status}`)
@@ -101,13 +103,13 @@ export function listStrategies(): Promise<{ strategies: StrategyDef[] } | null> 
 
 export function getStrategyPicks(
   key: string,
-  opts: { sport?: string; limit?: number } = {}
+  opts: { sport?: string; limit?: number; timeoutMs?: number } = {}
 ): Promise<StrategyResult | null> {
   const qs = new URLSearchParams()
   if (opts.sport) qs.set("sport", opts.sport)
   if (opts.limit) qs.set("limit", String(opts.limit))
   const suffix = qs.toString() ? `?${qs}` : ""
-  return engineFetch(`/predictions/strategy/${encodeURIComponent(key)}${suffix}`)
+  return engineFetch(`/predictions/strategy/${encodeURIComponent(key)}${suffix}`, { timeoutMs: opts.timeoutMs })
 }
 
 export function getPlacementGuide(
@@ -185,6 +187,8 @@ export interface LegPrice {
   bookName: string
   oddsDecimal: number
   oddsAmerican: string
+  /** Expected return at this price against the engine's fair probability, in %. Usually negative. */
+  edgePercent: number
   link: string | null
   linkKind: "betslip" | "event" | "home" | null
 }
@@ -219,16 +223,62 @@ export interface EngineBetslip {
   disclaimer: string
 }
 
-/** Several picks priced at one sportsbook, with a betslip link per leg. */
+/**
+ * Several picks priced at one sportsbook, with a betslip link per leg. Legs are
+ * prediction ids or board refs; the engine turns refs into predictions so
+ * tracking and settlement work for them.
+ */
 export function getBetslip(
-  predictionIds: string[],
-  opts: { book?: string | null; state?: string | null; stake?: number } = {}
+  legs: { ids?: string[]; refs?: string[] },
+  opts: { book?: string | null; state?: string | null; stake?: number; timeoutMs?: number } = {}
 ): Promise<EngineBetslip | null> {
-  const qs = new URLSearchParams({ ids: predictionIds.join(",") })
+  const qs = new URLSearchParams()
+  if (legs.ids?.length) qs.set("ids", legs.ids.join(","))
+  if (legs.refs?.length) qs.set("refs", legs.refs.join(","))
   if (opts.book) qs.set("book", opts.book)
   if (opts.state) qs.set("state", opts.state)
   if (opts.stake) qs.set("stake", String(opts.stake))
-  return engineFetch(`/predictions/betslip?${qs}`)
+  return engineFetch(`/predictions/betslip?${qs}`, { timeoutMs: opts.timeoutMs })
+}
+
+/** One bet on the engine's board: any upcoming outcome licensed books price. */
+export interface BoardCandidate {
+  /** "gameId~outcomeId"; becomes a prediction when used in a betslip. */
+  ref: string
+  predictionId: string | null
+  gameId: string
+  outcomeId: string
+  marketType: string
+  selection: string
+  outcomeName: string
+  point: number | null
+  fairProbability: number
+  /** Decimal price at the requested book, or the best licensed price. */
+  offeredOdds: number
+  offeredBook: string
+  /** Expected return at offeredOdds, in %. Usually negative: the book's margin. */
+  edgePercent: number
+  confidence: number
+  numBooks: number
+  game: { id: string; sport: string; league: string; homeTeam: string; awayTeam: string; commenceTime: string }
+}
+
+export interface Board {
+  candidates: BoardCandidate[]
+  pricesAsOf: string | null
+  /** Licensed books with prices in the snapshots looked at. */
+  booksWithPrices: string[]
+}
+
+/** Every upcoming bet in a sport, best value first; with a book, only that book's prices. */
+export function getBoard(
+  sport: string,
+  opts: { book?: string | null; limit?: number; timeoutMs?: number } = {}
+): Promise<Board | null> {
+  const qs = new URLSearchParams({ sport })
+  if (opts.book) qs.set("book", opts.book)
+  if (opts.limit) qs.set("limit", String(opts.limit))
+  return engineFetch(`/predictions/board?${qs}`, { timeoutMs: opts.timeoutMs })
 }
 
 export interface IngestionStatus {
@@ -252,6 +302,28 @@ export interface IngestionStatus {
  * Whether odds are flowing into the engine. Requires the service key, so a
  * successful response also proves ENGINE_SERVICE_KEY matches the engine's.
  */
-export function getIngestionStatus(): Promise<IngestionStatus | null> {
-  return engineFetch("/ingestion/status")
+export function getIngestionStatus(opts: { timeoutMs?: number } = {}): Promise<IngestionStatus | null> {
+  return engineFetch("/ingestion/status", opts)
+}
+
+/**
+ * The status call with its HTTP outcome, for the admin health check: a key
+ * mismatch, an engine that predates the route, and an engine error read
+ * differently. status is null on a network error or timeout.
+ */
+export async function getIngestionStatusDetailed(
+  timeoutMs = 10_000
+): Promise<{ ok: true; data: IngestionStatus } | { ok: false; status: number | null }> {
+  if (!isEngineConfigured()) return { ok: false, status: null }
+  try {
+    const res = await fetch(`${ENGINE_URL}/ingestion/status`, {
+      headers: { "x-engine-key": process.env.ENGINE_SERVICE_KEY as string },
+      cache: "no-store",
+      signal: AbortSignal.timeout(timeoutMs),
+    })
+    if (!res.ok) return { ok: false, status: res.status }
+    return { ok: true, data: (await res.json()) as IngestionStatus }
+  } catch {
+    return { ok: false, status: null }
+  }
 }

@@ -10,7 +10,6 @@ import type { BetslipLeg, LegPrice } from "@/lib/engine"
 import BookPicker from "../picks/BookPicker"
 
 interface SlipLeg extends BetslipLeg {
-  edgePercent: number | null
   reasoning: string | null
 }
 
@@ -44,9 +43,13 @@ const BET_TYPES: { value: BetType; label: string }[] = [
 ]
 
 const RISK_LEVELS: { value: RiskLevel; label: string; desc: string }[] = [
-  { value: "low", label: "🛡️ Safe", desc: "Favorites the engine rates at least 60% likely to win." },
-  { value: "medium", label: "⚡ Balanced", desc: "The engine's best value bets at any price." },
-  { value: "high", label: "🚀 High Value", desc: "Underdogs the engine rates under 40% likely: bigger payouts, more misses." },
+  {
+    value: "low",
+    label: "🎯 Favorites",
+    desc: "Bets the engine rates at least 60% likely to win. They hit more often and pay less; that is not the same as low risk.",
+  },
+  { value: "medium", label: "⚡ Balanced", desc: "Bets the engine rates 40-62% likely to win." },
+  { value: "high", label: "🚀 Underdogs", desc: "Bets the engine rates 15-40% likely to win: bigger payouts, more misses." },
 ]
 
 const PREFS_KEY = "intellabets_ai_picks_prefs"
@@ -64,6 +67,17 @@ function kickoff(iso: string): string {
 
 const pct = (p: number) => `${(p * 100).toFixed(p < 0.1 ? 1 : 0)}%`
 
+/** "+1.2% above fair" / "2.4% below fair": the expected return at the shown price. */
+function vsFair(edge: number): string {
+  if (Math.abs(edge) < 0.05) return "at fair"
+  return edge > 0 ? `${edge.toFixed(1)}% above fair` : `${Math.abs(edge).toFixed(1)}% below fair`
+}
+
+function minutesAgo(iso: string): string {
+  const m = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 60_000))
+  return m < 1 ? "just now" : `${m} min ago`
+}
+
 export default function AIPicksPage() {
   const [sport, setSport] = useState<string>("NFL")
   const [betType, setBetType] = useState<BetType>("parlay")
@@ -78,17 +92,23 @@ export default function AIPicksPage() {
   const [hasAccess, setHasAccess] = useState<boolean | null>(null)
 
   useEffect(() => {
-    fetch("/api/premium")
-      .then((r) => r.json())
-      .then((d) => setHasAccess(d.hasAI ?? false))
-      .catch(() => setHasAccess(false))
     // Remembered per browser; storage can be unavailable (private mode).
+    let savedBook = ""
     try {
       const saved = JSON.parse(localStorage.getItem(PREFS_KEY) ?? "{}")
-      if (typeof saved.book === "string") setBook(saved.book)
+      if (typeof saved.book === "string") savedBook = saved.book
       if (typeof saved.state === "string") setState(saved.state)
       if (typeof saved.stake === "string") setStake(saved.stake)
     } catch {}
+    if (savedBook) setBook(savedBook)
+    fetch("/api/premium")
+      .then((r) => r.json())
+      .then((d) => {
+        setHasAccess(d.hasAI ?? false)
+        // A new browser starts from the book saved on the account.
+        if (!savedBook && typeof d.preferredBook === "string") setBook(d.preferredBook)
+      })
+      .catch(() => setHasAccess(false))
   }, [])
 
   const generate = async () => {
@@ -138,17 +158,17 @@ export default function AIPicksPage() {
         </h1>
         <p className="text-gray-400 mb-6 leading-relaxed">
           Claude builds betslips from live odds at licensed US sportsbooks, choosing among the
-          bets our pricing engine rates best and explaining each pick. Every leg opens straight
-          into your sportsbook&apos;s betslip.
+          best-priced bets for your risk level and explaining each pick. Each leg links to your
+          sportsbook, straight onto the betslip where the book supports it.
         </p>
         <div className="card p-6 mb-8 text-left space-y-3">
           {[
             "Real upcoming games and live prices, never made-up matchups",
             "NFL, college football, NBA, NHL, MLB and more as the engine covers them",
             "Single bets, parlays and same-game parlays",
-            "Safe / Balanced / High Value risk levels",
-            "One-tap links that open each leg in your sportsbook",
-            "The engine's win chance and edge for every leg",
+            "Favorites / Balanced / Underdogs risk levels",
+            "Links that take each leg to your sportsbook",
+            "The engine's win chance and how each price compares with fair",
           ].map((item) => (
             <div key={item} className="flex items-center gap-2 text-sm text-gray-300">
               <span className="text-cyan-400">✓</span> {item}
@@ -218,7 +238,8 @@ export default function AIPicksPage() {
           🧠 AI <span className="gradient-text">Predictions</span>
         </h1>
         <p className="text-gray-400 text-sm">
-          Built from live odds on real upcoming games. Each pick opens in your sportsbook&apos;s betslip.
+          Built from live odds on real upcoming games. Each pick links to your sportsbook (a filled betslip where
+          the book supports it).
         </p>
       </div>
 
@@ -249,7 +270,7 @@ export default function AIPicksPage() {
           <div>
             <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">Your sportsbook</label>
             <select value={book} onChange={(e) => setBook(e.target.value)} className="input-dark text-sm py-2.5">
-              <option value="">Best price anywhere</option>
+              <option value="">{betType === "single" ? "Best price anywhere" : "Choose your sportsbook"}</option>
               {SPORTSBOOK_CHOICES.map((b) => <option key={b.key} value={b.key}>{b.name}</option>)}
             </select>
           </div>
@@ -276,6 +297,9 @@ export default function AIPicksPage() {
           <p>
             {RISK_LEVELS.find((r) => r.value === riskLevel)?.desc} {legs} leg{legs === 1 ? "" : "s"}.
           </p>
+          {!book && betType !== "single" && (
+            <p className="text-yellow-400/80 text-xs">Choose your sportsbook: a parlay has to be placed at one book.</p>
+          )}
           {chosenBook?.usesState && !state && (
             <p className="text-yellow-400/80 text-xs">
               {chosenBook.name} uses a separate site per state. Set your state so its links open your betslip.
@@ -291,9 +315,9 @@ export default function AIPicksPage() {
 
         <button
           onClick={generate}
-          disabled={loading}
+          disabled={loading || (!book && betType !== "single")}
           className="btn-primary w-full py-3 font-semibold"
-          style={{ borderRadius: "10px", opacity: loading ? 0.8 : 1 }}
+          style={{ borderRadius: "10px", opacity: loading || (!book && betType !== "single") ? 0.6 : 1 }}
         >
           {loading ? (
             <span className="flex items-center justify-center gap-2">
@@ -361,6 +385,11 @@ export default function AIPicksPage() {
             </a>
           )}
           <p className="text-xs text-gray-400">{result.note}</p>
+          {result.legs.length > 1 && (
+            <p className="text-xs text-gray-500">
+              Parlay tracking isn&apos;t available yet; track single bets from Engine Picks.
+            </p>
+          )}
           {result.sameGameWarning && <p className="text-xs text-yellow-400/80">{result.sameGameWarning}</p>}
 
           <div className="space-y-3">
@@ -384,10 +413,16 @@ export default function AIPicksPage() {
                     </div>
                   </div>
 
-                  <div className="flex gap-3 text-xs text-gray-500 mb-2">
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500 mb-2">
                     <span>Engine win chance <span className="text-gray-300">{pct(leg.fairProbability)}</span></span>
-                    {leg.edgePercent !== null && <span>Edge <span className="text-gray-300">{leg.edgePercent.toFixed(1)}%</span></span>}
-                    <span>Confidence <span className="text-gray-300">{Math.round(leg.confidence)}</span></span>
+                    {price && (
+                      <span>
+                        Price{" "}
+                        <span className={price.edgePercent > 0 ? "text-emerald-400" : "text-gray-300"}>
+                          {vsFair(price.edgePercent)}
+                        </span>
+                      </span>
+                    )}
                   </div>
 
                   {leg.started && (
@@ -419,6 +454,9 @@ export default function AIPicksPage() {
                     marketType={leg.marketType}
                     preferredBook={result.book?.key ?? null}
                     state={result.state}
+                    // Logging one leg of a parlay as a single would record the wrong bet.
+                    trackable={result.legs.length === 1}
+                    initialStake={String(result.stake)}
                   />
                 </div>
               )
@@ -434,8 +472,9 @@ export default function AIPicksPage() {
 
           <p className="text-xs text-gray-600 leading-relaxed">
             ⚠ {result.disclaimer}
-            {result.pricesAsOf && ` Prices as of ${new Date(result.pricesAsOf).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}.`}{" "}
-            The win chance is the engine&apos;s estimate, not a guarantee. 21+. Please gamble responsibly.
+            {result.pricesAsOf && ` Prices from ${minutesAgo(result.pricesAsOf)}.`} &ldquo;Below fair&rdquo; is the
+            sportsbook&apos;s margin; most bets carry one. The win chance is the engine&apos;s estimate, not a guarantee.
+            Only bet where it is legal in your state. 21+. Gambling problem? Call 1-800-GAMBLER.
           </p>
         </div>
       )}

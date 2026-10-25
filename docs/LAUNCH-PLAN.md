@@ -22,7 +22,7 @@ cannot even let anyone sign up.
 |---|---|
 | **Login and registration** | ❌ **broken in production — see P0.1. Nobody can create an account or log in.** |
 | Site live at intellabets.com | ✅ verified |
-| Engine live, serving real odds | ✅ verified |
+| Engine live, serving real odds | ✅ verified 2026-10-25 (the feed was down 2026-09-14 to 2026-10-25 on a rejected Odds API key; see RUNBOOK) |
 | Revenue bypasses closed | ✅ `POST /api/premium`, `/api/subscriptions` → 404 |
 | Checkout fails safely when unauthenticated | ✅ `POST /api/checkout` → 401 (code inspection: falls through to a clean 503 once authenticated, if `STRIPE_SECRET_KEY` is absent/malformed — **not re-verified live**, since no account could be created to test it authenticated) |
 | Private betslips protected | ✅ signed-out requests leak nothing |

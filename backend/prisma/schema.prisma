@@ -98,6 +98,11 @@ model Prediction {
   game           Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
   userId         String?  // null = house/AI prediction
   user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  /// "engine" = a +EV pick the engine found (Engine Picks, the scoreboard).
+  /// "board" = a leg chosen for an AI Picks betslip from the full board, which
+  /// may have no edge. Kept so its links, tracking and settlement work, but
+  /// never shown as an engine pick or counted in the engine's record.
+  source         String   @default("engine")
 
   marketType     String   // moneyline | spread | total | prop
   outcomeId      String

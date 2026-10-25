@@ -15,10 +15,11 @@ import {
 } from "./strategies"
 import { buildPlacementGuide, compareBooks, resolveBookKey } from "./placement"
 import type { BookOption, BookPriceInput } from "./placement"
-import { buildParlayLink, getSportsbook } from "./deeplinks"
+import { buildParlayLink, getSportsbook, isRoutableBook } from "./deeplinks"
 import type { DeepLink } from "./deeplinks"
 import type { BookMarket } from "./devig"
 import type { EngineConfig } from "./prediction.types"
+import type { Sport } from "../sportsbook/types/provider.types"
 
 @Injectable()
 export class PredictionsService {
@@ -166,7 +167,7 @@ export class PredictionsService {
       if (opts.isProp) p.marketType = "prop"
 
       const existing = await this.prisma.prediction.findFirst({
-        where: { gameId: game.id, outcomeId: p.outcomeId, status: "pending", userId: null },
+        where: { gameId: game.id, outcomeId: p.outcomeId, status: "pending", userId: null, source: "engine" },
       })
       if (existing) continue
 
@@ -293,7 +294,7 @@ export class PredictionsService {
   /** House predictions currently pending, newest & most confident first. */
   async listPending(sport?: string, limit = 50) {
     return this.prisma.prediction.findMany({
-      where: { userId: null, status: "pending", ...(sport ? { game: { sport } } : {}) },
+      where: { userId: null, source: "engine", status: "pending", ...(sport ? { game: { sport } } : {}) },
       include: { game: true },
       orderBy: [{ confidence: "desc" }, { edgePercent: "desc" }],
       take: limit,
@@ -316,6 +317,7 @@ export class PredictionsService {
       // would still be offered as a bet.
       where: {
         userId: null,
+        source: "engine",
         status: "pending",
         game: { commenceTime: { gt: new Date() }, ...(sport ? { sport } : {}) },
       },
@@ -425,6 +427,158 @@ export class PredictionsService {
   }
 
   /**
+   * Every upcoming bet in a sport that licensed books price, best value first.
+   *
+   * This is the pool AI Picks builds from. Unlike the strategy lists it is not
+   * limited to +EV picks: a bet whose price is below fair is included with its
+   * true (negative) edge, so a slip can always be built and is always honest
+   * about the price. With a book, only bets that book prices are returned, at
+   * that book's price. Prices older than MAX_PRICE_AGE_MS are left out.
+   */
+  async board(opts: { sport?: string; book?: string | null; limit?: number } = {}) {
+    const now = Date.now()
+    const limit = Math.min(Math.max(opts.limit ?? 60, 1), 200)
+    const games = await this.prisma.game.findMany({
+      where: {
+        commenceTime: { gt: new Date(now), lt: new Date(now + BOARD_WINDOW_MS) },
+        ...(opts.sport ? { sport: opts.sport } : {}),
+      },
+      orderBy: { commenceTime: "asc" },
+      take: 200,
+    })
+    const empty = { candidates: [] as BoardCandidate[], pricesAsOf: null as string | null, booksWithPrices: [] as string[] }
+    if (games.length === 0) return empty
+
+    const snaps = await this.prisma.oddsSnapshot.findMany({
+      where: { gameId: { in: games.map((g) => g.id) }, capturedAt: { gt: new Date(now - MAX_PRICE_AGE_MS) } },
+      orderBy: [{ gameId: "asc" }, { capturedAt: "desc" }],
+      distinct: ["gameId"],
+      select: { gameId: true, markets: true, capturedAt: true },
+    })
+    const engineIds = new Map(
+      (
+        await this.prisma.prediction.findMany({
+          where: { gameId: { in: games.map((g) => g.id) }, status: "pending", userId: null, source: "engine" },
+          select: { id: true, gameId: true, outcomeId: true },
+        })
+      ).map((p) => [`${p.gameId}~${p.outcomeId}`, p.id])
+    )
+    const bookKey = resolveBookKey(opts.book)
+    const byId = new Map(games.map((g) => [g.id, g]))
+    const booksWithPrices = new Set<string>()
+    const candidates: BoardCandidate[] = []
+    let oldest: Date | null = null
+
+    for (const snap of snaps) {
+      const game = byId.get(snap.gameId)
+      if (!game) continue
+      const booksByMarket = booksByMarketFrom(snap.markets)
+      for (const books of booksByMarket.values()) {
+        for (const b of books) if (isRoutableBook(b.book)) booksWithPrices.add(b.book)
+      }
+      const bets = this.engine.analyzeGame(asEngineGame(game), booksByMarket, { minEdgePercent: -100 })
+      let used = false
+      for (const bet of bets) {
+        let decimal = bet.offeredDecimal
+        let book = bet.offeredBook
+        if (bookKey) {
+          const atBook = pricesFromSnapshot(snap.markets, bet.outcomeId).get(bookKey)
+          if (!atBook) continue
+          decimal = atBook.decimal
+          book = bookKey
+        }
+        const ref = `${game.id}~${bet.outcomeId}`
+        candidates.push({
+          ref,
+          predictionId: engineIds.get(ref) ?? null,
+          gameId: game.id,
+          outcomeId: bet.outcomeId,
+          marketType: bet.marketType,
+          selection: bet.selection,
+          outcomeName: bet.outcomeName,
+          point: bet.point ?? null,
+          fairProbability: bet.fairProbability,
+          offeredOdds: decimal,
+          offeredBook: book,
+          edgePercent: Math.round((bet.fairProbability * decimal - 1) * 10000) / 100,
+          confidence: bet.confidence,
+          numBooks: bet.numBooks,
+          game: {
+            id: game.id,
+            sport: game.sport,
+            league: game.league,
+            homeTeam: game.homeTeam,
+            awayTeam: game.awayTeam,
+            commenceTime: game.commenceTime.toISOString(),
+          },
+        })
+        used = true
+      }
+      if (used && (!oldest || snap.capturedAt < oldest)) oldest = snap.capturedAt
+    }
+
+    candidates.sort((a, b) => b.edgePercent - a.edgePercent || b.confidence - a.confidence)
+    return {
+      candidates: candidates.slice(0, limit),
+      pricesAsOf: oldest?.toISOString() ?? null,
+      booksWithPrices: Array.from(booksWithPrices).sort(),
+    }
+  }
+
+  /**
+   * The prediction id for a board ref ("gameId~outcomeId"), creating a
+   * source "board" prediction when there is none, so the leg gets the same
+   * links, tracking and settlement as an engine pick. Null when the outcome is
+   * not in the game's latest prices.
+   */
+  private async predictionIdForRef(ref: string): Promise<string | null> {
+    const sep = ref.indexOf("~")
+    if (sep <= 0) return null
+    const gameId = ref.slice(0, sep)
+    const outcomeId = ref.slice(sep + 1)
+    const existing = await this.prisma.prediction.findFirst({
+      where: { gameId, outcomeId, status: "pending", userId: null },
+      // Prefer the engine's own pick for this outcome.
+      orderBy: { source: "desc" },
+      select: { id: true },
+    })
+    if (existing) return existing.id
+
+    const game = await this.prisma.game.findUnique({ where: { id: gameId } })
+    if (!game || game.commenceTime.getTime() <= Date.now()) return null
+    const snap = await this.prisma.oddsSnapshot.findFirst({
+      where: { gameId },
+      orderBy: { capturedAt: "desc" },
+      select: { markets: true },
+    })
+    if (!snap) return null
+    const bet = this.engine
+      .analyzeGame(asEngineGame(game), booksByMarketFrom(snap.markets), { minEdgePercent: -100 })
+      .find((b) => b.outcomeId === outcomeId)
+    if (!bet) return null
+    const created = await this.prisma.prediction.create({
+      data: {
+        gameId,
+        userId: null,
+        source: "board",
+        marketType: bet.marketType,
+        outcomeId: bet.outcomeId,
+        selection: bet.selection,
+        outcomeName: bet.outcomeName,
+        point: bet.point ?? null,
+        fairProbability: bet.fairProbability,
+        offeredOdds: bet.offeredDecimal,
+        offeredBook: bet.offeredBook,
+        edgePercent: bet.edgePercent,
+        kellyStake: bet.kellyStake,
+        confidence: bet.confidence,
+      },
+      select: { id: true },
+    })
+    return created.id
+  }
+
+  /**
    * Several picks priced at ONE sportsbook: the betslip a user builds there.
    *
    * A parlay can only be placed at a single book, so this answers "what does my
@@ -433,12 +587,21 @@ export class PredictionsService {
    * price comes back with atBook: null instead of being dropped, so the caller
    * can say which one to swap. The combined parlay price and the one-tap parlay
    * link exist only when the book prices every leg.
+   *
+   * Legs are given as prediction ids or as board refs; refs are turned into
+   * predictions first. The win chance and edges are recomputed from the same
+   * latest snapshot the prices come from, so every number on a leg agrees.
    */
   async betslipFor(
     ids: string[],
-    opts: { book?: string | null; state?: string | null; stake?: number } = {}
+    opts: { book?: string | null; state?: string | null; stake?: number; refs?: string[] } = {}
   ) {
-    const unique = Array.from(new Set(ids.filter(Boolean))).slice(0, MAX_BETSLIP_LEGS)
+    const fromRefs: string[] = []
+    for (const ref of opts.refs ?? []) {
+      const id = await this.predictionIdForRef(ref)
+      if (id) fromRefs.push(id)
+    }
+    const unique = Array.from(new Set([...ids.filter(Boolean), ...fromRefs])).slice(0, MAX_BETSLIP_LEGS)
     const stake = opts.stake && Number.isFinite(opts.stake) && opts.stake > 0 ? opts.stake : 10
     const preds = await this.prisma.prediction.findMany({
       where: { id: { in: unique } },
@@ -449,6 +612,7 @@ export class PredictionsService {
 
     const legs: BetslipLeg[] = []
     const linkInputs: (BookPriceInput | null)[] = []
+    const fairByGame = new Map<string, Map<string, number>>()
     let oldestPrices: Date | null = null
     for (const id of unique) {
       const p = byId.get(id)
@@ -460,6 +624,12 @@ export class PredictionsService {
       })
       if (snap && (!oldestPrices || snap.capturedAt < oldestPrices)) oldestPrices = snap.capturedAt
       const prices = snap ? pricesFromSnapshot(snap.markets, p.outcomeId) : new Map<string, BookPriceInput>()
+      if (snap && !fairByGame.has(p.gameId)) {
+        const bets = this.engine.analyzeGame(asEngineGame(p.game), booksByMarketFrom(snap.markets), { minEdgePercent: -100 })
+        fairByGame.set(p.gameId, new Map(bets.map((b) => [b.outcomeId, b.fairProbability])))
+      }
+      // The stored value is a fallback for an outcome no longer in the prices.
+      const fair = fairByGame.get(p.gameId)?.get(p.outcomeId) ?? p.fairProbability
       const comparison = compareBooks({
         selection: p.selection,
         matchup: `${p.game.awayTeam} @ ${p.game.homeTeam}`,
@@ -478,10 +648,10 @@ export class PredictionsService {
         started: p.game.commenceTime.getTime() <= now,
         marketType: p.marketType,
         selection: p.selection,
-        fairProbability: p.fairProbability,
+        fairProbability: fair,
         confidence: p.confidence,
-        atBook: atBook ? legPrice(atBook) : null,
-        best: comparison.best ? legPrice(comparison.best) : null,
+        atBook: atBook ? legPrice(atBook, fair) : null,
+        best: comparison.best ? legPrice(comparison.best, fair) : null,
       })
       linkInputs.push(atBook ? prices.get(atBook.book) ?? null : null)
     }
@@ -489,14 +659,17 @@ export class PredictionsService {
     const bookKey = resolveBookKey(opts.book)
     const entry = getSportsbook(bookKey)
     const allPriced = legs.length > 0 && legs.every((l) => l.atBook)
-    const combinedDecimal = allPriced
-      ? Math.round(legs.reduce((acc, l) => acc * l.atBook!.oddsDecimal, 1) * 1000) / 1000
-      : null
+    // Kept at the snapshots' 4 dp so a one-leg slip matches its leg's price.
+    const product = allPriced ? legs.reduce((acc, l) => acc * l.atBook!.oddsDecimal, 1) : null
+    // The sourced multi-leg links are regular parlays. Books build same-game
+    // parlays in their own flow, so legs sharing a game get per-leg links only.
+    const distinctGames = new Set(legs.map((l) => l.gameId)).size === legs.length
     const parlayLink =
-      allPriced && legs.length > 1 && bookKey
+      allPriced && legs.length > 1 && bookKey && distinctGames
         ? buildParlayLink(
             bookKey,
             linkInputs.map((li) => ({
+              providerLink: li?.link ?? null,
               outcomeSid: li?.outcomeSid ?? null,
               marketSid: li?.marketSid ?? null,
               eventSid: li?.eventSid ?? null,
@@ -506,21 +679,26 @@ export class PredictionsService {
         : null
 
     const missing = legs.filter((l) => !l.atBook).length
+    const notBetslip = legs.filter((l) => l.atBook && l.atBook.linkKind !== "betslip").length
     const bookName = entry?.name ?? opts.book ?? null
     let note: string
     if (!bookKey) note = "Pick your sportsbook to see its prices and betslip links."
     else if (legs.length === 0) note = "None of these picks were found."
     else if (missing > 0) note = `${bookName} has no current price for ${missing} of these ${legs.length} legs. Swap those legs or use another book.`
+    else if (notBetslip > 0)
+      note = `${notBetslip} of ${legs.length} legs open the game or ${bookName}'s home page rather than the betslip: find the selection there and add it yourself${legs.length > 1 ? ", then choose Parlay" : ""}.`
+    else if (legs.length > 1 && !distinctGames)
+      note = `Tap each leg to add it to your ${bookName} betslip, then choose Same Game Parlay there. ${bookName} sets the price.`
     else if (legs.length > 1 && !parlayLink)
       note = `Tap each leg to add it to your ${bookName} betslip, then choose Parlay there. ${bookName} sets the final parlay price.`
-    else note = `Prices shown are ${bookName}'s.`
+    else note = `Prices are from ${bookName}.`
 
     return {
       book: bookKey ? { key: bookKey, name: bookName } : null,
       stake,
       legs,
-      combinedDecimal,
-      payout: combinedDecimal ? Math.round(stake * combinedDecimal * 100) / 100 : null,
+      combinedDecimal: product === null ? null : Math.round(product * 10000) / 10000,
+      payout: product === null ? null : Math.round(stake * product * 100) / 100,
       parlayLink,
       note,
       pricesAsOf: oldestPrices?.toISOString() ?? null,
@@ -600,10 +778,10 @@ export class PredictionsService {
       this.prisma.oddsSnapshot.findFirst({ orderBy: { capturedAt: "desc" }, select: { capturedAt: true } }),
       this.prisma.game.count({ where: { commenceTime: { gt: now } } }),
       this.prisma.prediction.count({
-        where: { userId: null, status: "pending", game: { commenceTime: { gt: now } } },
+        where: { userId: null, source: "engine", status: "pending", game: { commenceTime: { gt: now } } },
       }),
       this.prisma.prediction.findFirst({
-        where: { userId: null },
+        where: { userId: null, source: "engine" },
         orderBy: { createdAt: "desc" },
         select: { createdAt: true },
       }),
@@ -619,7 +797,7 @@ export class PredictionsService {
   /** Rolling performance of house predictions — the honest scoreboard. */
   async performance() {
     const settled = await this.prisma.prediction.findMany({
-      where: { userId: null, status: { in: ["won", "lost", "push"] } },
+      where: { userId: null, source: "engine", status: { in: ["won", "lost", "push"] } },
       select: { status: true, clv: true, edgePercent: true },
     })
     const wins = settled.filter((p) => p.status === "won").length
@@ -720,6 +898,8 @@ export interface LegPrice {
   bookName: string
   oddsDecimal: number
   oddsAmerican: string
+  /** Expected return at this price against the engine's fair probability, in %. */
+  edgePercent: number
   link: string | null
   linkKind: DeepLink["kind"] | null
 }
@@ -741,15 +921,54 @@ export interface BetslipLeg {
   best: LegPrice | null
 }
 
-function legPrice(o: BookOption): LegPrice {
+function legPrice(o: BookOption, fairProbability: number): LegPrice {
   return {
     book: o.book,
     bookName: o.bookName,
     oddsDecimal: o.oddsDecimal,
     oddsAmerican: o.oddsAmerican,
+    edgePercent: Math.round((fairProbability * o.oddsDecimal - 1) * 10000) / 100,
     link: o.link,
     linkKind: o.linkKind,
   }
+}
+
+/** Upcoming games the board looks at. */
+const BOARD_WINDOW_MS = 8 * 86_400_000
+
+/** Older prices are not offered: the engine polls every 30 minutes. */
+const MAX_PRICE_AGE_MS = 90 * 60_000
+
+/** One bet on the board. `ref` identifies it until it becomes a prediction. */
+export interface BoardCandidate {
+  ref: string
+  /** The engine's own +EV pick for this outcome, if there is one. */
+  predictionId: string | null
+  gameId: string
+  outcomeId: string
+  marketType: string
+  selection: string
+  outcomeName: string
+  point: number | null
+  fairProbability: number
+  /** Decimal price at the requested book, or the best licensed price. */
+  offeredOdds: number
+  offeredBook: string
+  /** Expected return at offeredOdds, in %. Usually negative: the book's margin. */
+  edgePercent: number
+  confidence: number
+  numBooks: number
+  game: { id: string; sport: string; league: string; homeTeam: string; awayTeam: string; commenceTime: string }
+}
+
+/** A stored game as the engine's input; Game.sport holds an engine Sport. */
+function asEngineGame<G extends { sport: string }>(game: G): G & { sport: Sport } {
+  return game as G & { sport: Sport }
+}
+
+/** A stored snapshot's markets as the engine's input shape. */
+function booksByMarketFrom(markets: unknown): Map<string, BookMarket[]> {
+  return new Map(Object.entries((markets ?? {}) as Record<string, BookMarket[]>))
 }
 
 /**

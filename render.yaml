@@ -47,13 +47,16 @@ services:
       # college football run Sep-Jan, NBA and NHL Oct-Jun, so together these
       # cover the calendar with no dead months.
       #
-      # Quota: roughly (sports x 24h x 60 / POLL_INTERVAL_MIN) odds requests
-      # per day, plus scores and props. At 5 sports and a 30-minute interval
-      # that is ~240/day before props. Check this against your plan before
-      # adding more; "all" ingests every supported sport and will burn a small
-      # plan quickly.
+      # Quota is in Odds API credits: each /odds call costs markets (3) x
+      # regions. With 5 sports every 30 min and two regions that is about
+      # 1,440 credits a day for odds, plus about 240 for hourly /scores, so
+      # roughly 50,000 a month. The 100K plan covers it; the 20K plan does not.
       - key: ACTIVE_SPORTS
         value: americanfootball_nfl,americanfootball_ncaaf,basketball_nba,icehockey_nhl,baseball_mlb
+      # us = DraftKings, FanDuel, BetMGM, BetRivers (+ Caesars, Fanatics when listed);
+      # us2 adds Hard Rock, theScore Bet, Bally Bet and betPARX. Doubles credits per call.
+      - key: ODDS_REGIONS
+        value: us,us2
       - key: POLL_INTERVAL_MIN
         value: "30"
       - key: SETTLE_INTERVAL_MIN

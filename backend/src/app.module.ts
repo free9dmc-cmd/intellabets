@@ -1,8 +1,9 @@
 import { Module } from "@nestjs/common"
 import { ConfigModule, ConfigService } from "@nestjs/config"
 import { BullModule } from "@nestjs/bull"
-import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler"
+import { ThrottlerModule } from "@nestjs/throttler"
 import { APP_GUARD } from "@nestjs/core"
+import { EngineThrottlerGuard } from "./common/throttler/engine-throttler.guard"
 import { PrismaModule } from "./common/prisma/prisma.module"
 import { RealtimeModule } from "./modules/realtime/realtime.module"
 import { AuthModule } from "./modules/auth/auth.module"
@@ -33,6 +34,6 @@ import { BetslipsModule } from "./modules/betslips/betslips.module"
     IngestionModule,
     BetslipsModule,
   ],
-  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
+  providers: [{ provide: APP_GUARD, useClass: EngineThrottlerGuard }],
 })
 export class AppModule {}

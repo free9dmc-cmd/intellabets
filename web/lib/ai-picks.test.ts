@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest"
-import type { EnginePrediction } from "./engine"
 import {
   americanFromDecimal,
+  copyProblem,
   defaultSelection,
   eligibleCandidates,
+  inRiskBand,
   parlayMath,
   slipProblem,
+  upcomingGameCount,
+  type SlipCandidate,
 } from "./ai-picks"
 
 const NOW = Date.parse("2026-10-25T12:00:00Z")
@@ -13,7 +16,7 @@ const LATER = "2026-10-25T20:00:00Z"
 const EARLIER = "2026-10-25T11:00:00Z"
 
 let n = 0
-function pick(gameId: string, marketType: string, overrides: Partial<EnginePrediction> = {}): EnginePrediction {
+function pick(gameId: string, marketType: string, overrides: Partial<SlipCandidate> = {}): SlipCandidate {
   n += 1
   return {
     id: `p${n}`,
@@ -21,17 +24,12 @@ function pick(gameId: string, marketType: string, overrides: Partial<EnginePredi
     outcomeId: `${gameId}:${marketType}:${n}`,
     marketType,
     selection: `Pick ${n}`,
-    outcomeName: "Team",
-    point: null,
     fairProbability: 0.55,
-    offeredOdds: 2.0,
+    offeredOdds: 1.91,
     offeredBook: "fanduel",
-    edgePercent: 3,
-    kellyStake: 0.01,
+    edgePercent: -2.1,
     confidence: 70,
-    reasoning: null,
-    game: { id: gameId, sport: "NFL", league: "NFL", homeTeam: "H", awayTeam: "A", commenceTime: LATER },
-    lineMovement: null,
+    game: { sport: "NFL", homeTeam: "H", awayTeam: "A", commenceTime: LATER },
     ...overrides,
   }
 }
@@ -39,7 +37,7 @@ function pick(gameId: string, marketType: string, overrides: Partial<EnginePredi
 describe("eligibleCandidates", () => {
   it("drops games that have started and repeated outcomes", () => {
     const a = pick("g1", "spread")
-    const started = pick("g2", "spread", { game: { ...a.game, id: "g2", commenceTime: EARLIER } })
+    const started = pick("g2", "spread", { game: { ...a.game, commenceTime: EARLIER } })
     const dupe = { ...a, id: "other" }
     expect(eligibleCandidates([a, started, dupe], "parlay", 2, NOW).map((p) => p.id)).toEqual([a.id])
   })
@@ -120,5 +118,45 @@ describe("americanFromDecimal", () => {
     expect(americanFromDecimal(2.0)).toBe("+100")
     expect(americanFromDecimal(1.909)).toBe("-110")
     expect(americanFromDecimal(1)).toBe("—")
+  })
+})
+
+describe("parlay candidates", () => {
+  it("keeps at most two bets per game so twenty candidates span many games", () => {
+    const pool = Array.from({ length: 30 }, (_, i) => pick(`g${Math.floor(i / 3)}`, ["spread", "total", "moneyline"][i % 3]))
+    const out = eligibleCandidates(pool, "parlay", 3, NOW)
+    expect(out).toHaveLength(20)
+    expect(new Set(out.map((p) => p.gameId)).size).toBe(10)
+  })
+
+  it("counts the upcoming games a pool covers", () => {
+    const started = pick("old", "spread", { game: { sport: "NFL", homeTeam: "H", awayTeam: "A", commenceTime: EARLIER } })
+    expect(upcomingGameCount([pick("a", "spread"), pick("a", "total"), pick("b", "spread"), started], NOW)).toBe(2)
+  })
+})
+
+describe("inRiskBand", () => {
+  it("sorts bets into favorites, balanced and underdogs by the engine's win chance", () => {
+    expect(inRiskBand({ fairProbability: 0.7 }, "low")).toBe(true)
+    expect(inRiskBand({ fairProbability: 0.55 }, "low")).toBe(false)
+    expect(inRiskBand({ fairProbability: 0.5 }, "medium")).toBe(true)
+    expect(inRiskBand({ fairProbability: 0.3 }, "high")).toBe(true)
+    expect(inRiskBand({ fairProbability: 0.05 }, "high")).toBe(false)
+  })
+})
+
+describe("copyProblem", () => {
+  it("rejects inducements and claims the model has no data for", () => {
+    expect(copyProblem("This is a lock tonight")).toMatch(/lock/)
+    expect(copyProblem("Guaranteed winner")).toMatch(/guarantee/)
+    expect(copyProblem("Their QB is injured")).toMatch(/injur/)
+    expect(copyProblem("Wind and weather favor the under")).toMatch(/weather/)
+    expect(copyProblem("They won the last 5 games")).toMatch(/past results/)
+  })
+
+  it("accepts plain, numbers-only text", () => {
+    expect(copyProblem("The engine rates this 58% likely; the price is 1.2% below fair.")).toBeNull()
+    // "block" contains "lock" but is not the word.
+    expect(copyProblem("A block of three favorites priced near fair.")).toBeNull()
   })
 })
