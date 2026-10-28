@@ -4,6 +4,13 @@ The single source of truth for what ships next. Both daily automated runs read
 this first and update it. **Keep it honest** — a stale plan silently misdirects
 every run that follows.
 
+2026-10-28 evening run: **production could not be checked.** The run's egress
+proxy returned 403 on CONNECT for `intellabets.com` and `api.intellabets.com`,
+so no live endpoint was curled. No commits landed on `main` today (last:
+`baac150`, 2026-10-24, which recorded the Vercel `402 DEPLOYMENT_DISABLED`
+outage). Nothing below was re-verified live; the Vercel billing state is
+unknown. Only docs changed this run.
+
 Last full inspection: 2026-09-24 (evening run). No commits landed on `main`
 today before this run — the scheduled morning run left no trace (no commits
 since 65322e9 on 2026-09-22, and this file was still dated 2026-09-22),
@@ -172,7 +179,7 @@ underwriter reviewing the site will be looking for exactly it.
 - [x] **Why we don't publish a win rate** — folded into `/how-it-works` rather than a separate page, since it's the natural next paragraph after the de-vig explanation.
 - [x] **CLV explainer** — `/closing-line-value`, shipped 2026-10-07. Worked example labeled illustrative, limits of CLV, and an explicit statement that no average is published yet (sample too small under corrected settlement). Added to middleware publicRoutes and sitemap. Linked from `/how-it-works` footer 2026-10-08.
 - [x] **FAQ** — folded into `/how-it-works` (see above) rather than a separate page.
-- [ ] **Onboarding emails** — still open. Blocked in practice: there's no transactional email sending configured yet (P1), and no new users are being created right now (P0.1), so nothing would trigger them today anyway.
+- [~] **Onboarding emails** — copy drafted 2026-10-28 in `docs/marketing/onboarding-emails.md` (5 emails, no performance claims, 21+ and helpline footer). Still **not sending**: no email provider is configured (P1) and registration is unverified in production. Checklist for wiring it up is at the end of that file.
 - [x] **SEO metadata** — `/how-it-works` has full metadata + OG tags; added `app/sitemap.ts` and `app/robots.ts` (Next.js auto-generates `/sitemap.xml` and `/robots.txt` from these), listing only routes actually public per `middleware.ts`. Per-page metadata on the other marketing pages (terms/privacy/contact/premium) already existed before this run.
 - [x] **Responsible gambling page** — `/responsible-gambling`, added 2026-10-08 (not yet deployed/verified live at time of writing). Warning signs, control tips, US/UK help lines, no performance figures. In middleware publicRoutes and sitemap; linked from `/how-it-works`. Still to do: link from homepage footer and `/premium`.
 
