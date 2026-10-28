@@ -101,7 +101,12 @@ services:
     ports:
       - "3000:3000"
     environment:
-      NODE_ENV: development
+      # NODE_ENV is deliberately left unset for the web app: `next dev` sets
+      # NODE_ENV=development itself, and forcing a non-standard value here made
+      # `next build` inside this container fail while prerendering the pages
+      # that use next-auth ("Cannot read properties of null (reading
+      # 'useState')", plus a bogus <Html> error on /404). `next build` sets
+      # NODE_ENV=production itself, exactly as Vercel does. See AGENTS.md.
       PORT: "3000"
       DATABASE_URL: postgresql://intellabets:intellabets_local_dev@db:5432/intellabets_web?schema=public
       # The preview serves this app over https on the platform's public host;
@@ -116,6 +121,11 @@ services:
       CHOKIDAR_USEPOLLING: "true"
       NEXT_TELEMETRY_DISABLED: "1"
       BASE44_PREVIEW_MODE:
+      # next.config.js adds "3000-$BASE44_PUBLIC_HOST_SUFFIX" to
+      # allowedDevOrigins while BASE44_PREVIEW_MODE=1, so the preview origin can
+      # load the dev server's assets and HMR channel. Empty outside the sandbox,
+      # where the option then stays undefined.
+      BASE44_PUBLIC_HOST_SUFFIX:
     env_file:
       - path: ./.env.base44-defaults
       - path: /run/base44/app.env

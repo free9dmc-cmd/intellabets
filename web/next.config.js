@@ -6,6 +6,16 @@ const nextConfig = {
       { protocol: "https", hostname: "avatars.githubusercontent.com" },
     ],
   },
+  // In the Base44 sandbox the preview is served from a different origin
+  // (https://3000-$BASE44_PUBLIC_HOST_SUFFIX) than the dev server's own, and
+  // Next refuses to serve dev assets or the HMR channel to an origin that is
+  // not listed here ("Cross origin request detected ... allowedDevOrigins").
+  // Gated on the sandbox flag: with BASE44_PREVIEW_MODE unset or any other
+  // value this stays undefined, so production behaviour is unchanged.
+  allowedDevOrigins:
+    process.env.BASE44_PREVIEW_MODE === "1" && process.env.BASE44_PUBLIC_HOST_SUFFIX
+      ? [`3000-${process.env.BASE44_PUBLIC_HOST_SUFFIX}`]
+      : undefined,
   experimental: {
     serverActions: {
       allowedOrigins: [

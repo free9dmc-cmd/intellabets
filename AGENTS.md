@@ -61,6 +61,26 @@ is reviewable, and are bind-mounted read-only into the containers.
    re-seed from scratch: `docker compose -f docker-compose.base44.yml down -v`
    (drops `db_data`), then `up -d`.
 
+### Running a production build in the sandbox
+
+`next build` has to run under Next's own `NODE_ENV` (it sets production). Do not
+force `NODE_ENV=development` on it: with a non-standard value the build dies
+while prerendering the pages that render next-auth — `Cannot read properties of
+null (reading 'useState')` inside `SessionProvider`, plus a bogus `<Html> should
+not be imported outside of pages/_document` on `/404` — which looks like a code
+bug and is not one. The `web` service therefore does not set `NODE_ENV`: `next
+dev` sets `development` itself when the dev server runs, and `next build` sets
+`production`, exactly as Vercel does.
+
+```bash
+docker compose -f docker-compose.base44.yml run --rm --no-deps web npx next build
+```
+
+The preview origin (a different origin from the dev server's own) is allowed to
+load dev assets and the HMR channel through `allowedDevOrigins` in
+`web/next.config.js`, which appends `3000-$BASE44_PUBLIC_HOST_SUFFIX` only while
+`BASE44_PREVIEW_MODE=1`, so production config is untouched.
+
 ### Environment variables
 
 - Local infrastructure (`DATABASE_URL`, `REDIS_URL`) is set inline in compose.
