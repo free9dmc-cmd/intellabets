@@ -130,7 +130,7 @@ async function checkEngine(): Promise<Check[]> {
         : res.status === 404
           ? "the engine predates /ingestion/status - redeploy the engine"
           : res.status === 429
-            ? "the engine is rate-limiting this server - check its throttler settings"
+            ? "the engine rate-limited this server, so it did not accept our key (a valid service key is never throttled) - make ENGINE_SERVICE_KEY identical in Vercel and Render, at least 16 characters"
             : res.status === null
               ? "no response from the engine within 10s - check ENGINE_API_URL and that the Render service is running"
               : `the engine returned ${res.status} - check its logs on Render`

@@ -59,3 +59,48 @@ describe("OddsAggregatorService errors", () => {
     expect(err.isAuthFailure).toBe(false)
   })
 })
+
+describe("OddsAggregatorService outcome descriptions", () => {
+  it("signs a spread but not a total", async () => {
+    const market = (key: string, outcomes: { name: string; price: number; point: number }[]) => ({
+      key,
+      last_update: "2026-10-28T12:00:00Z",
+      outcomes,
+    })
+    const svc = service(async (config) => ({
+      status: 200,
+      statusText: "OK",
+      data: [
+        {
+          id: "evt",
+          sport_key: "americanfootball_nfl",
+          commence_time: "2026-10-29T17:00:00Z",
+          home_team: "Kansas City Chiefs",
+          away_team: "Las Vegas Raiders",
+          bookmakers: [
+            {
+              key: "fanduel",
+              title: "FanDuel",
+              markets: [
+                market("spreads", [
+                  { name: "Kansas City Chiefs", price: -110, point: -6.5 },
+                  { name: "Las Vegas Raiders", price: -110, point: 6.5 },
+                ]),
+                market("totals", [
+                  { name: "Over", price: -110, point: 45.5 },
+                  { name: "Under", price: -110, point: 45.5 },
+                ]),
+              ],
+            },
+          ],
+        },
+      ],
+      headers: new AxiosHeaders(),
+      config,
+    }))
+    const [game] = await svc.fetchSlate("americanfootball_nfl")
+    const describe = (type: string) => game.booksByMarket.get(type)![0].line.outcomes.map((o) => o.description)
+    expect(describe("spread")).toEqual(["Kansas City Chiefs -6.5", "Las Vegas Raiders +6.5"])
+    expect(describe("total")).toEqual(["Over 45.5", "Under 45.5"])
+  })
+})

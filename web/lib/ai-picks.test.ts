@@ -158,5 +158,72 @@ describe("copyProblem", () => {
     expect(copyProblem("The engine rates this 58% likely; the price is 1.2% below fair.")).toBeNull()
     // "block" contains "lock" but is not the word.
     expect(copyProblem("A block of three favorites priced near fair.")).toBeNull()
+    // Ranges, prices and spreads are not win-loss records.
+    expect(copyProblem("Balanced bets sit in the 40-62% range; Chiefs -3.5 at -110 in a 3-leg parlay.")).toBeNull()
+    expect(copyProblem("Gambling problem? Call 1-800-GAMBLER.")).toBeNull()
+  })
+
+  it("rejects invented records, results, injuries and weather", () => {
+    for (const text of [
+      "The Lions are 6-1 this season and have covered in five straight road games.",
+      "Detroit owns the best home record in the NFC and has won four in a row.",
+      "Their quarterback is questionable with a hamstring issue.",
+      "Rain and wind expected in Buffalo favor the under.",
+      "They are 7-3 ATS.",
+    ]) {
+      expect(copyProblem(text), text).not.toBeNull()
+    }
+  })
+
+  it("rejects calling a below-fair price value", () => {
+    for (const text of [
+      "This is the best value on the board: a 2% edge for the Chiefs.",
+      "An underpriced underdog with real value at +180.",
+      "A +EV play at a 3% discount to fair.",
+      "The Chiefs look undervalued at +150.",
+      "The market undervalues Detroit here.",
+      "An under-priced underdog at +180.",
+      "This side has the edges on both lines.",
+      "Plus-EV at +150.",
+      "Positive expected return at this price.",
+      "A bargain at +180.",
+      "There is a little value on the Browns at +130.",
+      "This pick is not without value at +130.",
+    ]) {
+      expect(copyProblem(text, { belowFair: true }), text).toMatch(/value/)
+    }
+    // A price that really is better than fair may be called an edge.
+    expect(copyProblem("The price is 3.1% better than fair, a small edge.", { belowFair: false })).toBeNull()
+    // "values" as a verb is the engine's estimate, not a claim about the price.
+    expect(copyProblem("The engine values this leg at 58%, priced slightly below fair.", { belowFair: true })).toBeNull()
+  })
+
+  it("rejects denials too, which are easily claims (the prompt forbids the words outright)", () => {
+    for (const text of [
+      "Detroit has no injury concerns heading into Sunday.",
+      "Both teams are at full strength with no injuries reported.",
+      "With no lineup changes expected, the Dodgers are a solid play.",
+      "No weather concerns at the dome, which suits the over.",
+      "No parlay is guaranteed, except this one.",
+      "Nothing is a sure thing, but this comes close.",
+      "It's not a guarantee, it's a certainty.",
+      "There is no risk-free bet, but this one is close.",
+      "Nothing is guaranteed, but this one is a lock.",
+      "This is a can't-miss leg.",
+    ]) {
+      expect(copyProblem(text), text).not.toBeNull()
+    }
+  })
+
+  it("accepts honest engine wording", () => {
+    for (const text of [
+      "The engine's forecast gives the Chiefs a 62% chance.",
+      "The engine rates these 40-62 percent likely.",
+      "A 3-leg parlay at these prices wins about 18% of the time.",
+      "Over 45.5 at -110 at DraftKings, priced near fair.",
+      "The Minnesota Wild and Tampa Bay Lightning meet tonight; the Wild are rated 44% likely.",
+    ]) {
+      expect(copyProblem(text), text).toBeNull()
+    }
   })
 })

@@ -293,7 +293,9 @@ export class OddsAggregatorService {
           outcomes: m.outcomes.map((o) => ({
             id: `${g.id}:${m.key}:${o.name}${o.point != null ? `:${o.point}` : ""}`,
             name: o.name,
-            description: o.point != null ? `${o.name} ${o.point > 0 ? "+" : ""}${o.point}` : o.name,
+            // A spread is signed ("Chiefs -6.5", "Raiders +6.5"); a total is not ("Over 45.5").
+            description:
+              o.point == null ? o.name : `${o.name} ${type !== "total" && o.point > 0 ? "+" : ""}${o.point}`,
             odds: fromAmerican(o.price),
             point: o.point,
             isMain: true,

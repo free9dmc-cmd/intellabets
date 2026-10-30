@@ -9,6 +9,7 @@ import {
   type RiskLevel,
   type SlipCandidate,
 } from "./ai-picks"
+import { sportsbookName } from "./sportsbooks"
 
 const anthropic = new Anthropic({
   apiKey: anthropicKey() ?? undefined,
@@ -86,7 +87,7 @@ Field meanings:
 - price: what the sportsbook pays, in American odds.
 - priceVsFair: the expected return at that price against the engine's estimate, in percent. Positive means the price is better than fair. Negative, which is normal, means the sportsbook's margin makes the price slightly worse than fair.
 
-Write only from these numbers. Never call a bet with a negative priceVsFair "value", an "edge" or "underpriced"; say plainly that it is priced near or slightly below fair. Never mention injuries, statistics, trends, records, streaks, weather, lineups or news: you have none, and inventing them would mislead people betting real money. Keep the tone plain and measured. No guarantees, and no words like "lock", "sure thing" or "risk-free".`
+Write only from these numbers. For a bet whose priceVsFair is zero or negative, do not use the words "value", "edge", "undervalued", "underpriced" or "bargain" at all; say plainly that it is priced near or slightly below fair. Never mention injuries, statistics, trends, records, streaks, weather, lineups or news: you have none, and inventing them would mislead people betting real money. Keep the tone plain and measured. Do not use the words "lock", "sure thing", "certainty", "risk-free" or "guarantee", not even to deny them; the page already explains that every bet can lose.`
 
 function candidateLine(c: SlipCandidate, label: string) {
   return {
@@ -95,7 +96,7 @@ function candidateLine(c: SlipCandidate, label: string) {
     gameId: c.gameId,
     market: c.marketType,
     pick: c.selection,
-    price: `${americanFromDecimal(c.offeredOdds)} at ${c.offeredBook}`,
+    price: `${americanFromDecimal(c.offeredOdds)} at ${sportsbookName(c.offeredBook)}`,
     priceVsFair: `${c.edgePercent > 0 ? "+" : ""}${c.edgePercent.toFixed(1)}%`,
     engineWinChance: `${(c.fairProbability * 100).toFixed(1)}%`,
   }
@@ -217,9 +218,14 @@ ${JSON.stringify(
       analysis: string
     }
     const picks = out.legs.map((l) => byLabel.get(l.label)).filter((p): p is C => !!p)
+    // Each leg's words are checked against its own price; the slip's against all of them.
     const problem =
       (picks.length === out.legs.length ? slipProblem(picks, betType, legs) : "chose an unknown label") ??
-      copyProblem([out.title, out.description, out.analysis, ...out.legs.map((l) => l.reasoning)].join("\n"))
+      copyProblem([out.title, out.description, out.analysis].join("\n"), {
+        belowFair: picks.some((p) => p.edgePercent <= 0),
+      }) ??
+      out.legs.map((l, i) => copyProblem(l.reasoning, { belowFair: picks[i].edgePercent <= 0 })).find(Boolean) ??
+      null
     if (problem) {
       console.error(`AI picks: model's slip ${problem}, using the engine's ranking`)
       return engineChoice(candidates, sport, betType, legs)

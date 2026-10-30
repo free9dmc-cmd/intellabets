@@ -29,6 +29,26 @@ export function devigProportional(decimals: number[]): number[] {
 }
 
 /**
+ * Split one market's books into groups that price the same outcomes (name and
+ * point). Books often hang different numbers on a spread or total -- -3 at one,
+ * -3.5 at another -- and each number is its own bet, so each needs its own
+ * consensus from the books that price exactly it. Groups keep the books' order.
+ */
+export function groupByLine(books: BookMarket[]): BookMarket[][] {
+  const groups = new Map<string, BookMarket[]>()
+  for (const b of books) {
+    const key = b.line.outcomes
+      .map((o) => `${o.name}\u0000${o.point ?? ""}`)
+      .sort()
+      .join("\u0001")
+    const group = groups.get(key)
+    if (group) group.push(b)
+    else groups.set(key, [b])
+  }
+  return Array.from(groups.values())
+}
+
+/**
  * Given the same market captured from several books, build a consensus fair
  * probability per outcome by averaging each book's de-vigged probability, and
  * find the best available price (line shopping).

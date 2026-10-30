@@ -401,11 +401,7 @@ export class PredictionsService {
     })
     if (!p) return null
 
-    const snap = await this.prisma.oddsSnapshot.findFirst({
-      where: { gameId: p.gameId },
-      orderBy: { capturedAt: "desc" },
-      select: { markets: true, capturedAt: true },
-    })
+    const snap = await this.latestSnapshot(p.gameId, p.marketType)
 
     const comparison = compareBooks({
       selection: p.selection,
@@ -438,6 +434,10 @@ export class PredictionsService {
   async board(opts: { sport?: string; book?: string | null; limit?: number } = {}) {
     const now = Date.now()
     const limit = Math.min(Math.max(opts.limit ?? 60, 1), 200)
+    const empty = { candidates: [] as BoardCandidate[], pricesAsOf: null as string | null, booksWithPrices: [] as string[] }
+    const bookKey = resolveBookKey(opts.book)
+    // Offshore and unregistered books are never offered, even when asked for.
+    if (bookKey && !isRoutableBook(bookKey)) return empty
     const games = await this.prisma.game.findMany({
       where: {
         commenceTime: { gt: new Date(now), lt: new Date(now + BOARD_WINDOW_MS) },
@@ -446,15 +446,23 @@ export class PredictionsService {
       orderBy: { commenceTime: "asc" },
       take: 200,
     })
-    const empty = { candidates: [] as BoardCandidate[], pricesAsOf: null as string | null, booksWithPrices: [] as string[] }
     if (games.length === 0) return empty
 
-    const snaps = await this.prisma.oddsSnapshot.findMany({
-      where: { gameId: { in: games.map((g) => g.id) }, capturedAt: { gt: new Date(now - MAX_PRICE_AGE_MS) } },
-      orderBy: [{ gameId: "asc" }, { capturedAt: "desc" }],
-      distinct: ["gameId"],
-      select: { gameId: true, markets: true, capturedAt: true },
-    })
+    // The newest game-line snapshot per game, picked in the database: Prisma
+    // runs `distinct` in memory, which would load every snapshot's markets.
+    const latest = await this.prisma.$queryRaw<{ id: string }[]>`
+      SELECT DISTINCT ON ("gameId") id FROM "OddsSnapshot"
+      WHERE "gameId" IN (${Prisma.join(games.map((g) => g.id))})
+        AND "capturedAt" > ${utcTimestamp(new Date(now - MAX_PRICE_AGE_MS))}::timestamp
+        AND ${HOLDS_GAME_LINES}
+      ORDER BY "gameId", "capturedAt" DESC`
+    const snaps =
+      latest.length === 0
+        ? []
+        : await this.prisma.oddsSnapshot.findMany({
+            where: { id: { in: latest.map((r) => r.id) } },
+            select: { gameId: true, markets: true, capturedAt: true },
+          })
     const engineIds = new Map(
       (
         await this.prisma.prediction.findMany({
@@ -463,7 +471,6 @@ export class PredictionsService {
         })
       ).map((p) => [`${p.gameId}~${p.outcomeId}`, p.id])
     )
-    const bookKey = resolveBookKey(opts.book)
     const byId = new Map(games.map((g) => [g.id, g]))
     const booksWithPrices = new Set<string>()
     const candidates: BoardCandidate[] = []
@@ -472,7 +479,7 @@ export class PredictionsService {
     for (const snap of snaps) {
       const game = byId.get(snap.gameId)
       if (!game) continue
-      const booksByMarket = booksByMarketFrom(snap.markets)
+      const booksByMarket = gameLinesFrom(snap.markets)
       for (const books of booksByMarket.values()) {
         for (const b of books) if (isRoutableBook(b.book)) booksWithPrices.add(b.book)
       }
@@ -518,8 +525,18 @@ export class PredictionsService {
     }
 
     candidates.sort((a, b) => b.edgePercent - a.edgePercent || b.confidence - a.confidence)
+    // Without a book, one side of a market can appear at several numbers
+    // (-3 and -3.5); keep its best-priced one. A team giving points and the
+    // same team getting them (-1.5 vs +1.5) are different bets, so stay apart.
+    const sides = new Set<string>()
+    const board = candidates.filter((c) => {
+      const side = `${c.gameId}|${c.marketType}|${c.outcomeName}|${Math.sign(c.point ?? 0)}`
+      if (sides.has(side)) return false
+      sides.add(side)
+      return true
+    })
     return {
-      candidates: candidates.slice(0, limit),
+      candidates: board.slice(0, limit),
       pricesAsOf: oldest?.toISOString() ?? null,
       booksWithPrices: Array.from(booksWithPrices).sort(),
     }
@@ -546,36 +563,61 @@ export class PredictionsService {
 
     const game = await this.prisma.game.findUnique({ where: { id: gameId } })
     if (!game || game.commenceTime.getTime() <= Date.now()) return null
-    const snap = await this.prisma.oddsSnapshot.findFirst({
-      where: { gameId },
-      orderBy: { capturedAt: "desc" },
-      select: { markets: true },
-    })
+    // The board offers game lines only, so a ref is always one.
+    const snap = await this.latestSnapshot(gameId, "moneyline")
     if (!snap) return null
     const bet = this.engine
-      .analyzeGame(asEngineGame(game), booksByMarketFrom(snap.markets), { minEdgePercent: -100 })
+      .analyzeGame(asEngineGame(game), gameLinesFrom(snap.markets), { minEdgePercent: -100 })
       .find((b) => b.outcomeId === outcomeId)
     if (!bet) return null
-    const created = await this.prisma.prediction.create({
-      data: {
-        gameId,
-        userId: null,
-        source: "board",
-        marketType: bet.marketType,
-        outcomeId: bet.outcomeId,
-        selection: bet.selection,
-        outcomeName: bet.outcomeName,
-        point: bet.point ?? null,
-        fairProbability: bet.fairProbability,
-        offeredOdds: bet.offeredDecimal,
-        offeredBook: bet.offeredBook,
-        edgePercent: bet.edgePercent,
-        kellyStake: bet.kellyStake,
-        confidence: bet.confidence,
-      },
-      select: { id: true },
+    return this.prisma.$transaction(async (tx) => {
+      // Two users choosing the same bet at once must share one row: lock on
+      // the ref, then look again before creating.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${ref}))`
+      const raced = await tx.prediction.findFirst({
+        where: { gameId, outcomeId, status: "pending", userId: null },
+        orderBy: { source: "desc" },
+        select: { id: true },
+      })
+      if (raced) return raced.id
+      const created = await tx.prediction.create({
+        data: {
+          gameId,
+          userId: null,
+          source: "board",
+          marketType: bet.marketType,
+          outcomeId: bet.outcomeId,
+          selection: bet.selection,
+          outcomeName: bet.outcomeName,
+          point: bet.point ?? null,
+          fairProbability: bet.fairProbability,
+          offeredOdds: bet.offeredDecimal,
+          offeredBook: bet.offeredBook,
+          edgePercent: bet.edgePercent,
+          kellyStake: bet.kellyStake,
+          confidence: bet.confidence,
+        },
+        select: { id: true },
+      })
+      return created.id
     })
-    return created.id
+  }
+
+  /**
+   * The newest snapshot of a game holding this kind of market. Game lines and
+   * player props are captured by separate jobs into separate snapshots, so the
+   * newest snapshot of any kind can be missing the market entirely.
+   */
+  private async latestSnapshot(gameId: string, marketType: string) {
+    const holds = isGameLine(marketType) ? HOLDS_GAME_LINES : Prisma.sql`NOT ${HOLDS_GAME_LINES}`
+    const [row] = await this.prisma.$queryRaw<{ id: string }[]>`
+      SELECT id FROM "OddsSnapshot" WHERE "gameId" = ${gameId} AND ${holds}
+      ORDER BY "capturedAt" DESC LIMIT 1`
+    if (!row) return null
+    return this.prisma.oddsSnapshot.findUnique({
+      where: { id: row.id },
+      select: { id: true, markets: true, capturedAt: true },
+    })
   }
 
   /**
@@ -610,32 +652,32 @@ export class PredictionsService {
     const byId = new Map(preds.map((p) => [p.id, p]))
     const now = Date.now()
 
+    // Offshore and unregistered books are never named or priced, even when asked for.
+    const requested = resolveBookKey(opts.book)
+    const bookKey = requested && isRoutableBook(requested) ? requested : null
+
     const legs: BetslipLeg[] = []
     const linkInputs: (BookPriceInput | null)[] = []
-    const fairByGame = new Map<string, Map<string, number>>()
+    const fairBySnapshot = new Map<string, Map<string, number>>()
     let oldestPrices: Date | null = null
     for (const id of unique) {
       const p = byId.get(id)
       if (!p) continue
-      const snap = await this.prisma.oddsSnapshot.findFirst({
-        where: { gameId: p.gameId },
-        orderBy: { capturedAt: "desc" },
-        select: { markets: true, capturedAt: true },
-      })
+      const snap = await this.latestSnapshot(p.gameId, p.marketType)
       if (snap && (!oldestPrices || snap.capturedAt < oldestPrices)) oldestPrices = snap.capturedAt
       const prices = snap ? pricesFromSnapshot(snap.markets, p.outcomeId) : new Map<string, BookPriceInput>()
-      if (snap && !fairByGame.has(p.gameId)) {
+      if (snap && !fairBySnapshot.has(snap.id)) {
         const bets = this.engine.analyzeGame(asEngineGame(p.game), booksByMarketFrom(snap.markets), { minEdgePercent: -100 })
-        fairByGame.set(p.gameId, new Map(bets.map((b) => [b.outcomeId, b.fairProbability])))
+        fairBySnapshot.set(snap.id, new Map(bets.map((b) => [b.outcomeId, b.fairProbability])))
       }
       // The stored value is a fallback for an outcome no longer in the prices.
-      const fair = fairByGame.get(p.gameId)?.get(p.outcomeId) ?? p.fairProbability
+      const fair = (snap && fairBySnapshot.get(snap.id)?.get(p.outcomeId)) ?? p.fairProbability
       const comparison = compareBooks({
         selection: p.selection,
         matchup: `${p.game.awayTeam} @ ${p.game.homeTeam}`,
         stake,
         pricesByBook: prices,
-        preferredBook: opts.book ?? null,
+        preferredBook: bookKey,
         state: opts.state ?? null,
       })
       const atBook = comparison.preferred
@@ -656,7 +698,6 @@ export class PredictionsService {
       linkInputs.push(atBook ? prices.get(atBook.book) ?? null : null)
     }
 
-    const bookKey = resolveBookKey(opts.book)
     const entry = getSportsbook(bookKey)
     const allPriced = legs.length > 0 && legs.every((l) => l.atBook)
     // Kept at the snapshots' 4 dp so a one-leg slip matches its leg's price.
@@ -680,9 +721,9 @@ export class PredictionsService {
 
     const missing = legs.filter((l) => !l.atBook).length
     const notBetslip = legs.filter((l) => l.atBook && l.atBook.linkKind !== "betslip").length
-    const bookName = entry?.name ?? opts.book ?? null
+    const bookName = entry?.name ?? bookKey
     let note: string
-    if (!bookKey) note = "Pick your sportsbook to see its prices and betslip links."
+    if (!bookKey) note = "No sportsbook chosen, so each leg shows the best price at any licensed book. Pick your sportsbook to see its own prices."
     else if (legs.length === 0) note = "None of these picks were found."
     else if (missing > 0) note = `${bookName} has no current price for ${missing} of these ${legs.length} legs. Swap those legs or use another book.`
     else if (notBetslip > 0)
@@ -834,16 +875,17 @@ export class PredictionsService {
     // land in a narrow window before kickoff, which at a 30-minute poll
     // interval often does not happen). Correctness comes from the capturedAt
     // bound instead: prefer a flagged snapshot, but only ever consider
-    // snapshots taken before commenceTime.
-    const target =
-      (await this.prisma.oddsSnapshot.findFirst({
-        where: { gameId, isClosing: true, capturedAt: { lt: commenceTime } },
-        orderBy: { capturedAt: "desc" },
-      })) ??
-      (await this.prisma.oddsSnapshot.findFirst({
-        where: { gameId, capturedAt: { lt: commenceTime } },
-        orderBy: { capturedAt: "desc" },
-      }))
+    // snapshots taken before commenceTime. Only game-line predictions are
+    // graded here, so a later props-only snapshot must not stand in.
+    const [row] = await this.prisma.$queryRaw<{ id: string }[]>`
+      SELECT id FROM "OddsSnapshot"
+      WHERE "gameId" = ${gameId}
+        AND "capturedAt" < ${utcTimestamp(commenceTime)}::timestamp
+        AND ${HOLDS_GAME_LINES}
+      ORDER BY "isClosing" DESC, "capturedAt" DESC LIMIT 1`
+    const target = row
+      ? await this.prisma.oddsSnapshot.findUnique({ where: { id: row.id }, select: { markets: true } })
+      : null
 
     // No pregame snapshot means no honest closing line. Leave CLV null rather
     // than inventing one from a price that was never available pregame.
@@ -969,6 +1011,32 @@ function asEngineGame<G extends { sport: string }>(game: G): G & { sport: Sport 
 /** A stored snapshot's markets as the engine's input shape. */
 function booksByMarketFrom(markets: unknown): Map<string, BookMarket[]> {
   return new Map(Object.entries((markets ?? {}) as Record<string, BookMarket[]>))
+}
+
+/** The markets the game-line poll captures; props are keyed "<market>|<player>". */
+const GAME_LINE_MARKETS: readonly string[] = ["moneyline", "spread", "total"]
+
+function isGameLine(marketType: string): boolean {
+  return GAME_LINE_MARKETS.includes(marketType)
+}
+
+/** A snapshot's game-line markets only. */
+function gameLinesFrom(markets: unknown): Map<string, BookMarket[]> {
+  return new Map(Array.from(booksByMarketFrom(markets)).filter(([type]) => isGameLine(type)))
+}
+
+/** SQL: the snapshot holds game lines (markets is jsonb keyed by market type). */
+const HOLDS_GAME_LINES = Prisma.sql`(
+  (markets -> 'moneyline') IS NOT NULL OR (markets -> 'spread') IS NOT NULL OR (markets -> 'total') IS NOT NULL
+)`
+
+/**
+ * A Date as the text of a UTC timestamp, for comparing with a Prisma DateTime
+ * column (timestamp without time zone, stored in UTC) in raw SQL whatever the
+ * session's time zone.
+ */
+function utcTimestamp(d: Date): string {
+  return d.toISOString().replace("T", " ").replace("Z", "")
 }
 
 /**

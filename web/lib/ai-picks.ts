@@ -203,23 +203,40 @@ export function upcomingGameCount(preds: SlipCandidate[], now: number): number {
 /**
  * Words the slip text must not contain, or null. Inducements a licensed
  * operator's partners commit not to use, and claims the model has no data for
- * (it gets prices and probabilities only, so any injury, weather, lineup or
- * record talk is invented).
+ * (it gets prices and probabilities only, so any injury, weather, lineup,
+ * record or results talk is invented).
+ *
+ * Denials count too ("nothing is guaranteed", "no injury concerns"): the
+ * prompt tells the model not to use these words at all, because a denial is
+ * easily the start of a claim ("not a guarantee, it's a certainty") or a
+ * claim itself ("Detroit has no injury concerns").
+ *
+ * With `belowFair`, the text describes a bet priced at or below fair, and may
+ * not call it value, an edge, undervalued or underpriced.
  */
-export function copyProblem(text: string): string | null {
+export function copyProblem(text: string, opts: { belowFair?: boolean } = {}): string | null {
   const banned: [RegExp, string][] = [
-    [/\blocks?\b/i, "\"lock\""],
+    [/\blocks?\b|\blocked in\b/i, "\"lock\""],
     [/\brisk[- ]?free\b/i, "\"risk-free\""],
-    [/\bfree bets?\b/i, "\"free bet\""],
-    [/\bsure thing\b/i, "\"sure thing\""],
+    [/\bfree (bets?|money)\b/i, "\"free bet\""],
+    [/\bsure (things?|bets?)\b|\bcan'?t[- ]miss\b|\bno[- ]brainer\b|\b(near[- ])?certain(ty)?\b/i, "\"sure thing\""],
     [/\b(can'?t|cannot) lose\b/i, "\"can't lose\""],
     [/\bguarantee[sd]?\b/i, "a guarantee"],
-    [/\binjur(y|ies|ed)\b/i, "injuries"],
+    [/\binjur(y|ies|ed)\b|\b(questionable|doubtful|ruled out|sidelined|hamstring|ankle|knee|concussion)\b/i, "injuries"],
     [/\blineups?\b/i, "lineups"],
-    [/\bweather\b/i, "weather"],
-    [/\bstreaks?\b/i, "streaks"],
-    [/\blast \d+ (games|meetings)\b/i, "past results"],
+    [/\bweather\b|\b(rain|wind|windy|snow)\b|\b(weather|in the) forecast\b/i, "weather"],
+    [/\bstreaks?\b|\bin a row\b|\bstraight (games|wins|losses|covers|road|home|starts|weeks|seasons)\b/i, "streaks"],
+    // Win-loss records such as "6-1"; not prices (-110), spreads (-3.5) or ranges like 40-62%.
+    [/\brecords?\b|(?<![-+.\d])\b\d{1,2}-\d{1,2}\b(?![.\d]|\s*(%|percent|points?\b))/i, "records"],
+    [/\blast \d+ (games|meetings)\b|\b(has|have|had) (won|lost|covered|beaten|dropped)\b/i, "past results"],
+    [/\bATS\b|\bper game\b|\b(this|last) season\b/i, "statistics"],
   ]
+  if (opts.belowFair) {
+    banned.push([
+      /\b(value|edges?|under-?priced|mispriced|overlay|bargain)\b|\bunder-?valu\w*|\+\s?EV\b|\bEV\+|\b(plus|positive)[- ]?(EV|expected (value|return))\b/i,
+      "value at a below-fair price",
+    ])
+  }
   for (const [re, what] of banned) if (re.test(text)) return `mentions ${what}`
   return null
 }

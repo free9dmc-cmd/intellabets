@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { chooseAISlip } from "@/lib/ai"
 import {
   LEG_COUNT,
+  defaultSelection,
   eligibleCandidates,
   inRiskBand,
   isAISport,
@@ -76,8 +77,8 @@ export async function POST(req: Request) {
   }
 
   // A parlay is placed at one book, so it needs one. The saved book covers a
-  // new browser that has not chosen yet.
-  const book = sportsbookKey(body.book) ?? sportsbookKey(user?.preferredBook)
+  // caller that sent no book at all; an explicit null is "best price anywhere".
+  const book = body.book === undefined ? sportsbookKey(user?.preferredBook) : sportsbookKey(body.book)
   if (!book && betType !== "single") {
     return NextResponse.json(
       { error: "Choose your sportsbook: a parlay has to be placed at one book.", code: "BOOK_REQUIRED" },
@@ -115,8 +116,10 @@ export async function POST(req: Request) {
     .map((c) => ({ ...c, id: c.ref }))
   const candidates = eligibleCandidates(inBand, betType, legs, now)
 
+  // The engine's own pick exists whenever any legal slip does, so without one
+  // the model is not asked (it could only fail the same rules).
   const choice =
-    candidates.length >= legs
+    candidates.length >= legs && defaultSelection(candidates, betType, legs)
       ? await chooseAISlip({ sport, betType, riskLevel, legs, candidates, budgetMs: remaining() - 12_000 })
       : null
   if (!choice) {
@@ -150,6 +153,14 @@ export async function POST(req: Request) {
       notice: "Live odds are refreshing. Please try again in a few minutes.",
     })
   }
+  // The board only offers bets the chosen book prices, so a leg it no longer
+  // prices means new odds landed while the slip was being built.
+  if (book && slip.legs.some((l) => !l.atBook)) {
+    return NextResponse.json({
+      betslip: null,
+      notice: `${slip.book?.name ?? "Your sportsbook"} just updated its odds. Please generate the slip again.`,
+    })
+  }
 
   // The board ref became a prediction; reasons are keyed by ref, legs come back in order.
   const legsOut = slip.legs.map((l, i) => ({
@@ -162,7 +173,9 @@ export async function POST(req: Request) {
   // legs multiplied would overstate the payout: show no combined price.
   const sgp = betType === "same-game-parlay"
   const single = slip.legs.length === 1 ? slip.legs[0] : null
-  const singlePrice = single ? single.atBook ?? single.best : null
+  // With a book chosen every leg is priced there (checked above); the best
+  // price anywhere stands in only when no book was chosen.
+  const singlePrice = single ? (book ? single.atBook : single.atBook ?? single.best) : null
   const combinedDecimal = sgp ? null : single ? singlePrice?.oddsDecimal ?? null : slip.combinedDecimal
   const payout = combinedDecimal ? Math.round(slip.stake * combinedDecimal * 100) / 100 : null
 

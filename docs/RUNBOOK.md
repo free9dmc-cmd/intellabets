@@ -181,6 +181,21 @@ How a slip is built:
 on Engine Picks and never count in the engine's scoreboard
 (`/predictions/performance`).
 
+The board offers game lines only (moneyline, spread, total), each priced
+from the newest game-line snapshot, so an admin props ingest never hides a
+game's lines. Each line number gets its own consensus from the books that
+price exactly that number (`groupByLine` in `devig.ts`), and needs at least
+3 such books.
+
+**Do not roll the engine back past the commit that added
+`Prediction.source`** without a plan. The engine boots with
+`prisma db push --accept-data-loss`, so an older image drops the column:
+board rows then show on Engine Picks and in the scoreboard, and after rolling
+forward again every one of them is labelled `engine`. To repair after such a
+rollback, re-tag them on the engine database: engine picks always clear the
+engine's 2% edge bar, board rows usually do not
+(`UPDATE "Prediction" SET source = 'board' WHERE "userId" IS NULL AND "edgePercent" < 2 AND "createdAt" > '<deploy time of that commit>'`).
+
 Which books can be chosen depends on `ODDS_REGIONS` on Render. `us` covers
 DraftKings, FanDuel, BetMGM, BetRivers and, when The Odds API lists them,
 Caesars and Fanatics. `us2` adds Hard Rock, theScore Bet, Bally Bet and

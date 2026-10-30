@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common"
-import { buildConsensus, BookMarket } from "./devig"
+import { buildConsensus, groupByLine, BookMarket } from "./devig"
 import type { Market } from "../sportsbook/types/provider.types"
 import type { ConsensusOutcome, EngineConfig, ValueBet } from "./prediction.types"
 
@@ -40,19 +40,26 @@ export class PredictionEngineService {
     const cfg = { ...DEFAULTS, ...config }
     const results: ValueBet[] = []
 
-    for (const [marketType, books] of booksByMarket.entries()) {
-      if (books.length < cfg.minBooks) {
-        this.logger.debug(
-          `Skipping ${marketType} for ${game.canonicalId}: only ${books.length} books (need ${cfg.minBooks})`
-        )
-        continue
-      }
+    for (const [marketType, allBooks] of booksByMarket.entries()) {
+      // Each line number is analysed with only the books that price it, so
+      // the book count is the count behind that consensus.
+      for (const books of groupByLine(allBooks)) {
+        // A line listed with one side only has nothing to de-vig against: its
+        // "fair" chance would come out as 100%.
+        if (books[0].line.outcomes.length < 2) continue
+        if (books.length < cfg.minBooks) {
+          this.logger.debug(
+            `Skipping a ${marketType} line for ${game.canonicalId}: only ${books.length} books (need ${cfg.minBooks})`
+          )
+          continue
+        }
 
-      const consensus = buildConsensus(books)
+        const consensus = buildConsensus(books)
 
-      for (const outcome of consensus) {
-        const bet = this.evaluateOutcome(game, marketType, outcome, books.length, cfg)
-        if (bet) results.push(bet)
+        for (const outcome of consensus) {
+          const bet = this.evaluateOutcome(game, marketType, outcome, books.length, cfg)
+          if (bet) results.push(bet)
+        }
       }
     }
 

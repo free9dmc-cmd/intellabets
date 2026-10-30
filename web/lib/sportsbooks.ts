@@ -22,6 +22,18 @@ export const SPORTSBOOK_CHOICES: readonly { key: string; name: string; usesState
 
 const BOOK_KEYS = new Set(SPORTSBOOK_CHOICES.map((b) => b.key))
 
+/** Licensed books the engine may name as the best price without being a "my book" choice. */
+const OTHER_BOOK_NAMES: Readonly<Record<string, string>> = {
+  hardrockbet_az: "Hard Rock Bet",
+  hardrockbet_fl: "Hard Rock Bet",
+  hardrockbet_oh: "Hard Rock Bet",
+}
+
+/** A book's display name for an Odds API key ("williamhill_us" -> "Caesars"); the key if unknown. */
+export function sportsbookName(key: string): string {
+  return SPORTSBOOK_CHOICES.find((b) => b.key === key)?.name ?? OTHER_BOOK_NAMES[key] ?? key
+}
+
 /** The book key if it is one we offer, otherwise null. */
 export function sportsbookKey(raw: unknown): string | null {
   return typeof raw === "string" && BOOK_KEYS.has(raw) ? raw : null
