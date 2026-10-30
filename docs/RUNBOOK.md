@@ -196,10 +196,12 @@ rollback, re-tag them on the engine database: engine picks always clear the
 engine's 2% edge bar, board rows usually do not
 (`UPDATE "Prediction" SET source = 'board' WHERE "userId" IS NULL AND "edgePercent" < 2 AND "createdAt" > '<deploy time of that commit>'`).
 
-Which books can be chosen depends on `ODDS_REGIONS` on Render. `us` covers
+Which books have prices depends on `ODDS_REGIONS` on Render. `us` covers
 DraftKings, FanDuel, BetMGM, BetRivers and, when The Odds API lists them,
 Caesars and Fanatics. `us2` adds Hard Rock, theScore Bet, Bally Bet and
-betPARX. If a book has no prices, AI Picks names the books that do.
+betPARX but doubles the credits per call, so it is off on the 20K plan (see
+`render.yaml` for the credit maths). If a book has no prices, AI Picks names
+the books that do.
 
 ## Dependency security
 
@@ -284,9 +286,18 @@ until it is moved to a current Expo SDK or removed.
 
 ## Known issues
 
+**2026-10-25 20:31 UTC to 2026-10-30: no live odds again, `401
+OUT_OF_USAGE_CREDITS`.** The key from 2026-10-25 ran out of credits the same
+day (the plan was smaller than the engine's usage). On 2026-10-30 the owner
+moved The Odds API to the 20K plan, and the engine was set to fit it:
+`ODDS_REGIONS=us`, `POLL_INTERVAL_MIN=45`, `SETTLE_INTERVAL_MIN=180`, about
+14,000 credits a month. More books (`us2`) or 30-minute odds need the 100K
+plan. If the error persists after an upgrade, the plan may come with a new
+key: set it as `THE_ODDS_API_KEY` on Render.
+
 **Resolved 2026-10-25: no live odds from 2026-09-14 to 2026-10-25.** The owner
-replaced the key, moved The Odds API to the 100K plan and the engine to
-Render Starter; odds resumed at 09:00 UTC. Kept for reference:
+replaced the key and moved the engine to Render Starter; odds resumed at
+09:00 UTC. Kept for reference:
 - **What fails.** Every poll returns `401` for every sport, so there are no
   upcoming games or picks. The Engine Picks page and AI Picks are empty, and AI
   Picks says live odds are unavailable rather than inventing games.
@@ -295,10 +306,10 @@ Render Starter; odds resumed at 09:00 UTC. Kept for reference:
   Render. The engine redeploys and polls on the next 30-minute boundary;
   `/api/admin/health` → `odds-feed` shows when odds last arrived and the
   credits left.
-- **Plan size.** At the defaults (3 markets x 1 region per `/odds` call, 5
-  sports, every 30 min, plus `/scores` settlement hourly) the engine uses
-  roughly 28,000 credits a month while awake, more than the 20K plan. Use the
-  100K plan, or cut `ACTIVE_SPORTS` / raise `POLL_INTERVAL_MIN`.
+- **Plan size.** At 3 markets x 1 region per `/odds` call, 5 sports, every
+  30 min, plus `/scores` settlement hourly, the engine uses roughly 28,000
+  credits a month, more than the 20K plan. The settings above fit the 20K
+  plan; `render.yaml` has the maths.
 - **Also.** The engine is on Render's free plan, which sleeps after 15 minutes
   without traffic, and nothing polls while it sleeps. Move it to Starter for
   odds that stay current.
