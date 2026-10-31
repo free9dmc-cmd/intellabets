@@ -288,8 +288,8 @@ until it is moved to a current Expo SDK or removed.
 
 **Resolved 2026-10-31 00:00 UTC: no live odds from 2026-10-25 20:31 UTC,
 `401 OUT_OF_USAGE_CREDITS`.** Odds resumed once the 20K plan's key was set
-on Render (first poll used 12 credits; about 46 a 135-minute cycle including
-scores, on pace for ~14,000 a month). The key from 2026-10-25 ran out of credits the same
+on Render. The first two hours used 46 credits (three polls of 12 plus one
+scores run), on pace for about 14,000 a month. The key from 2026-10-25 ran out of credits the same
 day (the plan was smaller than the engine's usage). On 2026-10-30 the owner
 moved The Odds API to the 20K plan, and the engine was set to fit it:
 `ODDS_REGIONS=us`, `POLL_INTERVAL_MIN=45`, `SETTLE_INTERVAL_MIN=180`, about
