@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Link from "next/link"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
@@ -335,6 +336,15 @@ export default function PremiumPage() {
           ))}
         </div>
       </div>
+
+      <p className="text-gray-600 text-xs text-center">
+        21+ only. Betting involves risk and no outcome is guaranteed. If gambling is a problem,
+        call 1-800-GAMBLER. See our{" "}
+        <Link href="/responsible-gambling" className="text-purple-400 hover:underline">
+          responsible gambling resources
+        </Link>
+        .
+      </p>
     </div>
   )
 }
