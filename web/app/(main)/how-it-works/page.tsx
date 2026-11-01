@@ -161,7 +161,8 @@ export default function HowItWorksPage() {
         <p>
           See also our <Link href="/terms" className="text-purple-400 hover:underline">Terms</Link> and{" "}
           <Link href="/privacy" className="text-purple-400 hover:underline">Privacy Policy</Link>,{" "}
-          <Link href="/closing-line-value" className="text-purple-400 hover:underline">Closing Line Value explained</Link>, and{" "}
+          <Link href="/closing-line-value" className="text-purple-400 hover:underline">Closing Line Value explained</Link>, the{" "}
+          <Link href="/devig-calculator" className="text-purple-400 hover:underline">no-vig calculator</Link>, and{" "}
           <Link href="/responsible-gambling" className="text-purple-400 hover:underline">Responsible Gambling</Link>.
         </p>
       </section>
