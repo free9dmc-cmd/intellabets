@@ -397,6 +397,21 @@ describe("copyProblem for player props", () => {
     "A career-high pace makes this attractive.",
     "He's been hot lately.",
     "His minutes have increased.",
+    // Found by the review: other wordings of the same claims.
+    "Seven of his last ten games went over this number.",
+    "Over in 4 of the past 5 games.",
+    "He\u2019s cleared this number often.",
+    "Tatum gets more shots with Jaylen Brown out.",
+    "He is in great form.",
+    "He is on fire.",
+    "Tatum is a 27 PPG scorer.",
+    "He is the top scorer.",
+    "It's a revenge game for him against his former team.",
+    "Tatum's minutes are up.",
+    "He dropped 35 on Tuesday.",
+    "He has been putting up 27 a night.",
+    "He is shooting 45% from three.",
+    "Orlando's offense runs through Banchero.",
   ]
   const legitimate = [
     "LeBron James Over 24.5 Points is priced near fair at -110.",
@@ -407,6 +422,16 @@ describe("copyProblem for player props", () => {
     "Andrei Svechnikov Over 2.5 Shots on Goal is priced close to fair.",
     "Two player props from the same game; the book prices the parlay itself.",
     "Payout is about $26 on a $10 stake.",
+    // Found by the review: honest risk wording that must not be rejected.
+    "This parlay carries more risk because every leg must win.",
+    "Each leg carries the sportsbook's usual margin.",
+    "This slip targets the best-priced Balanced props.",
+    "Both legs have been chosen from the same game.",
+    "The price has been set slightly below fair.",
+    "A same-game parlay allows the book to price the combination itself.",
+    "These are the most recent prices in the feed.",
+    "Two props from the Celtics-Magic matchup.",
+    "Both legs must win, so the combined chance is about 26%.",
   ]
 
   it("rejects invented player stats and news", () => {
@@ -418,6 +443,26 @@ describe("copyProblem for player props", () => {
       expect(copyProblem(text, { props: true }), text).toBeNull()
       expect(copyProblem(text, { props: true, belowFair: true }), text).toBeNull()
     }
+  })
+
+  it("rejects injury and availability news for any slip", () => {
+    for (const text of [
+      "Jaylen Brown won't play tonight.",
+      "Brown will miss tonight's game.",
+      "Brown is day-to-day.",
+      "He is a game-time decision.",
+      "It is the second night of a back-to-back.",
+      "Brown is listed as probable.",
+    ]) {
+      expect(copyProblem(text), text).toBe("mentions injuries")
+    }
+    expect(copyProblem("The favorite is the more probable leg at 64%.")).toBeNull()
+  })
+
+  it("does not read the slip's own names as banned words", () => {
+    const text = "Drew Lock Over 199.5 Passing Yards is priced near fair."
+    expect(copyProblem(text, { props: true })).toMatch(/lock/)
+    expect(copyProblem(text, { props: true, names: ["Drew Lock Over 199.5 Passing Yards", "Drew Lock"] })).toBeNull()
   })
 
   it("keeps every other check for props", () => {

@@ -100,7 +100,7 @@ export function personNames(firstVariants: string[], lastVariants: string[]): Pe
 }
 
 export type PlayerMatch<T> =
-  /** Exactly one player has this name, or a unique first initial and last name. */
+  /** Exactly one player has this name, or the same surname and the same first name (see sameFirstName). */
   | { kind: "found"; player: T }
   /** More than one dressed player has this name; never guess between them. */
   | { kind: "ambiguous"; candidates: T[] }
@@ -122,25 +122,96 @@ export function matchPlayer<T extends PersonNames>(players: T[], oddsName: strin
   if (byFullName.length === 1) return { kind: "found", player: byFullName[0] }
   if (byFullName.length > 1) return { kind: "ambiguous", candidates: byFullName }
 
-  // "Joe Veleno" for a Joseph with no "Joe" variant: same last name and the
-  // same start of the first name. A full first name must share two letters:
-  // a "Jack Miller" who did not dress must not be graded on a dressed
-  // "J.T. Miller". A feed name that is itself an initial ("J. Miller") can
-  // only be matched on that letter.
-  const first = name.split(" ")[0]
-  const firstStart = first.length === 1 ? first : first.slice(0, 2)
-  const byInitial = players.filter(
-    (p) => p.lastNames.some((l) => name.endsWith(" " + l)) && p.firstNames.some((f) => f.startsWith(firstStart))
-  )
-  if (byInitial.length === 1) return { kind: "found", player: byInitial[0] }
-  if (byInitial.length > 1) return { kind: "ambiguous", candidates: byInitial }
+  const byFirstName = players.filter((p) => sameSurnameAndFirstName(p, name))
+  if (byFirstName.length === 1) return { kind: "found", player: byFirstName[0] }
+  if (byFirstName.length > 1) return { kind: "ambiguous", candidates: byFirstName }
 
-  // Loose on purpose: anything close to a dressed player's surname leaves the
-  // prop pending rather than voiding it as "did not play".
+  return nearSurname(players, name) ? { kind: "unsure" } : { kind: "absent" }
+}
+
+export type GameMatch<T, R> =
+  /** One player of either club has this name, and he dressed. */
+  | { kind: "found"; player: T }
+  /** More than one player of the two clubs has this name: never guess. */
+  | { kind: "ambiguous"; candidates: (T | R)[] }
+  | { kind: "unsure" }
+  /** He is on a club's roster but did not dress, or is on neither club. */
+  | { kind: "absent" }
+
+/**
+ * matchPlayer for a game, checked against both clubs' full rosters as well as
+ * the players who dressed. A name shared by two players of the clubs (VAN has
+ * two Elias Petterssons) is ambiguous even when only one of them dressed, and
+ * a rostered player who did not dress is absent, never graded on a dressed
+ * teammate with a similar name.
+ */
+export function matchInGame<T extends PersonNames & { playerId: number }, R extends PersonNames & { playerId: number }>(
+  dressed: T[],
+  rostered: R[],
+  oddsName: string
+): GameMatch<T, R> {
+  const name = normalizePersonName(oddsName)
+  if (!name) return { kind: "unsure" }
+  const everyone = new Map<number, T | R>()
+  for (const p of rostered) everyone.set(p.playerId, p)
+  for (const p of dressed) everyone.set(p.playerId, p)
+  const all = Array.from(everyone.values())
+  const dressedById = new Map(dressed.map((p) => [p.playerId, p]))
+
+  const pick = (candidates: (T | R)[]): GameMatch<T, R> | null => {
+    if (candidates.length > 1) return { kind: "ambiguous", candidates }
+    if (candidates.length === 0) return null
+    const player = dressedById.get(candidates[0].playerId)
+    return player ? { kind: "found", player } : { kind: "absent" }
+  }
+
+  return (
+    pick(all.filter((p) => p.fullNames.includes(name))) ??
+    pick(all.filter((p) => sameSurnameAndFirstName(p, name))) ??
+    (nearSurname(all, name) ? { kind: "unsure" } : { kind: "absent" })
+  )
+}
+
+/**
+ * Nicknames that are not a prefix of the full first name ("Joe" for
+ * "Joseph"); prefixes of 3 letters or more ("Mitch", "Alex") match anyway.
+ */
+const NICKNAMES: readonly (readonly [string, string])[] = [
+  ["joe", "joseph"], ["joey", "joseph"], ["jake", "jacob"], ["tom", "thomas"], ["tommy", "thomas"],
+  ["tony", "anthony"], ["bill", "william"], ["billy", "william"], ["bob", "robert"], ["bobby", "robert"],
+  ["jim", "james"], ["jimmy", "james"], ["mike", "michael"], ["mikey", "michael"], ["nate", "nathan"],
+  ["nate", "nathaniel"], ["andy", "andrew"], ["drew", "andrew"], ["danny", "daniel"], ["matty", "matthew"],
+  ["freddie", "frederick"], ["eddie", "edward"], ["ted", "edward"], ["teddy", "theodore"], ["chuck", "charles"],
+  ["charlie", "charles"], ["dave", "david"], ["davey", "david"], ["steve", "stephen"], ["rick", "richard"],
+  ["ricky", "richard"], ["dick", "richard"], ["kenny", "kenneth"], ["sasha", "alexander"], ["jack", "john"],
+]
+
+/**
+ * Same surname, and a first name that is the same person's: equal, a prefix
+ * of at least 3 letters, a known nickname, or the feed's lone initial ("J.
+ * Miller"). "Anders" and "Andre" are different people.
+ */
+function sameSurnameAndFirstName(p: PersonNames, name: string): boolean {
+  const surname = p.lastNames.find((l) => name.endsWith(" " + l))
+  if (!surname) return false
+  const first = name.slice(0, name.length - surname.length - 1).split(" ")[0]
+  return p.firstNames.some((f) => sameFirstName(first, f.split(" ")[0]))
+}
+
+function sameFirstName(a: string, b: string): boolean {
+  if (!a || !b) return false
+  if (a === b) return true
+  if (a.length === 1) return b.startsWith(a)
+  const [short, long] = a.length <= b.length ? [a, b] : [b, a]
+  if (short.length >= 3 && long.startsWith(short)) return true
+  return NICKNAMES.some(([x, y]) => (x === a && y === b) || (x === b && y === a))
+}
+
+/** Loose on purpose: anything close to a surname leaves the prop pending rather than voiding it. */
+function nearSurname(players: PersonNames[], name: string): boolean {
   const lastToken = name.split(" ").pop() ?? name
-  const nearSurname = (l: string) => l.split(" ").pop() === lastToken || compact(name).endsWith(compact(l))
-  if (players.some((p) => p.lastNames.some(nearSurname))) return { kind: "unsure" }
-  return { kind: "absent" }
+  const near = (l: string) => l.split(" ").pop() === lastToken || compact(name).endsWith(compact(l))
+  return players.some((p) => p.lastNames.some(near))
 }
 
 function unique(values: string[]): string[] {

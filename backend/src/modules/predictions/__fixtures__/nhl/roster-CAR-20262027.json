@@ -1,0 +1,260 @@
+{
+ "forwards": [
+  {
+   "id": 8478427,
+   "firstName": {
+    "default": "Sebastian"
+   },
+   "lastName": {
+    "default": "Aho"
+   },
+   "positionCode": "C"
+  },
+  {
+   "id": 8482809,
+   "firstName": {
+    "default": "Jackson"
+   },
+   "lastName": {
+    "default": "Blake"
+   },
+   "positionCode": "R"
+  },
+  {
+   "id": 8477478,
+   "firstName": {
+    "default": "William"
+   },
+   "lastName": {
+    "default": "Carrier"
+   },
+   "positionCode": "L"
+  },
+  {
+   "id": 8475235,
+   "firstName": {
+    "default": "Nicolas"
+   },
+   "lastName": {
+    "default": "Deslauriers"
+   },
+   "positionCode": "L"
+  },
+  {
+   "id": 8477940,
+   "firstName": {
+    "default": "Nikolaj"
+   },
+   "lastName": {
+    "default": "Ehlers"
+   },
+   "positionCode": "L"
+  },
+  {
+   "id": 8475791,
+   "firstName": {
+    "default": "Taylor"
+   },
+   "lastName": {
+    "default": "Hall"
+   },
+   "positionCode": "L"
+  },
+  {
+   "id": 8476873,
+   "firstName": {
+    "default": "Mark"
+   },
+   "lastName": {
+    "default": "Jankowski"
+   },
+   "positionCode": "L"
+  },
+  {
+   "id": 8482093,
+   "firstName": {
+    "default": "Seth"
+   },
+   "lastName": {
+    "default": "Jarvis"
+   },
+   "positionCode": "R"
+  },
+  {
+   "id": 8480829,
+   "firstName": {
+    "default": "Jesperi"
+   },
+   "lastName": {
+    "default": "Kotkaniemi"
+   },
+   "positionCode": "C"
+  },
+  {
+   "id": 8476921,
+   "firstName": {
+    "default": "Jordan"
+   },
+   "lastName": {
+    "default": "Martinook"
+   },
+   "positionCode": "L"
+  },
+  {
+   "id": 8480762,
+   "firstName": {
+    "default": "Eric"
+   },
+   "lastName": {
+    "default": "Robinson"
+   },
+   "positionCode": "L"
+  },
+  {
+   "id": 8473533,
+   "firstName": {
+    "default": "Jordan"
+   },
+   "lastName": {
+    "default": "Staal"
+   },
+   "positionCode": "C"
+  },
+  {
+   "id": 8482702,
+   "firstName": {
+    "default": "Logan"
+   },
+   "lastName": {
+    "default": "Stankoven"
+   },
+   "positionCode": "C"
+  },
+  {
+   "id": 8480830,
+   "firstName": {
+    "default": "Andrei",
+    "cs": "Andrej",
+    "sk": "Andrej"
+   },
+   "lastName": {
+    "default": "Svechnikov",
+    "cs": "Svečnikov",
+    "fi": "Svetshnikov",
+    "sk": "Svečnikov"
+   },
+   "positionCode": "R"
+  }
+ ],
+ "defensemen": [
+  {
+   "id": 8478970,
+   "firstName": {
+    "default": "Jalen"
+   },
+   "lastName": {
+    "default": "Chatfield"
+   },
+   "positionCode": "D"
+  },
+  {
+   "id": 8476906,
+   "firstName": {
+    "default": "Shayne"
+   },
+   "lastName": {
+    "default": "Gostisbehere"
+   },
+   "positionCode": "D"
+  },
+  {
+   "id": 8480817,
+   "firstName": {
+    "default": "K'Andre"
+   },
+   "lastName": {
+    "default": "Miller"
+   },
+   "positionCode": "D"
+  },
+  {
+   "id": 8482100,
+   "firstName": {
+    "default": "Alexander"
+   },
+   "lastName": {
+    "default": "Nikishin"
+   },
+   "positionCode": "D"
+  },
+  {
+   "id": 8476422,
+   "firstName": {
+    "default": "Mike"
+   },
+   "lastName": {
+    "default": "Reilly"
+   },
+   "positionCode": "D"
+  },
+  {
+   "id": 8476958,
+   "firstName": {
+    "default": "Jaccob"
+   },
+   "lastName": {
+    "default": "Slavin"
+   },
+   "positionCode": "D"
+  },
+  {
+   "id": 8479976,
+   "firstName": {
+    "default": "Juuso"
+   },
+   "lastName": {
+    "default": "Välimäki",
+    "de": "Valimaki",
+    "es": "Valimaki",
+    "fr": "Valimaki"
+   },
+   "positionCode": "D"
+  },
+  {
+   "id": 8480336,
+   "firstName": {
+    "default": "Sean"
+   },
+   "lastName": {
+    "default": "Walker"
+   },
+   "positionCode": "D"
+  }
+ ],
+ "goalies": [
+  {
+   "id": 8483548,
+   "firstName": {
+    "default": "Brandon"
+   },
+   "lastName": {
+    "default": "Bussi"
+   },
+   "positionCode": "G"
+  },
+  {
+   "id": 8481611,
+   "firstName": {
+    "default": "Pyotr",
+    "cs": "Pjotr",
+    "fi": "Pjotr",
+    "sk": "Pjotr"
+   },
+   "lastName": {
+    "default": "Kochetkov",
+    "fi": "Kotshetkov"
+   },
+   "positionCode": "G"
+  }
+ ]
+}

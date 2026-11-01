@@ -134,7 +134,7 @@ function engineChoice<C extends SlipCandidate>(
       ? "The pricing engine's best-priced player props for this risk level."
       : "The pricing engine's best-priced picks for this risk level.",
     // Prop prices are captured hours before the game, so they are not called live.
-    analysis: `Chosen by the pricing engine from ${props ? "sportsbook player-prop" : "live sportsbook"} prices. The AI write-up is unavailable right now, so each leg shows the engine's win chance and how its price compares with fair.`,
+    analysis: `Chosen by the pricing engine from ${props ? "sportsbook player-prop" : "live sportsbook"} prices. Each leg shows the engine's win chance and how its price compares with fair.`,
     reasons,
     writtenBy: "engine",
   }
@@ -231,14 +231,19 @@ ${JSON.stringify(
       analysis: string
     }
     const picks = out.legs.map((l) => byLabel.get(l.label)).filter((p): p is C => !!p)
+    // The slip's own selections, players and teams are not read as claims.
+    const names = candidates.flatMap((c) => [c.selection, c.player ?? "", c.game.homeTeam, c.game.awayTeam])
     // Each leg's words are checked against its own price; the slip's against all of them.
     const problem =
       (picks.length === out.legs.length ? slipProblem(picks, betType, legs) : "chose an unknown label") ??
       copyProblem([out.title, out.description, out.analysis].join("\n"), {
         belowFair: picks.some((p) => p.edgePercent <= 0),
         props,
+        names,
       }) ??
-      out.legs.map((l, i) => copyProblem(l.reasoning, { belowFair: picks[i].edgePercent <= 0, props })).find(Boolean) ??
+      out.legs
+        .map((l, i) => copyProblem(l.reasoning, { belowFair: picks[i].edgePercent <= 0, props, names }))
+        .find(Boolean) ??
       null
     if (problem) {
       console.error(`AI picks: model's slip ${problem}, using the engine's ranking`)

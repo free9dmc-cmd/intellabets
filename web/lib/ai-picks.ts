@@ -271,6 +271,46 @@ export function upcomingGameCount(preds: SlipCandidate[], now: number): number {
   return new Set(preds.filter((p) => new Date(p.game.commenceTime).getTime() > now).map((p) => p.gameId)).size
 }
 
+const COUNT = String.raw`(\d+|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty)`
+
+/** Player stats, form and news a prop write-up cannot know (see copyProblem). */
+const PROP_CLAIMS = new RegExp(
+  [
+    String.raw`\baverag(e[sd]?|ing)\b`,
+    String.raw`\b(of|in) (his|her|their|the) (last|past|previous) ${COUNT}\b`,
+    String.raw`\b(last|past|previous) ${COUNT} (games|outings|starts|meetings|contests)\b`,
+    String.raw`\blast (week|night|game|outing|time)\b`,
+    String.raw`\b(he|she|they|he's|she's)('s| has| have| had| is)? ?(gone|hit|cleared|topped|scored|recorded|thrown|rushed|posted|been)\b`,
+    String.raw`\b(has|have|had) (gone|hit|cleared|topped|scored|recorded|thrown|rushed|posted)\b`,
+    String.raw`\bdropped \d+\b|\b\d+(\.\d+)? (a|per) (night|game)\b|\bshooting \d+%`,
+    String.raw`\b(career|season)[- ]highs?\b`,
+    String.raw`\b(hot|cold|slump|lately|recently|trend(s|ing)?|form|on fire)\b|\brecent (games|form|outings|weeks|stretch|play)\b`,
+    String.raw`\b(usage|snap (count|share)|time on ice|TOI|power[- ]play|role)\b`,
+    String.raw`\b(minutes|targets|touches|carries) (are|is|have|has|per|up|down)\b|\b(his|her|their|\w+'s) (minutes|targets?|touches|carries)\b`,
+    String.raw`\b(defen[cs]e|defensive|offen[cs]e|offensive|pace|opponents?)\b|\ballows? (the )?(most|fewest|least|\d+)|\ballowed\b`,
+    String.raw`\b(is|are|sits?|sitting) out\b|\bwith (\w+ ){1,3}out\b|\b(scratch(ed)?|inactive|resting|rested|load management)\b`,
+    String.raw`\bleads? (the|his|their) (team|league)\b|\b(ppg|rpg|apg)\b|\btop (scorer|option|target)\b|\brevenge\b|\bformer team\b`,
+  ].join("|"),
+  "i"
+)
+
+/** Typographic quotes and dashes as plain ones, so "he’s" reads as "he's". */
+function normalizeQuotes(text: string): string {
+  return text.replace(/[\u2018\u2019\u02BC]/g, "'").replace(/[\u2010-\u2015]/g, "-")
+}
+
+/**
+ * The text with the slip's own names taken out, so a player or team called,
+ * say, "Lock" is not read as the word.
+ */
+function withoutNames(text: string, names: readonly string[]): string {
+  let out = text
+  for (const name of [...names].filter((n) => n.trim().length > 1).sort((a, b) => b.length - a.length)) {
+    out = out.replace(new RegExp(normalizeQuotes(name).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), " ")
+  }
+  return out
+}
+
 /**
  * Words the slip text must not contain, or null. Inducements a licensed
  * operator's partners commit not to use, and claims the model has no data for
@@ -290,7 +330,11 @@ export function upcomingGameCount(preds: SlipCandidate[], now: number): number {
  * the over, highs, form, minutes, usage or role, the opponent's defense or
  * pace, who is out, or who leads the team. The model has none of that data.
  */
-export function copyProblem(text: string, opts: { belowFair?: boolean; props?: boolean } = {}): string | null {
+export function copyProblem(
+  text: string,
+  opts: { belowFair?: boolean; props?: boolean; names?: readonly string[] } = {}
+): string | null {
+  const plain = withoutNames(normalizeQuotes(text), opts.names ?? [])
   const banned: [RegExp, string][] = [
     [/\blocks?\b|\blocked in\b/i, "\"lock\""],
     [/\brisk[- ]?free\b/i, "\"risk-free\""],
@@ -298,7 +342,7 @@ export function copyProblem(text: string, opts: { belowFair?: boolean; props?: b
     [/\bsure (things?|bets?)\b|\bcan'?t[- ]miss\b|\bno[- ]brainer\b|\b(near[- ])?certain(ty)?\b/i, "\"sure thing\""],
     [/\b(can'?t|cannot) lose\b/i, "\"can't lose\""],
     [/\bguarantee[sd]?\b/i, "a guarantee"],
-    [/\binjur(y|ies|ed)\b|\b(questionable|doubtful|ruled out|sidelined|hamstring|ankle|knee|concussion)\b/i, "injuries"],
+    [/\binjur(y|ies|ed)\b|\b(questionable|doubtful|ruled out|sidelined|hamstring|ankle|knee|concussion|day-to-day)\b|\blisted as (probable|out)\b|\bwon't play\b|\bwill (miss|sit)\b|\bgame-time decision\b|\bback-to-back\b|\bconfirmed (starter|to start)\b/i, "injuries"],
     [/\blineups?\b/i, "lineups"],
     [/\bweather\b|\b(rain|wind|windy|snow)\b|\b(weather|in the) forecast\b/i, "weather"],
     [/\bstreaks?\b|\bin a row\b|\bstraight (games|wins|losses|covers|road|home|starts|weeks|seasons)\b/i, "streaks"],
@@ -314,13 +358,10 @@ export function copyProblem(text: string, opts: { belowFair?: boolean; props?: b
     ])
   }
   if (opts.props) {
-    // Tested on invented and legitimate prop sentences (ai-picks.test.ts): it
-    // names stats and news, not selections, prices or payouts.
-    banned.push([
-      /\baverag(e[sd]?|ing)\b|\b(of|in) (his|her|their|the) last \d+\b|\blast (week|night|game|outing|time)\b|\b(has|have|had|he's|she's) (gone|hit|cleared|topped|scored|recorded|thrown|rushed|posted|been)\b|\b(career|season)[- ]highs?\b|\b(hot|cold|slump|lately|recent(ly)?|trend(s|ing)?)\b|\b(usage|minutes|snap (count|share)|targets?|touches|carries|time on ice|TOI|power[- ]play|role)\b|\b(defen[cs]e|defensive|allows?|allowed|pace|opponents?)\b|\b(is|are|sits?|sitting) out\b|\bwith \w+ out\b|\b(scratch(ed)?|inactive|resting|rested|load management)\b|\bleads? (the|his|their) (team|league)\b/i,
-      "player stats or news",
-    ])
+    // Tested on invented and honest prop sentences (ai-picks.test.ts): it
+    // names stats, form and news, not selections, prices, payouts or risk.
+    banned.push([PROP_CLAIMS, "player stats or news"])
   }
-  for (const [re, what] of banned) if (re.test(text)) return `mentions ${what}`
+  for (const [re, what] of banned) if (re.test(plain)) return `mentions ${what}`
   return null
 }

@@ -3,7 +3,7 @@ import type { Prediction } from "@prisma/client"
 import { PrismaService } from "../../common/prisma/prisma.service"
 import { parsePropOutcomeId } from "../ingestion/prop-markets"
 import { NhlStatsService, type NhlGameStats } from "./nhl-stats.service"
-import { matchPlayer } from "./player-names"
+import { matchInGame } from "./player-names"
 
 type PropResult = "won" | "lost" | "push" | "void"
 
@@ -54,7 +54,7 @@ export class NhlPropsGrader {
       return null
     }
 
-    const match = matchPlayer(game.players, prop.player)
+    const match = matchInGame(game.players, game.rostered, prop.player)
     if (match.kind === "absent") return "void" // did not dress
     if (match.kind === "ambiguous") {
       const ids = match.candidates.map((p) => `${p.team} ${p.playerId}`).join(", ")
@@ -62,7 +62,7 @@ export class NhlPropsGrader {
       return null
     }
     if (match.kind === "unsure") {
-      this.logger.warn(`Prop ${pred.id} left pending: no exact match for "${prop.player}" in NHL game ${game.gameId}, but a dressed player has that surname`)
+      this.logger.warn(`Prop ${pred.id} left pending: no exact match for "${prop.player}" in NHL game ${game.gameId}, but a player of either club has that surname`)
       return null
     }
 

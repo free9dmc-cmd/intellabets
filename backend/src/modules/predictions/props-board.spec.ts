@@ -538,7 +538,7 @@ describe("props snapshots and the admin props call", () => {
     const gb = await propsBooks("nhl", new Date(Date.now() + 30 * 60_000))
     await service.savePropsSnapshot(gb)
     expect(prisma.games).toEqual([expect.objectContaining({ canonicalId: gb.canonicalId, status: "scheduled", sport: "NHL" })])
-    expect(prisma.snapshots).toEqual([expect.objectContaining({ provider: "the-odds-api", isClosing: false })])
+    expect(prisma.snapshots).toEqual([expect.objectContaining({ provider: "the-odds-api:props", isClosing: false })])
     const keys = Object.keys(prisma.snapshots[0].markets as object)
     expect(keys).toHaveLength(33)
     for (const k of keys) expect(k).toContain("|")

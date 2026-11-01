@@ -1,0 +1,297 @@
+{
+ "forwards": [
+  {
+   "id": 8474150,
+   "firstName": {
+    "default": "Mikael"
+   },
+   "lastName": {
+    "default": "Backlund"
+   },
+   "positionCode": "C"
+  },
+  {
+   "id": 8484154,
+   "firstName": {
+    "default": "Jonathan"
+   },
+   "lastName": {
+    "default": "Castagna"
+   },
+   "positionCode": "C"
+  },
+  {
+   "id": 8482679,
+   "firstName": {
+    "default": "Matt"
+   },
+   "lastName": {
+    "default": "Coronato"
+   },
+   "positionCode": "R"
+  },
+  {
+   "id": 8480797,
+   "firstName": {
+    "default": "Joel"
+   },
+   "lastName": {
+    "default": "Farabee"
+   },
+   "positionCode": "L"
+  },
+  {
+   "id": 8480028,
+   "firstName": {
+    "default": "Morgan"
+   },
+   "lastName": {
+    "default": "Frost"
+   },
+   "positionCode": "C"
+  },
+  {
+   "id": 8484860,
+   "firstName": {
+    "default": "Matvei"
+   },
+   "lastName": {
+    "default": "Gridin"
+   },
+   "positionCode": "R"
+  },
+  {
+   "id": 8484180,
+   "firstName": {
+    "default": "Samuel"
+   },
+   "lastName": {
+    "default": "Honzek"
+   },
+   "positionCode": "L"
+  },
+  {
+   "id": 8476456,
+   "firstName": {
+    "default": "Jonathan"
+   },
+   "lastName": {
+    "default": "Huberdeau"
+   },
+   "positionCode": "L"
+  },
+  {
+   "id": 8480259,
+   "firstName": {
+    "default": "Ben"
+   },
+   "lastName": {
+    "default": "Jones"
+   },
+   "positionCode": "C"
+  },
+  {
+   "id": 8483609,
+   "firstName": {
+    "default": "Adam"
+   },
+   "lastName": {
+    "default": "Klapka"
+   },
+   "positionCode": "R"
+  },
+  {
+   "id": 8482747,
+   "firstName": {
+    "default": "Brennan"
+   },
+   "lastName": {
+    "default": "Othmann"
+   },
+   "positionCode": "L"
+  },
+  {
+   "id": 8481028,
+   "firstName": {
+    "default": "Martin"
+   },
+   "lastName": {
+    "default": "Pospisil",
+    "cs": "Pospíšil",
+    "sk": "Pospíšil"
+   },
+   "positionCode": "C"
+  },
+  {
+   "id": 8481068,
+   "firstName": {
+    "default": "Yegor",
+    "cs": "Jegor",
+    "fi": "Jahor",
+    "sk": "Jegor"
+   },
+   "lastName": {
+    "default": "Sharangovich",
+    "cs": "Šarangovič",
+    "fi": "Sharanhovitsh",
+    "sk": "Šarangovič"
+   },
+   "positionCode": "C"
+  },
+  {
+   "id": 8476458,
+   "firstName": {
+    "default": "Ryan"
+   },
+   "lastName": {
+    "default": "Strome"
+   },
+   "positionCode": "C"
+  },
+  {
+   "id": 8482766,
+   "firstName": {
+    "default": "William"
+   },
+   "lastName": {
+    "default": "Stromgren"
+   },
+   "positionCode": "L"
+  },
+  {
+   "id": 8484234,
+   "firstName": {
+    "default": "Aydar"
+   },
+   "lastName": {
+    "default": "Suniev"
+   },
+   "positionCode": "L"
+  },
+  {
+   "id": 8484958,
+   "firstName": {
+    "default": "Maxim",
+    "fi": "Maksim"
+   },
+   "lastName": {
+    "default": "Tsyplakov",
+    "cs": "Cyplakov",
+    "sk": "Cyplakov"
+   },
+   "positionCode": "R"
+  }
+ ],
+ "defensemen": [
+  {
+   "id": 8480860,
+   "firstName": {
+    "default": "Kevin"
+   },
+   "lastName": {
+    "default": "Bahl"
+   },
+   "positionCode": "D"
+  },
+  {
+   "id": 8477810,
+   "firstName": {
+    "default": "Joel"
+   },
+   "lastName": {
+    "default": "Hanley"
+   },
+   "positionCode": "D"
+  },
+  {
+   "id": 8482165,
+   "firstName": {
+    "default": "Yan"
+   },
+   "lastName": {
+    "default": "Kuznetsov"
+   },
+   "positionCode": "D"
+  },
+  {
+   "id": 8478136,
+   "firstName": {
+    "default": "Jake",
+    "cs": "Jacob",
+    "de": "Jacob",
+    "es": "Jacob",
+    "fi": "Jacob",
+    "sk": "Jacob",
+    "sv": "Jacob"
+   },
+   "lastName": {
+    "default": "Middleton"
+   },
+   "positionCode": "D"
+  },
+  {
+   "id": 8483495,
+   "firstName": {
+    "default": "Simon",
+    "cs": "Šimon",
+    "sk": "Šimon"
+   },
+   "lastName": {
+    "default": "Nemec"
+   },
+   "positionCode": "D"
+  },
+  {
+   "id": 8484768,
+   "firstName": {
+    "default": "Zayne"
+   },
+   "lastName": {
+    "default": "Parekh"
+   },
+   "positionCode": "D"
+  },
+  {
+   "id": 8480727,
+   "firstName": {
+    "default": "Zach"
+   },
+   "lastName": {
+    "default": "Whitecloud"
+   },
+   "positionCode": "D"
+  }
+ ],
+ "goalies": [
+  {
+   "id": 8482445,
+   "firstName": {
+    "default": "Devin"
+   },
+   "lastName": {
+    "default": "Cooley"
+   },
+   "positionCode": "G"
+  },
+  {
+   "id": 8482949,
+   "firstName": {
+    "default": "Arsenii"
+   },
+   "lastName": {
+    "default": "Sergeev"
+   },
+   "positionCode": "G"
+  },
+  {
+   "id": 8481692,
+   "firstName": {
+    "default": "Dustin"
+   },
+   "lastName": {
+    "default": "Wolf"
+   },
+   "positionCode": "G"
+  }
+ ]
+}

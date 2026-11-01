@@ -145,26 +145,33 @@ describe("PropsIngestService.run", () => {
     expect(prisma.rows).toHaveLength(2)
   })
 
-  it("runs one sport at a time, so concurrent jobs cannot share the last credits", async () => {
+  it("skips a run while another is still going, so two cannot share the last credits", async () => {
     // Room for one more 4-credit call this month.
     const { svc, aggregator } = setup({ rows: [row({ cost: 3494 })] })
-    aggregator.fetchEvents
-      .mockResolvedValueOnce({ events: [event("game-a", 90)], cost: 0, remaining: 19_000 })
-      .mockResolvedValueOnce({ events: [event("game-b", 90)], cost: 0, remaining: 19_000 })
+    aggregator.fetchEvents.mockResolvedValueOnce({ events: [event("game-a", 90)], cost: 0, remaining: 19_000 })
     let release!: () => void
     aggregator.fetchEventProps.mockImplementationOnce(async () => {
       await new Promise<void>((resolve) => (release = resolve))
       return { books: books(3), cost: 4, remaining: 18_996 }
     })
     const first = svc.run("basketball_nba", NOW)
-    const second = svc.run("basketball_nba", NOW)
     await new Promise((r) => setImmediate(r))
-    expect(aggregator.fetchEvents).toHaveBeenCalledTimes(1)
+    await expect(svc.run("basketball_nba", NOW)).resolves.toMatchObject({ listed: 0, fetched: 0 })
     release()
     await expect(first).resolves.toMatchObject({ fetched: 1, credits: 4 })
-    // The second run checks the cap only after the first has spent.
-    await expect(second).resolves.toMatchObject({ fetched: 0, skipped: 1 })
+    expect(aggregator.fetchEvents).toHaveBeenCalledTimes(1)
     expect(aggregator.fetchEventProps.mock.calls.map((c) => c[1])).toEqual(["game-a"])
+  })
+
+  it("does nothing for a sport that is no longer in PROPS_SPORTS, or with ingestion disabled", async () => {
+    const { svc, aggregator } = setup({ events: [event("late-evt", 90)] })
+    aggregator.propsSportKeys.mockReturnValue([])
+    await expect(svc.run("basketball_nba", NOW)).resolves.toMatchObject({ listed: 0, fetched: 0 })
+    aggregator.propsSportKeys.mockReturnValue(["basketball_nba"])
+    const disabled = setup({ events: [event("late-evt", 90)], env: { DISABLE_INGESTION: "true" } })
+    await expect(disabled.svc.run("basketball_nba", NOW)).resolves.toMatchObject({ listed: 0, fetched: 0 })
+    expect(aggregator.fetchEvents).not.toHaveBeenCalled()
+    expect(disabled.aggregator.fetchEvents).not.toHaveBeenCalled()
   })
 
   it("keeps running after a failed run", async () => {
@@ -318,16 +325,21 @@ describe("PropsIngestService.run", () => {
     expect(none.aggregator.fetchEvents).not.toHaveBeenCalled()
   })
 
-  it("deletes the sport's props snapshots of games that started over the retention days ago", async () => {
+  it("deletes the sport's props snapshots of games that started over the retention days ago, at most hourly", async () => {
     const { svc, prisma } = setup({ events: [], env: { PROPS_SNAPSHOT_RETENTION_DAYS: "3" } })
     await svc.run("basketball_nba", NOW)
     expect(prisma.$executeRaw).toHaveBeenCalledTimes(1)
     const [strings, ...values] = prisma.$executeRaw.mock.calls[0] as [TemplateStringsArray, ...unknown[]]
     const sql = strings.join("?")
     expect(sql).toContain('DELETE FROM "OddsSnapshot"')
-    expect(sql).toContain("CASE WHEN jsonb_typeof(s.markets) = 'object'")
-    expect(sql).toContain("strpos(k, '|') > 0")
-    expect(values).toEqual(["NBA", "2026-11-12 18:00:00.000"])
+    // Found by the provider label among recent games: the markets are never read.
+    expect(sql).toContain("s.provider = ?")
+    expect(sql).not.toContain("markets")
+    expect(values).toEqual(["NBA", "2026-11-12 18:00:00.000", "2026-10-13 18:00:00.000", "the-odds-api:props"])
+    await svc.run("basketball_nba", new Date(NOW.getTime() + 30 * 60_000))
+    expect(prisma.$executeRaw).toHaveBeenCalledTimes(1)
+    await svc.run("basketball_nba", new Date(NOW.getTime() + 61 * 60_000))
+    expect(prisma.$executeRaw).toHaveBeenCalledTimes(2)
   })
 })
 

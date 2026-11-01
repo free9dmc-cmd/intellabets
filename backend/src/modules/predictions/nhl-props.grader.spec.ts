@@ -3,7 +3,7 @@ import * as path from "path"
 import { Logger } from "@nestjs/common"
 import type { PrismaService } from "../../common/prisma/prisma.service"
 import { NhlPropsGrader } from "./nhl-props.grader"
-import { NhlStatsService, nhlPlayersFrom, type NhlGameStats } from "./nhl-stats.service"
+import { NhlStatsService, nhlPlayersFrom, rosterPlayersFrom, type NhlGameStats } from "./nhl-stats.service"
 import { personNames } from "./player-names"
 
 // Grades props against the real CBJ @ CAR box score (2026020206, final):
@@ -17,6 +17,10 @@ const fixture = (name: string) => JSON.parse(fs.readFileSync(path.join(FIXTURES,
 const GAME: NhlGameStats = {
   gameId: 2026020206,
   players: nhlPlayersFrom(fixture("boxscore-2026020206"), fixture("play-by-play-2026020206"))!,
+  rostered: [
+    ...rosterPlayersFrom(fixture("roster-CBJ-20262027"), "CBJ")!,
+    ...rosterPlayersFrom(fixture("roster-CAR-20262027"), "CAR")!,
+  ],
 }
 
 const EVENT = "0a1b2c3d4e5f60718293a4b5c6d7e8f9"

@@ -54,6 +54,10 @@ export const HOLDS_GAME_LINES = Prisma.sql`(
   (markets -> 'moneyline') IS NOT NULL OR (markets -> 'spread') IS NOT NULL OR (markets -> 'total') IS NOT NULL
 )`
 
+/** OddsSnapshot.provider for game-line and player-prop snapshots. */
+export const GAME_LINES_SNAPSHOT_PROVIDER = "the-odds-api"
+export const PROPS_SNAPSHOT_PROVIDER = "the-odds-api:props"
+
 /**
  * SQL: the snapshot holds player props. Tested on the keys rather than as
  * "not game lines", because a poll that finds a game with no bookmakers

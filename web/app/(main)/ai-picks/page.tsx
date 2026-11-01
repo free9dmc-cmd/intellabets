@@ -440,7 +440,9 @@ export default function AIPicksPage() {
           <p className="text-xs text-gray-400">{result.note}</p>
           {result.legs.length > 1 && (
             <p className="text-xs text-gray-500">
-              Parlay tracking isn&apos;t available yet; track single bets from Engine Picks.
+              {result.kind === "props"
+                ? "Parlay tracking isn't available yet, and player-prop parlays can't be tracked here."
+                : "Parlay tracking isn't available yet; track single bets from Engine Picks."}
             </p>
           )}
           {result.sameGameWarning && <p className="text-xs text-yellow-400/80">{result.sameGameWarning}</p>}

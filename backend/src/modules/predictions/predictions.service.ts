@@ -10,8 +10,10 @@ import { RealtimeService } from "../realtime/realtime.service"
 import { MlbStatsService } from "./mlb-stats.service"
 import { NhlPropsGrader } from "./nhl-props.grader"
 import {
+  GAME_LINES_SNAPSHOT_PROVIDER,
   HOLDS_GAME_LINES,
   HOLDS_PROPS,
+  PROPS_SNAPSHOT_PROVIDER,
   MAX_PRICE_AGE_MS,
   boardSideKey,
   booksByMarketFrom,
@@ -206,7 +208,9 @@ export class PredictionsService {
     await this.prisma.oddsSnapshot.create({
       data: {
         gameId: game.id,
-        provider: "the-odds-api",
+        // The props label lets clean-up and freshness checks tell the two
+        // kinds apart without reading the markets.
+        provider: opts.isProp ? PROPS_SNAPSHOT_PROVIDER : GAME_LINES_SNAPSHOT_PROVIDER,
         isClosing,
         markets: serializeBooks(gb.booksByMarket) as Prisma.InputJsonValue,
       },
@@ -962,7 +966,13 @@ export class PredictionsService {
   async feedStats() {
     const now = new Date()
     const [lastSnapshot, upcomingGames, livePicks, lastPick] = await Promise.all([
-      this.prisma.oddsSnapshot.findFirst({ orderBy: { capturedAt: "desc" }, select: { capturedAt: true } }),
+      // Game lines only: props snapshots arrive on their own schedule and
+      // would make a stalled game-line poll look fresh.
+      this.prisma.oddsSnapshot.findFirst({
+        where: { provider: GAME_LINES_SNAPSHOT_PROVIDER },
+        orderBy: { capturedAt: "desc" },
+        select: { capturedAt: true },
+      }),
       this.prisma.game.count({ where: { commenceTime: { gt: now } } }),
       this.prisma.prediction.count({
         where: { userId: null, source: "engine", status: "pending", game: { commenceTime: { gt: now } } },

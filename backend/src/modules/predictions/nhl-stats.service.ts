@@ -16,10 +16,17 @@ export interface NhlPlayer extends PersonNames {
   line: NhlSkaterLine | null
 }
 
+export interface NhlRosterPlayer extends PersonNames {
+  playerId: number
+  team: string
+}
+
 export interface NhlGameStats {
   gameId: number
   /** Every dressed player of both teams, skaters and goalies. */
   players: NhlPlayer[]
+  /** Both clubs' season rosters, dressed or not: to tell namesakes and scratches apart. */
+  rostered: NhlRosterPlayer[]
 }
 
 interface ScoreGame {
@@ -34,6 +41,8 @@ interface ScoreGame {
 const MAX_START_GAP_MS = 3 * 3_600_000
 /** How long one date's score lookup is reused: about one settle run. */
 const SCORE_TTL_MS = 10 * 60_000
+/** Rosters change rarely; a few hours of reuse saves a call per graded game. */
+const ROSTER_TTL_MS = 6 * 3_600_000
 
 /**
  * Grades NHL player props using the NHL's public web API (api-web.nhle.com —
@@ -47,6 +56,7 @@ export class NhlStatsService {
   private readonly logger = new Logger(NhlStatsService.name)
   private readonly http: AxiosInstance
   private readonly scores = new Map<string, { expires: number; games: Promise<ScoreGame[] | null> }>()
+  private readonly rosters = new Map<string, { expires: number; players: Promise<NhlRosterPlayer[] | null> }>()
 
   constructor() {
     this.http = axios.create({ baseURL: "https://api-web.nhle.com/v1", timeout: 12_000 })
@@ -81,11 +91,40 @@ export class NhlStatsService {
         this.logger.warn(`NHL game ${game.id}: unexpected boxscore or roster shape, not grading`)
         return null
       }
-      return { gameId: game.id, players }
+      const season = typeof box.season === "number" ? box.season : seasonOf(game.id)
+      const rosters = await Promise.all(
+        [box.awayTeam?.abbrev, box.homeTeam?.abbrev].map((abbrev) =>
+          typeof abbrev === "string" ? this.roster(abbrev, season) : Promise.resolve(null)
+        )
+      )
+      if (rosters.some((r) => !r)) {
+        this.logger.warn(`NHL game ${game.id}: could not read both club rosters, not grading`)
+        return null
+      }
+      return { gameId: game.id, players, rostered: rosters.flatMap((r) => r ?? []) }
     } catch (err) {
       this.logger.warn(`NHL boxscore fetch failed for ${game.id}: ${errMsg(err)}`)
       return null
     }
+  }
+
+  /** A club's season roster (cached for a few hours), or null if it cannot be read. */
+  private roster(abbrev: string, season: number): Promise<NhlRosterPlayer[] | null> {
+    const key = `${abbrev}:${season}`
+    const hit = this.rosters.get(key)
+    if (hit && hit.expires > Date.now()) return hit.players
+    const players = this.http
+      .get(`/roster/${abbrev}/${season}`)
+      .then(({ data }) => rosterPlayersFrom(data, abbrev))
+      .catch((err) => {
+        this.logger.warn(`NHL roster ${key} fetch failed: ${errMsg(err)}`)
+        return null
+      })
+    this.rosters.set(key, { expires: Date.now() + ROSTER_TTL_MS, players })
+    void players.then((p) => {
+      if (!p) this.rosters.delete(key)
+    })
+    return players
   }
 
   /** Map a stored prop stat key to the player's actual number. */
@@ -212,6 +251,29 @@ export function nhlPlayersFrom(box: any, pbp: any): NhlPlayer[] | null {
     }
   }
   return players
+}
+
+/**
+ * A club's season roster (/v1/roster/{abbrev}/{season}): forwards,
+ * defensemen and goalies with full names. Null on any shape it does not expect.
+ */
+export function rosterPlayersFrom(data: any, team: string): NhlRosterPlayer[] | null {
+  const groups = [data?.forwards, data?.defensemen, data?.goalies]
+  if (!groups.every(Array.isArray)) return null
+  const players: NhlRosterPlayer[] = []
+  for (const entry of groups.flat()) {
+    const first = localeValues(entry?.firstName)
+    const last = localeValues(entry?.lastName)
+    if (typeof entry?.id !== "number" || first.length === 0 || last.length === 0) return null
+    players.push({ playerId: entry.id, team, ...personNames(first, last) })
+  }
+  return players.length > 0 ? players : null
+}
+
+/** The season of an NHL game id: 2026020214 -> 20262027. */
+function seasonOf(gameId: number): number {
+  const year = Math.floor(gameId / 1_000_000)
+  return year * 10_000 + year + 1
 }
 
 /** Every spelling in a localized name object ({ default: "Joseph", fr: "Joe" }). */

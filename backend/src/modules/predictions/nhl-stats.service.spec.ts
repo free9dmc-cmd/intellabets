@@ -25,6 +25,10 @@ const REAL_ROUTES: Record<string, string> = {
   "/gamecenter/2026020226/boxscore": "boxscore-2026020226",
   "/gamecenter/2026020226/play-by-play": "play-by-play-2026020226",
   "/gamecenter/2026020227/boxscore": "boxscore-2026020227",
+  "/roster/CGY/20262027": "roster-CGY-20262027",
+  "/roster/COL/20262027": "roster-COL-20262027",
+  "/roster/CBJ/20262027": "roster-CBJ-20262027",
+  "/roster/CAR/20262027": "roster-CAR-20262027",
 }
 
 /** A service whose HTTP calls are answered from `routes` (404 otherwise), and the paths it asked for. */
@@ -63,11 +67,19 @@ describe("NhlStatsService.getGameStats", () => {
       "/score/2026-10-31",
       "/gamecenter/2026020226/boxscore",
       "/gamecenter/2026020226/play-by-play",
+      "/roster/CGY/20262027",
+      "/roster/COL/20262027",
     ])
+    expect(game?.rostered.length).toBe(27 + 22)
     expect(game?.gameId).toBe(2026020226)
     expect(game?.players).toHaveLength(40)
     expect(line(game, "Cale Makar")).toEqual({ goals: 0, assists: 4, points: 4, sog: 3 })
     expect(line(game, "Nathan MacKinnon")).toEqual({ goals: 1, assists: 1, points: 2, sog: 5 })
+  })
+
+  it("does not grade a game whose club roster cannot be read", async () => {
+    const { svc } = service({ "/roster/COL/20262027": undefined })
+    expect(await svc.getGameStats(...CGY_AT_COL)).toBeNull()
   })
 
   it("reads Svechnikov (SOG 1, points 0) and Jarvis (points 2, SOG 3) from CBJ @ CAR", async () => {

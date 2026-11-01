@@ -1,4 +1,4 @@
-import { easternDate, matchPlayer, normalizePersonName, personNames, shiftDate, teamMatches } from "./player-names"
+import { easternDate, matchInGame, matchPlayer, normalizePersonName, personNames, shiftDate, teamMatches } from "./player-names"
 
 // Name objects as the NHL API publishes them (rosterSpots / roster endpoints,
 // fetched 2026-11-01), with every locale variant it sent.
@@ -97,7 +97,16 @@ describe("matchPlayer: the hard cases from the NHL feed", () => {
       { id: 1, ...personNames(["Jack"], ["Hughes"]) },
       { id: 2, ...personNames(["Jake"], ["Hughes"]) },
     ]
-    expect(found("Jay Hughes", two)).toBe("ambiguous")
+    expect(found("J. Hughes", two)).toBe("ambiguous")
+    // A different full first name is not the same person: pending, not graded.
+    expect(found("Jay Hughes", two)).toBe("unsure")
+  })
+
+  it("never treats a different first name with the same start as the same player", () => {
+    const lees = [{ id: 1, ...personNames(["Andre"], ["Lee"]) }]
+    expect(found("Anders Lee", lees)).toBe("unsure")
+    expect(found("Andy Lee", [{ id: 2, ...personNames(["Andrew"], ["Lee"]) }])).toBe(2)
+    expect(found("Mitch Marner", [{ id: 3, ...personNames(["Mitchell"], ["Marner"]) }])).toBe(3)
   })
 
   it("is unsure, not absent, when the surname is dressed but the first name differs", () => {
@@ -151,5 +160,31 @@ describe("teamMatches", () => {
     ["Carolina Hurricanes", ""],
   ])("%s is not the %s", (oddsName, nickname) => {
     expect(teamMatches(oddsName, nickname)).toBe(false)
+  })
+})
+
+describe("matchInGame: namesakes and scratches across both clubs' rosters", () => {
+  const p = (playerId: number, first: string, last: string) => ({ playerId, ...personNames([first], [last]) })
+
+  it("is ambiguous when two players of the clubs share the name, even if only one dressed", () => {
+    const dressed = [p(8483678, "Elias", "Pettersson")] // the defenseman
+    const rostered = [p(8480012, "Elias", "Pettersson"), p(8483678, "Elias", "Pettersson")]
+    expect(matchInGame(dressed, rostered, "Elias Pettersson").kind).toBe("ambiguous")
+  })
+
+  it("is absent (void) when the named player is on a roster but did not dress", () => {
+    const dressed = [p(2, "Andre", "Lee")]
+    const rostered = [p(1, "Anders", "Lee"), p(2, "Andre", "Lee")]
+    expect(matchInGame(dressed, rostered, "Anders Lee").kind).toBe("absent")
+  })
+
+  it("finds a dressed player and grades him", () => {
+    const dressed = [p(7, "Seth", "Jarvis")]
+    const m = matchInGame(dressed, [p(7, "Seth", "Jarvis")], "Seth Jarvis")
+    expect(m.kind).toBe("found")
+  })
+
+  it("stays unsure for an unknown first name next to a dressed surname", () => {
+    expect(matchInGame([p(2, "Andre", "Lee")], [p(2, "Andre", "Lee")], "Anders Lee").kind).toBe("unsure")
   })
 })

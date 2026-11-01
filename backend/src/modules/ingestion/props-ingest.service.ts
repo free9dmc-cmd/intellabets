@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common"
 import { ConfigService } from "@nestjs/config"
 import { PrismaService } from "../../common/prisma/prisma.service"
 import { PredictionsService } from "../predictions/predictions.service"
+import { PROPS_SNAPSHOT_PROVIDER } from "../predictions/board-helpers"
 import { OddsAggregatorService, OddsApiError } from "./odds-aggregator.service"
 import {
   DEFAULT_PROPS_WINDOWS,
@@ -38,11 +39,20 @@ export interface PropsRunResult {
  * game lines (PROPS_MIN_REMAINING_CREDITS). It lives in Postgres because the
  * Redis instance has no persistence: a restart must not reset the month.
  */
+/** A run longer than this frees its job; later runs skip until it ends. */
+const RUN_TIMEOUT_MS = 10 * 60_000
+/** Old props snapshots are deleted at most this often per sport. */
+const PRUNE_EVERY_MS = 60 * 60_000
+/** How far back the delete looks: covers props paused for weeks. */
+const PRUNE_LOOKBACK_DAYS = 30
+
 @Injectable()
 export class PropsIngestService {
   private readonly logger = new Logger(PropsIngestService.name)
-  /** The run in progress; runs queue behind it (see run()). */
-  private running: Promise<unknown> = Promise.resolve()
+  /** A run still going (one that outlived RUN_TIMEOUT_MS included). */
+  private busy = false
+  /** When each sport's old props snapshots were last deleted. */
+  private readonly lastPrune = new Map<string, number>()
 
   constructor(
     private readonly prisma: PrismaService,
@@ -86,15 +96,40 @@ export class PropsIngestService {
 
   /**
    * One scheduled run for a sport. Auth failures (rejected key, no credits)
-   * are rethrown. Runs go one at a time, so two sports cannot both pass the
-   * cap check on the same credits: Bull adds the concurrency of every named
-   * processor on the queue together, so its "props" concurrency of 1 does not
-   * ensure that, and the jobs for all sports fire on the same tick.
+   * are rethrown. The props queue has a single worker, so runs never overlap;
+   * a run that outlives RUN_TIMEOUT_MS is let go (the job ends) and later
+   * runs are skipped until it finishes. Skipping is safe: the ledger keeps
+   * each window's slot, and the next tick is the retry.
    */
-  run(sportKey: string, now?: Date): Promise<PropsRunResult> {
-    const next = this.running.then(() => this.runOnce(sportKey, now ?? new Date()))
-    this.running = next.catch(() => undefined)
-    return next
+  async run(sportKey: string, now?: Date): Promise<PropsRunResult> {
+    const idle: PropsRunResult = { listed: 0, fetched: 0, early: 0, late: 0, skipped: 0, credits: 0 }
+    // Pausing (PROPS_SPORTS emptied, DISABLE_INGESTION) applies at once,
+    // even to a run that was already queued.
+    if (this.config.get("DISABLE_INGESTION") === "true" || !this.aggregator.propsSportKeys().includes(sportKey)) {
+      this.logger.debug(`${sportKey} PROPS: not enabled, skipped`)
+      return idle
+    }
+    if (this.busy) {
+      this.logger.warn(`${sportKey} PROPS: an earlier run is still going, skipped`)
+      return idle
+    }
+    this.busy = true
+    const work = this.runOnce(sportKey, now ?? new Date()).finally(() => {
+      this.busy = false
+    })
+    let timer: NodeJS.Timeout | undefined
+    const timeout = new Promise<PropsRunResult>((resolve) => {
+      timer = setTimeout(() => {
+        this.logger.error(`${sportKey} PROPS: run still going after ${RUN_TIMEOUT_MS / 60_000} min; later runs wait for it`)
+        resolve(idle)
+      }, RUN_TIMEOUT_MS)
+      timer.unref?.()
+    })
+    try {
+      return await Promise.race([work, timeout])
+    } finally {
+      clearTimeout(timer)
+    }
   }
 
   private async runOnce(sportKey: string, now: Date): Promise<PropsRunResult> {
@@ -237,22 +272,28 @@ export class PropsIngestService {
 
   /**
    * Delete a sport's props snapshots once their game started more than
-   * PROPS_SNAPSHOT_RETENTION_DAYS ago. Each is a few hundred KB and nothing
-   * reads them after the game (grading uses box scores, CLV uses game lines).
-   * Game-line snapshots are never touched.
+   * PROPS_SNAPSHOT_RETENTION_DAYS ago, at most once an hour. Each is a few
+   * hundred KB and nothing reads them after the game (grading uses box
+   * scores, CLV uses game lines). Game-line snapshots are never touched.
+   * Props snapshots are found by their provider label, and only among games
+   * of the last PRUNE_LOOKBACK_DAYS, so the delete reads neither the markets
+   * nor the whole table.
    */
   private async pruneSnapshots(sportKey: string, now: Date): Promise<void> {
+    const last = this.lastPrune.get(sportKey)
+    if (last != null && now.getTime() - last < PRUNE_EVERY_MS) return
     const sport = this.aggregator.sportFor(sportKey)
     if (!sport) return
+    this.lastPrune.set(sportKey, now.getTime())
     const cutoff = new Date(now.getTime() - this.retentionDays() * 86_400_000)
+    const oldest = new Date(cutoff.getTime() - PRUNE_LOOKBACK_DAYS * 86_400_000)
     const deleted = await this.prisma.$executeRaw`
       DELETE FROM "OddsSnapshot" s USING "Game" g
       WHERE s."gameId" = g.id
         AND g.sport = ${sport}
         AND g."commenceTime" < ${utcTimestamp(cutoff)}::timestamp
-        AND (CASE WHEN jsonb_typeof(s.markets) = 'object'
-          THEN EXISTS (SELECT 1 FROM jsonb_object_keys(s.markets) k WHERE strpos(k, '|') > 0)
-          ELSE false END)`
+        AND g."commenceTime" >= ${utcTimestamp(oldest)}::timestamp
+        AND s.provider = ${PROPS_SNAPSHOT_PROVIDER}`
     if (deleted > 0) {
       this.logger.log(`${sportKey} PROPS: deleted ${deleted} props snapshots of games that started before ${cutoff.toISOString()}`)
     }

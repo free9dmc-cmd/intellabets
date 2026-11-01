@@ -1,0 +1,230 @@
+{
+ "forwards": [
+  {
+   "id": 8486171,
+   "firstName": {
+    "default": "T.J."
+   },
+   "lastName": {
+    "default": "Hughes"
+   },
+   "positionCode": "R"
+  },
+  {
+   "id": 8475172,
+   "firstName": {
+    "default": "Nazem"
+   },
+   "lastName": {
+    "default": "Kadri"
+   },
+   "positionCode": "C"
+  },
+  {
+   "id": 8480448,
+   "firstName": {
+    "default": "Parker"
+   },
+   "lastName": {
+    "default": "Kelly"
+   },
+   "positionCode": "C"
+  },
+  {
+   "id": 8482742,
+   "firstName": {
+    "default": "Zachary"
+   },
+   "lastName": {
+    "default": "L'Heureux"
+   },
+   "positionCode": "L"
+  },
+  {
+   "id": 8476455,
+   "firstName": {
+    "default": "Gabriel"
+   },
+   "lastName": {
+    "default": "Landeskog"
+   },
+   "positionCode": "L"
+  },
+  {
+   "id": 8477476,
+   "firstName": {
+    "default": "Artturi"
+   },
+   "lastName": {
+    "default": "Lehkonen"
+   },
+   "positionCode": "L"
+  },
+  {
+   "id": 8477492,
+   "firstName": {
+    "default": "Nathan"
+   },
+   "lastName": {
+    "default": "MacKinnon"
+   },
+   "positionCode": "C"
+  },
+  {
+   "id": 8480039,
+   "firstName": {
+    "default": "Martin"
+   },
+   "lastName": {
+    "default": "Necas",
+    "cs": "Nečas",
+    "sk": "Nečas"
+   },
+   "positionCode": "C"
+  },
+  {
+   "id": 8475754,
+   "firstName": {
+    "default": "Brock"
+   },
+   "lastName": {
+    "default": "Nelson"
+   },
+   "positionCode": "C"
+  },
+  {
+   "id": 8481186,
+   "firstName": {
+    "default": "Logan"
+   },
+   "lastName": {
+    "default": "O'Connor"
+   },
+   "positionCode": "R"
+  },
+  {
+   "id": 8478462,
+   "firstName": {
+    "default": "Nicolas"
+   },
+   "lastName": {
+    "default": "Roy"
+   },
+   "positionCode": "C"
+  },
+  {
+   "id": 8475768,
+   "firstName": {
+    "default": "Jaden"
+   },
+   "lastName": {
+    "default": "Schwartz"
+   },
+   "positionCode": "L"
+  },
+  {
+   "id": 8482768,
+   "firstName": {
+    "default": "Fedor"
+   },
+   "lastName": {
+    "default": "Svechkov"
+   },
+   "positionCode": "C"
+  }
+ ],
+ "defensemen": [
+  {
+   "id": 8470613,
+   "firstName": {
+    "default": "Brent"
+   },
+   "lastName": {
+    "default": "Burns"
+   },
+   "positionCode": "D"
+  },
+  {
+   "id": 8478454,
+   "firstName": {
+    "default": "Noah"
+   },
+   "lastName": {
+    "default": "Juulsen"
+   },
+   "positionCode": "D"
+  },
+  {
+   "id": 8476967,
+   "firstName": {
+    "default": "Brett"
+   },
+   "lastName": {
+    "default": "Kulak"
+   },
+   "positionCode": "D"
+  },
+  {
+   "id": 8480069,
+   "firstName": {
+    "default": "Cale"
+   },
+   "lastName": {
+    "default": "Makar"
+   },
+   "positionCode": "D"
+  },
+  {
+   "id": 8484258,
+   "firstName": {
+    "default": "Sam"
+   },
+   "lastName": {
+    "default": "Malinski"
+   },
+   "positionCode": "D"
+  },
+  {
+   "id": 8476312,
+   "firstName": {
+    "default": "Josh"
+   },
+   "lastName": {
+    "default": "Manson"
+   },
+   "positionCode": "D"
+  },
+  {
+   "id": 8478038,
+   "firstName": {
+    "default": "Devon"
+   },
+   "lastName": {
+    "default": "Toews"
+   },
+   "positionCode": "D"
+  }
+ ],
+ "goalies": [
+  {
+   "id": 8478406,
+   "firstName": {
+    "default": "Mackenzie"
+   },
+   "lastName": {
+    "default": "Blackwood"
+   },
+   "positionCode": "G"
+  },
+  {
+   "id": 8475809,
+   "firstName": {
+    "default": "Scott"
+   },
+   "lastName": {
+    "default": "Wedgewood"
+   },
+   "positionCode": "G"
+  }
+ ]
+}

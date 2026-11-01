@@ -96,7 +96,9 @@ export class OddsAggregatorService {
     this.http.interceptors.response.use(
       (res) => {
         this.recordQuota(res.headers)
-        this.feed.lastSuccessAt = new Date().toISOString()
+        // The feed's health is the game-line poll's: the props job's own
+        // calls (/events listings and event odds) must not hide it failing.
+        if (!String(res.config?.url ?? "").includes("/events")) this.feed.lastSuccessAt = new Date().toISOString()
         return res
       },
       (err: unknown) => {

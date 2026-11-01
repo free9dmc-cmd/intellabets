@@ -1,0 +1,246 @@
+{
+ "forwards": [
+  {
+   "id": 8475745,
+   "firstName": {
+    "default": "Charlie"
+   },
+   "lastName": {
+    "default": "Coyle"
+   },
+   "positionCode": "C"
+  },
+  {
+   "id": 8483432,
+   "firstName": {
+    "default": "Luca"
+   },
+   "lastName": {
+    "default": "Del Bel Belluz"
+   },
+   "positionCode": "C"
+  },
+  {
+   "id": 8484166,
+   "firstName": {
+    "default": "Adam"
+   },
+   "lastName": {
+    "default": "Fantilli"
+   },
+   "positionCode": "C"
+  },
+  {
+   "id": 8478856,
+   "firstName": {
+    "default": "Conor"
+   },
+   "lastName": {
+    "default": "Garland"
+   },
+   "positionCode": "R"
+  },
+  {
+   "id": 8478046,
+   "firstName": {
+    "default": "Danton"
+   },
+   "lastName": {
+    "default": "Heinen"
+   },
+   "positionCode": "L"
+  },
+  {
+   "id": 8482660,
+   "firstName": {
+    "default": "Kent"
+   },
+   "lastName": {
+    "default": "Johnson"
+   },
+   "positionCode": "C"
+  },
+  {
+   "id": 8482720,
+   "firstName": {
+    "default": "Matthew"
+   },
+   "lastName": {
+    "default": "Knies"
+   },
+   "positionCode": "L"
+  },
+  {
+   "id": 8479066,
+   "firstName": {
+    "default": "Ryan"
+   },
+   "lastName": {
+    "default": "Lomberg"
+   },
+   "positionCode": "L"
+  },
+  {
+   "id": 8477497,
+   "firstName": {
+    "default": "Sean"
+   },
+   "lastName": {
+    "default": "Monahan"
+   },
+   "positionCode": "C"
+  },
+  {
+   "id": 8477501,
+   "firstName": {
+    "default": "Valeri",
+    "cs": "Valerij",
+    "sk": "Valerij"
+   },
+   "lastName": {
+    "default": "Nichushkin",
+    "cs": "Ničuškin",
+    "fi": "Nitshushkin",
+    "sk": "Ničuškin"
+   },
+   "positionCode": "R"
+  },
+  {
+   "id": 8479671,
+   "firstName": {
+    "default": "Mathieu"
+   },
+   "lastName": {
+    "default": "Olivier"
+   },
+   "positionCode": "R"
+  },
+  {
+   "id": 8482705,
+   "firstName": {
+    "default": "Cole"
+   },
+   "lastName": {
+    "default": "Sillinger"
+   },
+   "positionCode": "C"
+  },
+  {
+   "id": 8481716,
+   "firstName": {
+    "default": "Dmitri",
+    "cs": "Dmitrij",
+    "sk": "Dmitrij"
+   },
+   "lastName": {
+    "default": "Voronkov"
+   },
+   "positionCode": "L"
+  }
+ ],
+ "defensemen": [
+  {
+   "id": 8482126,
+   "firstName": {
+    "default": "Emil"
+   },
+   "lastName": {
+    "default": "Andrae"
+   },
+   "positionCode": "D"
+  },
+  {
+   "id": 8481161,
+   "firstName": {
+    "default": "Jake",
+    "sv": "v"
+   },
+   "lastName": {
+    "default": "Christiansen"
+   },
+   "positionCode": "D"
+  },
+  {
+   "id": 8479371,
+   "firstName": {
+    "default": "Dante"
+   },
+   "lastName": {
+    "default": "Fabbro"
+   },
+   "positionCode": "D"
+  },
+  {
+   "id": 8475790,
+   "firstName": {
+    "default": "Erik"
+   },
+   "lastName": {
+    "default": "Gudbranson"
+   },
+   "positionCode": "D"
+  },
+  {
+   "id": 8483485,
+   "firstName": {
+    "default": "Denton"
+   },
+   "lastName": {
+    "default": "Mateychuk"
+   },
+   "positionCode": "D"
+  },
+  {
+   "id": 8478500,
+   "firstName": {
+    "default": "Ivan"
+   },
+   "lastName": {
+    "default": "Provorov"
+   },
+   "positionCode": "D"
+  },
+  {
+   "id": 8476923,
+   "firstName": {
+    "default": "Damon"
+   },
+   "lastName": {
+    "default": "Severson"
+   },
+   "positionCode": "D"
+  },
+  {
+   "id": 8478460,
+   "firstName": {
+    "default": "Zach"
+   },
+   "lastName": {
+    "default": "Werenski"
+   },
+   "positionCode": "D"
+  }
+ ],
+ "goalies": [
+  {
+   "id": 8482982,
+   "firstName": {
+    "default": "Jet"
+   },
+   "lastName": {
+    "default": "Greaves"
+   },
+   "positionCode": "G"
+  },
+  {
+   "id": 8475660,
+   "firstName": {
+    "default": "Cam"
+   },
+   "lastName": {
+    "default": "Talbot"
+   },
+   "positionCode": "G"
+  }
+ ]
+}
