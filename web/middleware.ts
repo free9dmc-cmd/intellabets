@@ -50,6 +50,7 @@ export default withAuth(
           "/how-it-works",
           "/closing-line-value",
           "/devig-calculator",
+          "/line-shopping",
           "/responsible-gambling",
           "/sitemap.xml",
           "/robots.txt",
