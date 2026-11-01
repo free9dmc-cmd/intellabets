@@ -14,7 +14,6 @@ export default async function DashboardPage() {
     where: { id: session.user.id },
     include: {
       aiSubscription: true,
-      subscriptionsAsTipster: { where: { status: "active" } },
     },
   })
 
