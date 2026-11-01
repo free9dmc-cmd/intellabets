@@ -286,6 +286,15 @@ until it is moved to a current Expo SDK or removed.
 
 ## Known issues
 
+**Resolved 2026-11-01: AI Picks and Engine Picks "unavailable", engine
+returned `403` to the website.** Vercel's `ENGINE_SERVICE_KEY` (unchanged
+since 2026-09-18) no longer matched Render's. Vercel's runtime logs showed
+`Engine /predictions/board?... -> 403`. Fixed by setting a new random key in
+both places (Render restarts on its own; Vercel needs a production redeploy,
+then the `intellabets.com` alias, to load it). This also retired the key
+exposed in an earlier chat. If it recurs, set one new value in both, never
+copy one side's value to the other.
+
 **Resolved 2026-10-31 00:00 UTC: no live odds from 2026-10-25 20:31 UTC,
 `401 OUT_OF_USAGE_CREDITS`.** Odds resumed once the 20K plan's key was set
 on Render. The first two hours used 46 credits (three polls of 12 plus one
