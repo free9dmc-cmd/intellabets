@@ -4,7 +4,7 @@ The single source of truth for what ships next. Both daily automated runs read
 this first and update it. **Keep it honest** — a stale plan silently misdirects
 every run that follows.
 
-Last full inspection: 2026-09-24 (evening run). No commits landed on `main`
+Last full inspection: 2026-09-24 (evening run). 2026-10-25 evening run could not reach intellabets.com at all (egress proxy 403) — production state below is as of 2026-10-24 per RUNBOOK, unverified today. No commits landed on `main`
 today before this run — the scheduled morning run left no trace (no commits
 since 65322e9 on 2026-09-22, and this file was still dated 2026-09-22),
 so whatever it inspected was not verified against production and did not
@@ -172,7 +172,7 @@ underwriter reviewing the site will be looking for exactly it.
 - [x] **Why we don't publish a win rate** — folded into `/how-it-works` rather than a separate page, since it's the natural next paragraph after the de-vig explanation.
 - [x] **CLV explainer** — `/closing-line-value`, shipped 2026-10-07. Worked example labeled illustrative, limits of CLV, and an explicit statement that no average is published yet (sample too small under corrected settlement). Added to middleware publicRoutes and sitemap. Linked from `/how-it-works` footer 2026-10-08.
 - [x] **FAQ** — folded into `/how-it-works` (see above) rather than a separate page.
-- [ ] **Onboarding emails** — still open. Blocked in practice: there's no transactional email sending configured yet (P1), and no new users are being created right now (P0.1), so nothing would trigger them today anyway.
+- [x] **Onboarding emails** — draft copy for a 4-email sequence in `docs/marketing/onboarding-emails.md`, 2026-10-25. Copy only: no email provider is configured, so nothing sends. Rules, footer (18+, responsible gambling) and triggers are in the file; email 4 (plans) is held until checkout actually works.
 - [x] **SEO metadata** — `/how-it-works` has full metadata + OG tags; added `app/sitemap.ts` and `app/robots.ts` (Next.js auto-generates `/sitemap.xml` and `/robots.txt` from these), listing only routes actually public per `middleware.ts`. Per-page metadata on the other marketing pages (terms/privacy/contact/premium) already existed before this run.
 - [x] **Responsible gambling page** — `/responsible-gambling`, added 2026-10-08 (not yet deployed/verified live at time of writing). Warning signs, control tips, US/UK help lines, no performance figures. In middleware publicRoutes and sitemap; linked from `/how-it-works`. Linked from the homepage footer (replacing the external NCPG link) and from a caveat line at the foot of `/premium` on 2026-10-30. Verified live 2026-10-31 after the `intellabets.com` alias was moved (it had not deployed — see RUNBOOK "Push builds green but the site does not change"). The shared in-app footer (`components/Footer.tsx`) still pointed at the external NCPG site; switched to `/responsible-gambling` 2026-10-31.
 - [x] **No-vig calculator** — `/devig-calculator`, built 2026-10-31 for the "de-vig calculator" search term (Channels → long-form SEO). One book's 2-way or 3-way prices in; margin, fair probabilities and no-vig prices out, plus an optional expected-value check of another book's price. Maths in `lib/devig.ts`, mirroring the engine's proportional method, unit-tested against the `/how-it-works` worked example. No performance figures. Public in middleware, in the sitemap, linked from `/how-it-works`. Ships via PR, not yet live.
