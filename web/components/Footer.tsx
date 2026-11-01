@@ -17,14 +17,7 @@ export default function Footer() {
           <Link href="/privacy" className="hover:text-gray-300 transition-colors">Privacy</Link>
           <Link href="/refund" className="hover:text-gray-300 transition-colors">Refund</Link>
           <Link href="/contact" className="hover:text-gray-300 transition-colors">Contact</Link>
-          <a
-            href="https://www.ncpgambling.org"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-gray-300 transition-colors"
-          >
-            Responsible Gambling
-          </a>
+          <Link href="/responsible-gambling" className="hover:text-gray-300 transition-colors">Responsible Gambling</Link>
         </div>
       </div>
     </footer>
