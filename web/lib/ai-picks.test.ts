@@ -1,12 +1,21 @@
 import { describe, expect, it } from "vitest"
 import {
+  BET_TYPES,
+  LEG_COUNT,
+  RISK_LEVELS,
   americanFromDecimal,
   copyProblem,
   defaultSelection,
   eligibleCandidates,
   inRiskBand,
+  isPropSport,
+  isSlipKind,
+  isTrackable,
+  legCount,
   parlayMath,
+  riskBandBounds,
   slipProblem,
+  untrackablePropMessage,
   upcomingGameCount,
   type SlipCandidate,
 } from "./ai-picks"
@@ -225,5 +234,202 @@ describe("copyProblem", () => {
     ]) {
       expect(copyProblem(text), text).toBeNull()
     }
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Player props
+
+const STAT_LABEL: Record<string, string> = { player_points: "Points", player_assists: "Assists", player_rebounds: "Rebounds" }
+
+/** A props board bet, shaped as the engine sends it: marketType "prop", the player-stat key apart. */
+function prop(
+  gameId: string,
+  player: string,
+  statKey: string,
+  side: "Over" | "Under",
+  point: number,
+  overrides: Partial<SlipCandidate> = {}
+): SlipCandidate {
+  const stat = STAT_LABEL[statKey]
+  return pick(gameId, "prop", {
+    outcomeId: `ev-${gameId}:${statKey}:${player}:${side}:${point}`,
+    marketKey: `${statKey}|${player}`,
+    player,
+    stat,
+    selection: `${player} ${side} ${point} ${stat}`,
+    fairProbability: 0.5,
+    game: { sport: "NBA", homeTeam: "Orlando Magic", awayTeam: "Boston Celtics", commenceTime: LATER },
+    ...overrides,
+  })
+}
+
+describe("player-prop same-game parlays", () => {
+  it("rejects both sides of one player's stat", () => {
+    const over = prop("g1", "Jayson Tatum", "player_points", "Over", 27.5)
+    const under = prop("g1", "Jayson Tatum", "player_points", "Under", 27.5)
+    expect(slipProblem([over, under], "same-game-parlay", 2)).toBe("puts the same player and stat in a same-game parlay twice")
+  })
+
+  it("rejects two numbers on one player's stat", () => {
+    const a = prop("g1", "Jayson Tatum", "player_assists", "Over", 6.5)
+    const b = prop("g1", "Jayson Tatum", "player_assists", "Over", 7.5)
+    expect(slipProblem([a, b], "same-game-parlay", 2)).toMatch(/same player and stat/)
+  })
+
+  it("accepts different players, or different stats for one player", () => {
+    const tatum = prop("g1", "Jayson Tatum", "player_points", "Over", 27.5)
+    const banchero = prop("g1", "Paolo Banchero", "player_points", "Over", 24.5)
+    const tatumReb = prop("g1", "Jayson Tatum", "player_rebounds", "Under", 8.5)
+    expect(slipProblem([tatum, banchero], "same-game-parlay", 2)).toBeNull()
+    expect(slipProblem([tatum, banchero, tatumReb], "same-game-parlay", 3)).toBeNull()
+  })
+
+  it("still keeps a same-game parlay to one game", () => {
+    const a = prop("g1", "Jayson Tatum", "player_points", "Over", 27.5)
+    const b = prop("g2", "Paolo Banchero", "player_points", "Over", 24.5)
+    expect(slipProblem([a, b], "same-game-parlay", 2)).toMatch(/mixes games/)
+  })
+
+  it("finds candidates with one leg per player and stat, and the engine's default slip", () => {
+    const tatumOver = prop("g1", "Jayson Tatum", "player_points", "Over", 27.5)
+    const tatumUnder = prop("g1", "Jayson Tatum", "player_points", "Under", 27.5)
+    const tatumHigher = prop("g1", "Jayson Tatum", "player_points", "Over", 28.5)
+    const banchero = prop("g1", "Paolo Banchero", "player_points", "Over", 24.5)
+    const tatumReb = prop("g1", "Jayson Tatum", "player_rebounds", "Under", 8.5)
+    const pool = [tatumOver, tatumUnder, tatumHigher, banchero, tatumReb]
+    const out = eligibleCandidates(pool, "same-game-parlay", 3, NOW)
+    expect(out.map((p) => p.id)).toEqual([tatumOver.id, banchero.id, tatumReb.id])
+    const chosen = defaultSelection(out, "same-game-parlay", 3)
+    expect(chosen?.map((p) => p.id)).toEqual([tatumOver.id, banchero.id, tatumReb.id])
+  })
+
+  it("needs the player-stat key: without it every prop is one market", () => {
+    // Every prop's marketType is "prop", so it cannot tell players apart.
+    const a = prop("g1", "Jayson Tatum", "player_points", "Over", 27.5, { marketKey: null })
+    const b = prop("g1", "Paolo Banchero", "player_points", "Over", 24.5, { marketKey: null })
+    expect(eligibleCandidates([a, b], "same-game-parlay", 2, NOW)).toEqual([])
+  })
+
+  it("applies the regular-parlay rules to props unchanged", () => {
+    const a = prop("g1", "Jayson Tatum", "player_points", "Over", 27.5)
+    const b = prop("g1", "Paolo Banchero", "player_points", "Over", 24.5)
+    const c = prop("g2", "LeBron James", "player_points", "Under", 24.5)
+    expect(slipProblem([a, b], "parlay", 2)).toMatch(/one game/)
+    expect(slipProblem([a, c], "parlay", 2)).toBeNull()
+  })
+})
+
+describe("legCount", () => {
+  it("uses the game-line table for lines", () => {
+    for (const risk of RISK_LEVELS) {
+      for (const bt of BET_TYPES) expect(legCount("lines", risk, bt)).toBe(LEG_COUNT[risk][bt])
+    }
+  })
+
+  it("uses the props table for props", () => {
+    const table = Object.fromEntries(RISK_LEVELS.map((r) => [r, BET_TYPES.map((bt) => legCount("props", r, bt))]))
+    // [single, parlay, same-game-parlay]
+    expect(table).toEqual({ low: [1, 2, 2], medium: [1, 3, 3], high: [1, 4, 2] })
+  })
+})
+
+describe("riskBandBounds", () => {
+  it("gives each risk level's win-chance band", () => {
+    expect(riskBandBounds("low")).toEqual({ minProb: 0.6, maxProb: 1 })
+    expect(riskBandBounds("medium")).toEqual({ minProb: 0.4, maxProb: 0.62 })
+    expect(riskBandBounds("high")).toEqual({ minProb: 0.15, maxProb: 0.4 })
+  })
+
+  it("never drops a bet inRiskBand would keep", () => {
+    for (const risk of RISK_LEVELS) {
+      const { minProb, maxProb } = riskBandBounds(risk)
+      for (let i = 0; i <= 100; i++) {
+        const p = i / 100
+        if (inRiskBand({ fairProbability: p }, risk)) expect(p >= minProb && p <= maxProb, `${risk} ${p}`).toBe(true)
+      }
+    }
+  })
+})
+
+describe("slip kinds and prop sports", () => {
+  it("accepts only lines and props", () => {
+    expect(isSlipKind("lines")).toBe(true)
+    expect(isSlipKind("props")).toBe(true)
+    expect(isSlipKind("Props")).toBe(false)
+    expect(isSlipKind(undefined)).toBe(false)
+  })
+
+  it("offers props for NBA, NFL and NHL", () => {
+    expect(["NBA", "NFL", "NHL"].every(isPropSport)).toBe(true)
+    expect(isPropSport("MLB")).toBe(false)
+    expect(isPropSport("NCAAF")).toBe(false)
+  })
+})
+
+describe("isTrackable", () => {
+  it("tracks singles, and props only where the engine grades them", () => {
+    expect(isTrackable({ marketType: "prop", sport: "NBA" }, 1)).toBe(false)
+    expect(isTrackable({ marketType: "prop", sport: "NFL" }, 1)).toBe(false)
+    // NHL is added once its grader is verified on a real slate.
+    expect(isTrackable({ marketType: "prop", sport: "NHL" }, 1)).toBe(false)
+    expect(isTrackable({ marketType: "prop", sport: "MLB" }, 1)).toBe(true)
+    expect(isTrackable({ marketType: "moneyline", sport: "NBA" }, 1)).toBe(true)
+    expect(isTrackable({ marketType: "moneyline", sport: "NBA" }, 2)).toBe(false)
+    expect(isTrackable({ marketType: "prop", sport: "MLB" }, 2)).toBe(false)
+  })
+
+  it("says why a prop cannot be tracked", () => {
+    expect(untrackablePropMessage("NBA")).toBe("We can't grade NBA player props yet, so this bet can't be tracked here.")
+  })
+})
+
+describe("copyProblem for player props", () => {
+  // Claims the model has no data for: it gets selections, prices and win chances only.
+  const invented = [
+    "Jayson Tatum is averaging 27 points, so the over looks reasonable.",
+    "He has gone over this line in 7 of his last 10.",
+    "Tatum has hit the over in most matchups.",
+    "Svechnikov leads the team in shots on goal.",
+    "His usage rate jumps with Brown out tonight.",
+    "Orlando allows the most points to forwards.",
+    "Dak Prescott threw for 300 yards last week.",
+    "A career-high pace makes this attractive.",
+    "He's been hot lately.",
+    "His minutes have increased.",
+  ]
+  const legitimate = [
+    "LeBron James Over 24.5 Points is priced near fair at -110.",
+    "Over 2.5 3-Pointers at +120 is slightly below fair.",
+    "Sebastian Aho Over 0.5 Points: the engine rates it 64% likely.",
+    "Dak Prescott Under 275.5 Passing Yards pays -115 at DraftKings, 2.1% below fair.",
+    "CeeDee Lamb Over 5.5 Receptions is the most likely leg on this slip at 58%.",
+    "Andrei Svechnikov Over 2.5 Shots on Goal is priced close to fair.",
+    "Two player props from the same game; the book prices the parlay itself.",
+    "Payout is about $26 on a $10 stake.",
+  ]
+
+  it("rejects invented player stats and news", () => {
+    for (const text of invented) expect(copyProblem(text, { props: true }), text).toBe("mentions player stats or news")
+  })
+
+  it("accepts selections, prices, win chances and payouts", () => {
+    for (const text of legitimate) {
+      expect(copyProblem(text, { props: true }), text).toBeNull()
+      expect(copyProblem(text, { props: true, belowFair: true }), text).toBeNull()
+    }
+  })
+
+  it("keeps every other check for props", () => {
+    expect(copyProblem("Tatum Over 27.5 Points is a lock.", { props: true })).toMatch(/lock/)
+    expect(copyProblem("He is questionable with an ankle issue.", { props: true })).toMatch(/injur/)
+    expect(copyProblem("Real value on Tatum at +105.", { props: true, belowFair: true })).toMatch(/value/)
+  })
+
+  it("leaves game-line copy as it was when props is not set", () => {
+    const text = "The Wild's opponent is Tampa Bay; the engine rates the Wild 44% likely."
+    expect(copyProblem(text)).toBeNull()
+    expect(copyProblem(text, { belowFair: true })).toBeNull()
+    expect(copyProblem(text, { props: true })).toBe("mentions player stats or news")
   })
 })

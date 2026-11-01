@@ -4,17 +4,21 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { chooseAISlip } from "@/lib/ai"
 import {
-  LEG_COUNT,
   defaultSelection,
   eligibleCandidates,
   inRiskBand,
   isAISport,
   isBetType,
+  isPropSport,
   isRiskLevel,
+  isSlipKind,
+  legCount,
   parlayMath,
+  riskBandBounds,
   upcomingGameCount,
   type BetType,
   type RiskLevel,
+  type SlipKind,
 } from "@/lib/ai-picks"
 import { getBetslip, getBoard, isEngineConfigured, type BoardCandidate } from "@/lib/engine"
 import { hasAIAccess } from "@/lib/entitlements"
@@ -26,7 +30,11 @@ import { SPORTSBOOK_CHOICES, sportsbookKey, stateCode } from "@/lib/sportsbooks"
 export const maxDuration = 60
 const DEADLINE_MS = 50_000
 
-/** Prices older than this are not offered as live; the engine polls every 30 min. */
+/**
+ * Game-line prices older than this are not offered as live; the engine polls
+ * every 30 min. A board that states its own window (props: several hours,
+ * since props are fetched twice per game) uses that instead.
+ */
 const MAX_PRICE_AGE_MS = 90 * 60_000
 
 const BET_TYPE_LABEL: Record<BetType, string> = { single: "single bet", parlay: "parlay", "same-game-parlay": "same-game parlay" }
@@ -36,9 +44,10 @@ const RISK_LABEL: Record<RiskLevel, string> = { low: "Favorites", medium: "Balan
 type Candidate = BoardCandidate & { id: string }
 
 /**
- * Builds a betslip from the engine's board of real, upcoming bets: Claude
- * chooses the legs and explains them, and every leg comes back priced at the
- * user's sportsbook with a link that opens it there.
+ * Builds a betslip from the engine's board of real, upcoming bets (game lines,
+ * or player props for PROP_SPORTS): Claude chooses the legs and explains them,
+ * and every leg comes back priced at the user's sportsbook with a link that
+ * opens it there.
  */
 export async function POST(req: Request) {
   const started = Date.now()
@@ -51,6 +60,14 @@ export async function POST(req: Request) {
   const { sport, betType, riskLevel } = body ?? {}
   if (!isAISport(sport) || !isBetType(betType) || !isRiskLevel(riskLevel)) {
     return NextResponse.json({ error: "Choose a sport, bet type and risk level." }, { status: 400 })
+  }
+  const kind: unknown = body.kind ?? "lines"
+  if (!isSlipKind(kind)) {
+    return NextResponse.json({ error: "Choose game lines or player props." }, { status: 400 })
+  }
+  const props = kind === "props"
+  if (props && !isPropSport(sport)) {
+    return NextResponse.json({ error: "Player props are available for NBA, NFL and NHL." }, { status: 400 })
   }
   const state = stateCode(body.state)
   const rawStake = Number(body.stake)
@@ -102,11 +119,26 @@ export async function POST(req: Request) {
     await prisma.user.update({ where: { id: session.user.id }, data: { preferredBook: book } }).catch(() => {})
   }
 
-  const legs = LEG_COUNT[riskLevel][betType]
-  const board = await getBoard(sport, { book, limit: 200, timeoutMs: Math.min(30_000, remaining() - 15_000) })
+  const legs = legCount(kind, riskLevel, betType)
+  // The risk band goes to the engine so it is applied before the board is cut
+  // to size; inRiskBand below still decides.
+  const board = await getBoard(sport, {
+    book,
+    limit: 200,
+    kind,
+    ...riskBandBounds(riskLevel),
+    timeoutMs: Math.min(30_000, remaining() - 15_000),
+  })
   if (!board) {
     return NextResponse.json(
       { error: "Live picks are unavailable right now. Please try again in a minute.", code: "ENGINE_UNAVAILABLE" },
+      { status: 503 }
+    )
+  }
+  // An engine that predates props ignores kind and answers with game lines.
+  if (props && board.kind !== "props") {
+    return NextResponse.json(
+      { error: "Player props are unavailable right now. Please try again later.", code: "ENGINE_UNAVAILABLE" },
       { status: 503 }
     )
   }
@@ -120,16 +152,18 @@ export async function POST(req: Request) {
   // the model is not asked (it could only fail the same rules).
   const choice =
     candidates.length >= legs && defaultSelection(candidates, betType, legs)
-      ? await chooseAISlip({ sport, betType, riskLevel, legs, candidates, budgetMs: remaining() - 12_000 })
+      ? await chooseAISlip({ sport, betType, riskLevel, legs, kind, candidates, budgetMs: remaining() - 12_000 })
       : null
   if (!choice) {
     return NextResponse.json({
       betslip: null,
       notice: emptyNotice({
+        kind,
         sport,
         betType,
         riskLevel,
         legs,
+        book,
         bookName: book ? SPORTSBOOK_CHOICES.find((b) => b.key === book)?.name ?? book : null,
         boardSize: board.candidates.length,
         // What limits a slip: bets for a single, distinct games for a parlay.
@@ -143,14 +177,30 @@ export async function POST(req: Request) {
     { refs: choice.picks.map((p) => p.ref) },
     { book, state, stake, timeoutMs: Math.max(3_000, remaining() - 2_000) }
   )
-  if (!slip || slip.legs.length !== choice.picks.length) {
+  if (!slip) {
+    return NextResponse.json({ error: "Could not load sportsbook prices. Please try again.", code: "PRICES_UNAVAILABLE" }, { status: 502 })
+  }
+  // A ref the engine no longer finds means new prices landed while the slip
+  // was being built (its legs come from the newer snapshot's bets).
+  if (slip.unresolvedRefs?.length) {
+    return NextResponse.json({
+      betslip: null,
+      notice: `${slip.book ? `${slip.book.name} just updated its prices` : "Sportsbook prices just updated"}. Please generate the slip again.`,
+    })
+  }
+  // An engine that predates unresolvedRefs drops those legs without a word.
+  if (slip.legs.length !== choice.picks.length) {
     return NextResponse.json({ error: "Could not load sportsbook prices. Please try again.", code: "PRICES_UNAVAILABLE" }, { status: 502 })
   }
   // Prices this old are not live, whatever the board said a moment ago.
-  if (!slip.pricesAsOf || Date.now() - Date.parse(slip.pricesAsOf) > MAX_PRICE_AGE_MS) {
+  const maxPriceAgeMs =
+    typeof board.maxPriceAgeMs === "number" && board.maxPriceAgeMs > 0 ? board.maxPriceAgeMs : MAX_PRICE_AGE_MS
+  if (!slip.pricesAsOf || Date.now() - Date.parse(slip.pricesAsOf) > maxPriceAgeMs) {
     return NextResponse.json({
       betslip: null,
-      notice: "Live odds are refreshing. Please try again in a few minutes.",
+      notice: props
+        ? `These player prop prices are more than ${Math.round(maxPriceAgeMs / 360_000) / 10} hours old, so we won't offer them. Props are refreshed a few hours before each game and again about an hour before.`
+        : "Live odds are refreshing. Please try again in a few minutes.",
     })
   }
   // The board only offers bets the chosen book prices, so a leg it no longer
@@ -185,6 +235,7 @@ export async function POST(req: Request) {
       description: choice.description,
       analysis: choice.analysis,
       writtenBy: choice.writtenBy,
+      kind,
       sport,
       betType,
       riskLevel,
@@ -201,6 +252,10 @@ export async function POST(req: Request) {
       sameGameWarning: sgp
         ? `Same-game legs move together, so ${slip.book?.name ?? "your sportsbook"} prices this parlay itself, and the win chance shown treats the legs as independent.`
         : null,
+      // Props are priced hours before the game from prices alone; say so with every prop slip.
+      propsNote: props
+        ? `Player prop prices are captured a few hours before each game and again about an hour before, so they can be out of date. IntellaBets has no injury, lineup or player-stat data: the win chance comes only from sportsbook prices with their margin removed. Confirm every leg at ${slip.book?.name ?? "your sportsbook"} before placing.`
+        : null,
       pricesAsOf: slip.pricesAsOf,
       disclaimer: slip.disclaimer,
     },
@@ -214,32 +269,50 @@ function americanOdds(d: number): string {
 
 /** Why no slip could be built, in words a customer can act on. */
 function emptyNotice(p: {
+  kind: SlipKind
   sport: string
   betType: BetType
   riskLevel: RiskLevel
   legs: number
+  book: string | null
   bookName: string | null
   boardSize: number
   found: number
   booksWithPrices: string[]
 }): string {
-  if (p.boardSize === 0) {
+  const props = p.kind === "props"
+  const risk = RISK_LABEL[p.riskLevel]
+  // The engine applies the risk band, so an empty board can still have
+  // prices: booksWithPrices (from every snapshot looked at) tells them apart.
+  const noPrices = p.booksWithPrices.length === 0 || (p.book !== null && !p.booksWithPrices.includes(p.book))
+  if (p.boardSize === 0 && noPrices) {
     if (p.bookName && p.booksWithPrices.length > 0) {
       const names = p.booksWithPrices
         .map((k) => SPORTSBOOK_CHOICES.find((b) => b.key === k)?.name)
         .filter(Boolean)
         .join(", ")
-      return `${p.bookName} has no current ${p.sport} prices in our feed. Books with prices right now: ${names}.`
+      return props
+        ? `${p.bookName} has no current ${p.sport} player prop prices in our feed. Books with prop prices right now: ${names}.`
+        : `${p.bookName} has no current ${p.sport} prices in our feed. Books with prices right now: ${names}.`
     }
-    return `There are no upcoming ${p.sport} games with live prices right now. Try another sport, or check back soon.`
+    return props
+      ? `No ${p.sport} player props are priced right now. Props are posted a few hours before each game; check back closer to game time.`
+      : `There are no upcoming ${p.sport} games with live prices right now. Try another sport, or check back soon.`
   }
-  const kind = `${RISK_LABEL[p.riskLevel]} ${p.sport}`
+  const kind = `${risk} ${p.sport}`
+  const noBets = props
+    ? p.riskLevel === "medium"
+      ? `There are no ${kind} player props right now. Props are posted a few hours before each game; check back closer to game time.`
+      : `There are no ${kind} player props right now. Most props are priced near 50/50, so try Balanced.`
+    : `There are no ${kind} bets right now. Try another risk level or sport.`
   if (p.betType === "same-game-parlay") {
-    return `No ${p.sport} game has ${p.legs} ${RISK_LABEL[p.riskLevel]} bets in different markets right now. Try a regular parlay, a single bet, or another risk level.`
+    return props
+      ? `No ${p.sport} game has ${p.legs} ${risk} player props on different players or stats right now. Try ${p.riskLevel === "medium" ? "a single or a parlay" : "a single, a parlay, or Balanced"}.`
+      : `No ${p.sport} game has ${p.legs} ${risk} bets in different markets right now. Try a regular parlay, a single bet, or another risk level.`
   }
-  if (p.found === 0) return `There are no ${kind} bets right now. Try another risk level or sport.`
+  if (p.found === 0) return noBets
   if (p.betType === "parlay") {
-    return `A ${kind} ${BET_TYPE_LABEL[p.betType]} needs ${p.legs} legs from different games, and only ${p.found} game${p.found === 1 ? " has" : "s have"} one right now. Try another risk level (fewer legs), a single bet, or another sport.`
+    return `A ${kind} ${props ? "player-prop parlay" : BET_TYPE_LABEL[p.betType]} needs ${p.legs} legs from different games, and only ${p.found} game${p.found === 1 ? " has" : "s have"} one right now. Try another risk level (fewer legs), a single bet, or another sport.`
   }
-  return `There are no ${kind} bets right now. Try another risk level or sport.`
+  return noBets
 }

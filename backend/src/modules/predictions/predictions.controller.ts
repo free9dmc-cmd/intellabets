@@ -5,6 +5,7 @@ import { JwtAuthGuard, RolesGuard } from "../auth/guards/jwt-auth.guard"
 import { ServiceOrPremiumGuard } from "../auth/guards/service-or-premium.guard"
 import { RequirePremium } from "../auth/decorators/current-user.decorator"
 import { STRATEGIES, isStrategyKey } from "./strategies"
+import { isBoardKind } from "./board-helpers"
 
 @ApiTags("predictions")
 @Controller("predictions")
@@ -59,10 +60,36 @@ export class PredictionsController {
   @ApiQuery({ name: "sport", required: true, description: "e.g. NFL, NCAAF, NBA, NHL, MLB" })
   @ApiQuery({ name: "book", required: false, description: "Only bets this book prices, at its price" })
   @ApiQuery({ name: "limit", required: false, description: "Default 60, at most 200" })
-  board(@Query("sport") sport: string, @Query("book") book?: string, @Query("limit") limit?: string) {
+  @ApiQuery({ name: "kind", required: false, description: "lines (default: moneyline, spread, total) or props (player props)" })
+  @ApiQuery({ name: "minProb", required: false, description: "Lowest win chance to include, 0 to 1. Applied before limit" })
+  @ApiQuery({ name: "maxProb", required: false, description: "Highest win chance to include, 0 to 1. Applied before limit" })
+  board(
+    @Query("sport") sport: string,
+    @Query("book") book?: string,
+    @Query("limit") limit?: string,
+    @Query("kind") kind?: string,
+    @Query("minProb") minProb?: string,
+    @Query("maxProb") maxProb?: string
+  ) {
     if (!sport) throw new BadRequestException("sport is required")
+    const boardKind = kind ? kind : undefined
+    if (boardKind !== undefined && !isBoardKind(boardKind)) {
+      throw new BadRequestException('kind must be "lines" or "props"')
+    }
+    const min = probabilityParam("minProb", minProb)
+    const max = probabilityParam("maxProb", maxProb)
+    if (min !== undefined && max !== undefined && min > max) {
+      throw new BadRequestException("minProb must not be greater than maxProb")
+    }
     const n = limit ? parseInt(limit, 10) : undefined
-    return this.predictions.board({ sport, book: book ?? null, limit: Number.isFinite(n) ? n : undefined })
+    return this.predictions.board({
+      sport,
+      book: book ?? null,
+      limit: Number.isFinite(n) ? n : undefined,
+      kind: boardKind,
+      minProb: min,
+      maxProb: max,
+    })
   }
 
   @Get("betslip")
@@ -85,7 +112,9 @@ export class PredictionsController {
     @Query("stake") stake?: string
   ) {
     const idList = (ids ?? "").split(",").map((s) => s.trim()).filter(Boolean)
-    // Refs carry team names and Over/Under, never commas, so both split on ",".
+    // Refs carry team names, Over/Under and player names. Ingestion drops any
+    // player whose name contains , : ~ or | (UNSAFE_PLAYER_CHARS), so refs
+    // never contain commas and both lists split on ",".
     const refList = (refs ?? "").split(",").map((s) => s.trim()).filter(Boolean)
     if (idList.length + refList.length === 0) throw new BadRequestException("ids or refs is required")
     if (idList.length + refList.length > MAX_BETSLIP_LEGS) {
@@ -164,4 +193,13 @@ export class PredictionsController {
   performance() {
     return this.predictions.performance()
   }
+}
+
+/** An optional win-chance query param: undefined when absent, else a number in [0, 1]. */
+function probabilityParam(name: string, raw: string | undefined): number | undefined {
+  if (raw === undefined || (typeof raw === "string" && raw.trim() === "")) return undefined
+  // A repeated param arrives as an array, which is not a number either.
+  const p = typeof raw === "string" ? Number(raw) : NaN
+  if (!Number.isFinite(p) || p < 0 || p > 1) throw new BadRequestException(`${name} must be a number from 0 to 1`)
+  return p
 }

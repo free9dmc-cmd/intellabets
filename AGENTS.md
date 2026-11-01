@@ -111,6 +111,13 @@ leaderboard, admin console) against local Postgres, and `api` with
   one immediately, but it is admin-gated on the engine's *own* user table, which
   the sandbox does not seed — lower `POLL_INTERVAL_MIN` instead if you want a
   faster cycle.
+- **Player props** need `PROPS_SPORTS` too (unset in the sandbox). With it set
+  the engine also logs "Scheduled props every 30m for …", and each game's props
+  are fetched only 4-6 h and 1-2 h before it starts, so the Player props board
+  is empty most of the day. To see it without spending credits, run
+  `node test/e2e/fake-odds-api.mjs` inside the `api` container and set
+  `ODDS_API_BASE_URL=http://127.0.0.1:4010/v4` and `PROPS_INTERVAL_MIN=1`
+  (RUNBOOK "Player props").
 - **No `ANTHROPIC_API_KEY`** → AI analyst passes bets through unfiltered; support
   chat answers with its fallback message.
 - **No payment keys** (Stripe/Authorize.Net/NOWPayments/web3) → each rail is

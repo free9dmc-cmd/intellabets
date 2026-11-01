@@ -1,0 +1,827 @@
+{
+  "id": "9255ca8f32aea590d00aa57de79f6bb6",
+  "sport_key": "americanfootball_nfl",
+  "sport_title": "NFL",
+  "commence_time": "2026-11-01T18:00:00Z",
+  "home_team": "Dallas Cowboys",
+  "away_team": "Arizona Cardinals",
+  "bookmakers": [
+    {
+      "key": "draftkings",
+      "title": "DraftKings",
+      "link": "https://sportsbook.draftkings.com/event/34118131",
+      "sid": "34118131",
+      "markets": [
+        {
+          "key": "player_pass_tds",
+          "last_update": "2026-11-01T13:54:06Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "Dak Prescott", "price": 115, "point": 2.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383074055%232337862165_13L88808Q1-89235954Q20", "sid": "0QA383074055#2337862165_13L88808Q1-89235954Q20"},
+            {"name": "Under", "description": "Dak Prescott", "price": -147, "point": 2.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383074055%232337862244_13L88808Q1-819668547Q20", "sid": "0QA383074055#2337862244_13L88808Q1-819668547Q20"},
+            {"name": "Over", "description": "Jacoby Brissett", "price": -164, "point": 1.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073771%232337861396_13L88808Q1-23661583Q20", "sid": "0QA383073771#2337861396_13L88808Q1-23661583Q20"},
+            {"name": "Under", "description": "Jacoby Brissett", "price": 127, "point": 1.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073771%232337861412_13L88808Q1-1720642580Q20", "sid": "0QA383073771#2337861412_13L88808Q1-1720642580Q20"}
+          ]
+        },
+        {
+          "key": "player_pass_yds",
+          "last_update": "2026-11-01T13:54:06Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "Dak Prescott", "price": -114, "point": 270.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073570%232343210689_13L88808Q1-1747950572Q20", "sid": "0QA383073570#2343210689_13L88808Q1-1747950572Q20"},
+            {"name": "Under", "description": "Dak Prescott", "price": -111, "point": 270.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073570%232343210690_13L88808Q1788559962Q20", "sid": "0QA383073570#2343210690_13L88808Q1788559962Q20"},
+            {"name": "Over", "description": "Jacoby Brissett", "price": -112, "point": 256.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073644%232340898590_13L88808Q1-1606130403Q20", "sid": "0QA383073644#2340898590_13L88808Q1-1606130403Q20"},
+            {"name": "Under", "description": "Jacoby Brissett", "price": -112, "point": 256.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073644%232340898591_13L88808Q1431231502Q20", "sid": "0QA383073644#2340898591_13L88808Q1431231502Q20"}
+          ]
+        },
+        {
+          "key": "player_reception_yds",
+          "last_update": "2026-11-01T13:54:06Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "CeeDee Lamb", "price": -114, "point": 83.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073730%232337883909_13L88808Q1-2054741803Q20", "sid": "0QA383073730#2337883909_13L88808Q1-2054741803Q20"},
+            {"name": "Under", "description": "CeeDee Lamb", "price": -110, "point": 83.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073730%232337883910_13L88808Q1-994515015Q20", "sid": "0QA383073730#2337883910_13L88808Q1-994515015Q20"},
+            {"name": "Over", "description": "Trey McBride", "price": -114, "point": 73.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073970%232340670920_13L88808Q1-20662642Q20", "sid": "0QA383073970#2340670920_13L88808Q1-20662642Q20"},
+            {"name": "Under", "description": "Trey McBride", "price": -110, "point": 73.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073970%232340670921_13L88808Q12061921498Q20", "sid": "0QA383073970#2340670921_13L88808Q12061921498Q20"},
+            {"name": "Over", "description": "George Pickens", "price": -110, "point": 64.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073979%232338091831_13L88808Q1771641843Q20", "sid": "0QA383073979#2338091831_13L88808Q1771641843Q20"},
+            {"name": "Under", "description": "George Pickens", "price": -114, "point": 64.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073979%232338091832_13L88808Q1-809050881Q20", "sid": "0QA383073979#2338091832_13L88808Q1-809050881Q20"},
+            {"name": "Over", "description": "Michael Wilson", "price": -110, "point": 59.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073649%232340631713_13L88808Q1-773357201Q20", "sid": "0QA383073649#2340631713_13L88808Q1-773357201Q20"},
+            {"name": "Under", "description": "Michael Wilson", "price": -114, "point": 59.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073649%232340631714_13L88808Q1-737833955Q20", "sid": "0QA383073649#2340631714_13L88808Q1-737833955Q20"},
+            {"name": "Over", "description": "Ryan Flournoy", "price": -111, "point": 37.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383074137%232344423200_13L88808Q1-1547726350Q20", "sid": "0QA383074137#2344423200_13L88808Q1-1547726350Q20"},
+            {"name": "Under", "description": "Ryan Flournoy", "price": -114, "point": 37.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383074137%232344423201_13L88808Q11672585396Q20", "sid": "0QA383074137#2344423201_13L88808Q11672585396Q20"},
+            {"name": "Over", "description": "Kendrick Bourne", "price": -115, "point": 36.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073925%232337861864_13L88808Q1473749250Q20", "sid": "0QA383073925#2337861864_13L88808Q1473749250Q20"},
+            {"name": "Under", "description": "Kendrick Bourne", "price": -109, "point": 36.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073925%232337861981_13L88808Q1582081354Q20", "sid": "0QA383073925#2337861981_13L88808Q1582081354Q20"},
+            {"name": "Over", "description": "Elijah Higgins", "price": -118, "point": 16.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383074155%232340526928_13L88808Q1-1766943055Q20", "sid": "0QA383074155#2340526928_13L88808Q1-1766943055Q20"},
+            {"name": "Under", "description": "Elijah Higgins", "price": -108, "point": 16.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383074155%232340526929_13L88808Q1861045653Q20", "sid": "0QA383074155#2340526929_13L88808Q1861045653Q20"},
+            {"name": "Over", "description": "Brevyn Spann-Ford", "price": -114, "point": 14.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073887%232340749686_13L88808Q1-2101048465Q20", "sid": "0QA383073887#2340749686_13L88808Q1-2101048465Q20"},
+            {"name": "Under", "description": "Brevyn Spann-Ford", "price": -111, "point": 14.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073887%232340749687_13L88808Q1-131433868Q20", "sid": "0QA383073887#2340749687_13L88808Q1-131433868Q20"},
+            {"name": "Over", "description": "Jake Ferguson", "price": -112, "point": 14.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383074319%232340745116_13L88808Q1-2101048465Q20", "sid": "0QA383074319#2340745116_13L88808Q1-2101048465Q20"},
+            {"name": "Under", "description": "Jake Ferguson", "price": -112, "point": 14.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383074319%232340745117_13L88808Q1-131433868Q20", "sid": "0QA383074319#2340745117_13L88808Q1-131433868Q20"},
+            {"name": "Over", "description": "Reggie Virgil", "price": -114, "point": 11.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073636%232345406220_13L88808Q11960963348Q20", "sid": "0QA383073636#2345406220_13L88808Q11960963348Q20"},
+            {"name": "Under", "description": "Reggie Virgil", "price": -110, "point": 11.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073636%232345406221_13L88808Q1769551952Q20", "sid": "0QA383073636#2345406221_13L88808Q1769551952Q20"},
+            {"name": "Over", "description": "Jeremiyah Love", "price": -108, "point": 11.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383074271%232343059110_13L88808Q11960963348Q20", "sid": "0QA383074271#2343059110_13L88808Q11960963348Q20"},
+            {"name": "Under", "description": "Jeremiyah Love", "price": -118, "point": 11.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383074271%232343059111_13L88808Q1769551952Q20", "sid": "0QA383074271#2343059111_13L88808Q1769551952Q20"},
+            {"name": "Over", "description": "Javonte Williams", "price": -105, "point": 11.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383074119%232340610421_13L88808Q11960963348Q20", "sid": "0QA383074119#2340610421_13L88808Q11960963348Q20"},
+            {"name": "Under", "description": "Javonte Williams", "price": -119, "point": 11.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383074119%232340610422_13L88808Q1769551952Q20", "sid": "0QA383074119#2340610422_13L88808Q1769551952Q20"}
+          ]
+        },
+        {
+          "key": "player_receptions",
+          "last_update": "2026-11-01T13:54:06Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "Trey McBride", "price": -123, "point": 7.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383074099%232338091598_13L88808Q11330879917Q20", "sid": "0QA383074099#2338091598_13L88808Q11330879917Q20"},
+            {"name": "Under", "description": "Trey McBride", "price": -104, "point": 7.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383074099%232338091599_13L88808Q1464456509Q20", "sid": "0QA383074099#2338091599_13L88808Q1464456509Q20"},
+            {"name": "Over", "description": "CeeDee Lamb", "price": -114, "point": 6.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383074148%232337881153_13L88808Q1-122753611Q20", "sid": "0QA383074148#2337881153_13L88808Q1-122753611Q20"},
+            {"name": "Under", "description": "CeeDee Lamb", "price": -111, "point": 6.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383074148%232337881154_13L88808Q1-1523053588Q20", "sid": "0QA383074148#2337881154_13L88808Q1-1523053588Q20"},
+            {"name": "Over", "description": "Michael Wilson", "price": -135, "point": 4.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073836%232337860393_13L88808Q11445674842Q20", "sid": "0QA383073836#2337860393_13L88808Q11445674842Q20"},
+            {"name": "Under", "description": "Michael Wilson", "price": 106, "point": 4.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073836%232337860429_13L88808Q1-2138696Q20", "sid": "0QA383073836#2337860429_13L88808Q1-2138696Q20"},
+            {"name": "Over", "description": "George Pickens", "price": -110, "point": 4.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073666%232337860111_13L88808Q11445674842Q20", "sid": "0QA383073666#2337860111_13L88808Q11445674842Q20"},
+            {"name": "Under", "description": "George Pickens", "price": -116, "point": 4.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073666%232337860139_13L88808Q1-2138696Q20", "sid": "0QA383073666#2337860139_13L88808Q1-2138696Q20"},
+            {"name": "Over", "description": "Kendrick Bourne", "price": -128, "point": 3.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383074289%232337863828_13L88808Q1730991375Q20", "sid": "0QA383074289#2337863828_13L88808Q1730991375Q20"},
+            {"name": "Under", "description": "Kendrick Bourne", "price": 101, "point": 3.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383074289%232337863838_13L88808Q1-616481466Q20", "sid": "0QA383074289#2337863838_13L88808Q1-616481466Q20"},
+            {"name": "Over", "description": "Ryan Flournoy", "price": -104, "point": 3.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073704%232337860545_13L88808Q1730991375Q20", "sid": "0QA383073704#2337860545_13L88808Q1730991375Q20"},
+            {"name": "Under", "description": "Ryan Flournoy", "price": -123, "point": 3.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073704%232337860604_13L88808Q1-616481466Q20", "sid": "0QA383073704#2337860604_13L88808Q1-616481466Q20"},
+            {"name": "Over", "description": "Jeremiyah Love", "price": 131, "point": 2.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073664%232338091752_13L88808Q1-2107084182Q20", "sid": "0QA383073664#2338091752_13L88808Q1-2107084182Q20"},
+            {"name": "Under", "description": "Jeremiyah Love", "price": -167, "point": 2.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073664%232338091753_13L88808Q11045072483Q20", "sid": "0QA383073664#2338091753_13L88808Q11045072483Q20"},
+            {"name": "Over", "description": "Elijah Higgins", "price": 145, "point": 2.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073592%232342445625_13L88808Q1-2107084182Q20", "sid": "0QA383073592#2342445625_13L88808Q1-2107084182Q20"},
+            {"name": "Under", "description": "Elijah Higgins", "price": -185, "point": 2.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073592%232342445626_13L88808Q11045072483Q20", "sid": "0QA383073592#2342445626_13L88808Q11045072483Q20"},
+            {"name": "Over", "description": "Jake Ferguson", "price": -196, "point": 1.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073744%232340748195_13L88808Q1-1669482518Q20", "sid": "0QA383073744#2340748195_13L88808Q1-1669482518Q20"},
+            {"name": "Under", "description": "Jake Ferguson", "price": 152, "point": 1.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073744%232340748196_13L88808Q1-847255388Q20", "sid": "0QA383073744#2340748196_13L88808Q1-847255388Q20"},
+            {"name": "Over", "description": "Javonte Williams", "price": -179, "point": 1.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383074329%232340751986_13L88808Q1-1669482518Q20", "sid": "0QA383074329#2340751986_13L88808Q1-1669482518Q20"},
+            {"name": "Under", "description": "Javonte Williams", "price": 139, "point": 1.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383074329%232340751987_13L88808Q1-847255388Q20", "sid": "0QA383074329#2340751987_13L88808Q1-847255388Q20"},
+            {"name": "Over", "description": "Brevyn Spann-Ford", "price": -147, "point": 1.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383074318%232340744512_13L88808Q1-1669482518Q20", "sid": "0QA383074318#2340744512_13L88808Q1-1669482518Q20"},
+            {"name": "Under", "description": "Brevyn Spann-Ford", "price": 115, "point": 1.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383074318%232340744513_13L88808Q1-847255388Q20", "sid": "0QA383074318#2340744513_13L88808Q1-847255388Q20"},
+            {"name": "Over", "description": "Reggie Virgil", "price": -227, "point": 0.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383074021%232337862173_13L88808Q11748027846Q20", "sid": "0QA383074021#2337862173_13L88808Q11748027846Q20"},
+            {"name": "Under", "description": "Reggie Virgil", "price": 175, "point": 0.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383074021%232337862249_13L88808Q11828871616Q20", "sid": "0QA383074021#2337862249_13L88808Q11828871616Q20"}
+          ]
+        },
+        {
+          "key": "player_rush_yds",
+          "last_update": "2026-11-01T13:54:06Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "Javonte Williams", "price": -114, "point": 75.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383074019%232338133288_13L88808Q1981074862Q20", "sid": "0QA383074019#2338133288_13L88808Q1981074862Q20"},
+            {"name": "Under", "description": "Javonte Williams", "price": -110, "point": 75.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383074019%232338133289_13L88808Q11636916788Q20", "sid": "0QA383074019#2338133289_13L88808Q11636916788Q20"},
+            {"name": "Over", "description": "Jeremiyah Love", "price": -114, "point": 43.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073601%232340631703_13L88808Q1852633450Q20", "sid": "0QA383073601#2340631703_13L88808Q1852633450Q20"},
+            {"name": "Under", "description": "Jeremiyah Love", "price": -111, "point": 43.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073601%232340631704_13L88808Q1-1212838127Q20", "sid": "0QA383073601#2340631704_13L88808Q1-1212838127Q20"},
+            {"name": "Over", "description": "Tyler Goodson", "price": -118, "point": 20.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073807%232341957304_13L88808Q1-1560957709Q20", "sid": "0QA383073807#2341957304_13L88808Q1-1560957709Q20"},
+            {"name": "Under", "description": "Tyler Goodson", "price": -108, "point": 20.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073807%232341957305_13L88808Q11191867163Q20", "sid": "0QA383073807#2341957305_13L88808Q11191867163Q20"},
+            {"name": "Over", "description": "Zonovan Knight", "price": -112, "point": 20.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073924%232341143640_13L88808Q1-1560957709Q20", "sid": "0QA383073924#2341143640_13L88808Q1-1560957709Q20"},
+            {"name": "Under", "description": "Zonovan Knight", "price": -112, "point": 20.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073924%232341143641_13L88808Q11191867163Q20", "sid": "0QA383073924#2341143641_13L88808Q11191867163Q20"},
+            {"name": "Over", "description": "Tyler Allgeier", "price": -108, "point": 13.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383074588%232343014464_13L88808Q1-235790665Q20", "sid": "0QA383074588#2343014464_13L88808Q1-235790665Q20"},
+            {"name": "Under", "description": "Tyler Allgeier", "price": -116, "point": 13.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383074588%232343014465_13L88808Q1-969042352Q20", "sid": "0QA383074588#2343014465_13L88808Q1-969042352Q20"},
+            {"name": "Over", "description": "Jacoby Brissett", "price": -114, "point": 9.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383074544%232340619417_13L88808Q1-709566483Q20", "sid": "0QA383074544#2340619417_13L88808Q1-709566483Q20"},
+            {"name": "Under", "description": "Jacoby Brissett", "price": -110, "point": 9.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383074544%232340619418_13L88808Q1-979552124Q20", "sid": "0QA383074544#2340619418_13L88808Q1-979552124Q20"},
+            {"name": "Over", "description": "Dak Prescott", "price": -112, "point": 8.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073600%232340623952_13L88808Q1116672457Q20", "sid": "0QA383073600#2340623952_13L88808Q1116672457Q20"},
+            {"name": "Under", "description": "Dak Prescott", "price": -112, "point": 8.5, "link": "https://sportsbook.draftkings.com/?outcomes=0QA383073600%232340623953_13L88808Q1-671607643Q20", "sid": "0QA383073600#2340623953_13L88808Q1-671607643Q20"}
+          ]
+        }
+      ]
+    },
+    {
+      "key": "fanduel",
+      "title": "FanDuel",
+      "link": "https://sportsbook.fanduel.com/football/nfl/arizona-cardinals-%40-dallas-cowboys-36215314",
+      "sid": "36215314",
+      "markets": [
+        {
+          "key": "player_pass_tds",
+          "last_update": "2026-11-01T13:54:19Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "Jacoby Brissett", "price": -154, "point": 1.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620685057&selectionId=14942497", "sid": "14942497"},
+            {"name": "Under", "description": "Jacoby Brissett", "price": 118, "point": 1.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620685057&selectionId=14942498", "sid": "14942498"},
+            {"name": "Over", "description": "Dak Prescott", "price": 114, "point": 2.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620685056&selectionId=11889993", "sid": "11889993"},
+            {"name": "Under", "description": "Dak Prescott", "price": -147, "point": 2.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620685056&selectionId=11889992", "sid": "11889992"}
+          ]
+        },
+        {
+          "key": "player_pass_yds",
+          "last_update": "2026-11-01T13:54:19Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "Dak Prescott", "price": -114, "point": 271.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620685052&selectionId=11889993", "sid": "11889993"},
+            {"name": "Under", "description": "Dak Prescott", "price": -114, "point": 271.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620685052&selectionId=11889992", "sid": "11889992"},
+            {"name": "Over", "description": "Jacoby Brissett", "price": -114, "point": 256.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620685053&selectionId=14942497", "sid": "14942497"},
+            {"name": "Under", "description": "Jacoby Brissett", "price": -114, "point": 256.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620685053&selectionId=14942498", "sid": "14942498"}
+          ]
+        },
+        {
+          "key": "player_reception_yds",
+          "last_update": "2026-11-01T13:54:19Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "Kendrick Bourne", "price": -114, "point": 38.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691173&selectionId=27362690", "sid": "27362690"},
+            {"name": "Under", "description": "Kendrick Bourne", "price": -114, "point": 38.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691173&selectionId=27362691", "sid": "27362691"},
+            {"name": "Over", "description": "George Pickens", "price": -114, "point": 65.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691169&selectionId=42217164", "sid": "42217164"},
+            {"name": "Under", "description": "George Pickens", "price": -114, "point": 65.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691169&selectionId=42217165", "sid": "42217165"},
+            {"name": "Over", "description": "Trey McBride", "price": -114, "point": 71.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691171&selectionId=48613596", "sid": "48613596"},
+            {"name": "Under", "description": "Trey McBride", "price": -114, "point": 71.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691171&selectionId=48613594", "sid": "48613594"},
+            {"name": "Over", "description": "Ryan Flournoy", "price": -114, "point": 36.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691168&selectionId=73637126", "sid": "73637126"},
+            {"name": "Under", "description": "Ryan Flournoy", "price": -114, "point": 36.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691168&selectionId=73637143", "sid": "73637143"},
+            {"name": "Over", "description": "Javonte Williams", "price": -114, "point": 11.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691170&selectionId=40891106", "sid": "40891106"},
+            {"name": "Under", "description": "Javonte Williams", "price": -114, "point": 11.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691170&selectionId=40891107", "sid": "40891107"},
+            {"name": "Over", "description": "Michael Wilson", "price": -114, "point": 56.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691172&selectionId=48289067", "sid": "48289067"},
+            {"name": "Under", "description": "Michael Wilson", "price": -114, "point": 56.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691172&selectionId=48289068", "sid": "48289068"},
+            {"name": "Over", "description": "Jake Ferguson", "price": -114, "point": 14.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691166&selectionId=41072316", "sid": "41072316"},
+            {"name": "Under", "description": "Jake Ferguson", "price": -114, "point": 14.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691166&selectionId=41072318", "sid": "41072318"},
+            {"name": "Over", "description": "Reggie Virgil", "price": -114, "point": 10.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.621673596&selectionId=104552024", "sid": "104552024"},
+            {"name": "Under", "description": "Reggie Virgil", "price": -114, "point": 10.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.621673596&selectionId=104552019", "sid": "104552019"},
+            {"name": "Over", "description": "CeeDee Lamb", "price": -114, "point": 80.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691165&selectionId=35952241", "sid": "35952241"},
+            {"name": "Under", "description": "CeeDee Lamb", "price": -114, "point": 80.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691165&selectionId=35952242", "sid": "35952242"},
+            {"name": "Over", "description": "Elijah Higgins", "price": -114, "point": 17.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.621067088&selectionId=41074265", "sid": "41074265"},
+            {"name": "Under", "description": "Elijah Higgins", "price": -114, "point": 17.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.621067088&selectionId=41074267", "sid": "41074267"},
+            {"name": "Over", "description": "Jeremiyah Love", "price": -114, "point": 10.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.621213272&selectionId=102331515", "sid": "102331515"},
+            {"name": "Under", "description": "Jeremiyah Love", "price": -114, "point": 10.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.621213272&selectionId=102331514", "sid": "102331514"},
+            {"name": "Over", "description": "Brevyn Spann-Ford", "price": -114, "point": 14.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691167&selectionId=42192075", "sid": "42192075"},
+            {"name": "Under", "description": "Brevyn Spann-Ford", "price": -114, "point": 14.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691167&selectionId=42192076", "sid": "42192076"}
+          ]
+        },
+        {
+          "key": "player_receptions",
+          "last_update": "2026-11-01T13:54:19Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "Jeremiyah Love", "price": 122, "point": 2.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.621213276&selectionId=102331515", "sid": "102331515"},
+            {"name": "Under", "description": "Jeremiyah Love", "price": -161, "point": 2.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.621213276&selectionId=102331514", "sid": "102331514"},
+            {"name": "Over", "description": "Javonte Williams", "price": -179, "point": 1.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691188&selectionId=40891106", "sid": "40891106"},
+            {"name": "Under", "description": "Javonte Williams", "price": 132, "point": 1.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691188&selectionId=40891107", "sid": "40891107"},
+            {"name": "Over", "description": "Ryan Flournoy", "price": 106, "point": 3.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691186&selectionId=73637126", "sid": "73637126"},
+            {"name": "Under", "description": "Ryan Flournoy", "price": -141, "point": 3.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691186&selectionId=73637143", "sid": "73637143"},
+            {"name": "Over", "description": "Trey McBride", "price": -122, "point": 7.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691189&selectionId=48613596", "sid": "48613596"},
+            {"name": "Under", "description": "Trey McBride", "price": -108, "point": 7.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691189&selectionId=48613594", "sid": "48613594"},
+            {"name": "Over", "description": "George Pickens", "price": -110, "point": 4.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691187&selectionId=42217164", "sid": "42217164"},
+            {"name": "Under", "description": "George Pickens", "price": -120, "point": 4.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691187&selectionId=42217165", "sid": "42217165"},
+            {"name": "Over", "description": "Michael Wilson", "price": -118, "point": 4.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691190&selectionId=48289067", "sid": "48289067"},
+            {"name": "Under", "description": "Michael Wilson", "price": -112, "point": 4.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691190&selectionId=48289068", "sid": "48289068"},
+            {"name": "Over", "description": "Kendrick Bourne", "price": -122, "point": 3.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691191&selectionId=27362690", "sid": "27362690"},
+            {"name": "Under", "description": "Kendrick Bourne", "price": -106, "point": 3.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691191&selectionId=27362691", "sid": "27362691"},
+            {"name": "Over", "description": "Reggie Virgil", "price": -196, "point": 0.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.621673598&selectionId=104552024", "sid": "104552024"},
+            {"name": "Under", "description": "Reggie Virgil", "price": 146, "point": 0.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.621673598&selectionId=104552019", "sid": "104552019"},
+            {"name": "Over", "description": "CeeDee Lamb", "price": -106, "point": 6.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691183&selectionId=35952241", "sid": "35952241"},
+            {"name": "Under", "description": "CeeDee Lamb", "price": -125, "point": 6.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691183&selectionId=35952242", "sid": "35952242"},
+            {"name": "Over", "description": "Elijah Higgins", "price": 140, "point": 2.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.621067090&selectionId=41074265", "sid": "41074265"},
+            {"name": "Under", "description": "Elijah Higgins", "price": -189, "point": 2.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.621067090&selectionId=41074267", "sid": "41074267"},
+            {"name": "Over", "description": "Jake Ferguson", "price": -189, "point": 1.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691184&selectionId=41072316", "sid": "41072316"},
+            {"name": "Under", "description": "Jake Ferguson", "price": 140, "point": 1.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691184&selectionId=41072318", "sid": "41072318"},
+            {"name": "Over", "description": "Brevyn Spann-Ford", "price": -147, "point": 1.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691185&selectionId=42192075", "sid": "42192075"},
+            {"name": "Under", "description": "Brevyn Spann-Ford", "price": 112, "point": 1.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691185&selectionId=42192076", "sid": "42192076"}
+          ]
+        },
+        {
+          "key": "player_rush_yds",
+          "last_update": "2026-11-01T13:54:19Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "Jacoby Brissett", "price": -114, "point": 10.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620685061&selectionId=14942497", "sid": "14942497"},
+            {"name": "Under", "description": "Jacoby Brissett", "price": -114, "point": 10.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620685061&selectionId=14942498", "sid": "14942498"},
+            {"name": "Over", "description": "Tyler Goodson", "price": -114, "point": 19.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691161&selectionId=41154238", "sid": "41154238"},
+            {"name": "Under", "description": "Tyler Goodson", "price": -114, "point": 19.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691161&selectionId=41154240", "sid": "41154240"},
+            {"name": "Over", "description": "Dak Prescott", "price": -114, "point": 8.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620685060&selectionId=11889993", "sid": "11889993"},
+            {"name": "Under", "description": "Dak Prescott", "price": -114, "point": 8.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620685060&selectionId=11889992", "sid": "11889992"},
+            {"name": "Over", "description": "Jeremiyah Love", "price": -114, "point": 41.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.621213270&selectionId=102331515", "sid": "102331515"},
+            {"name": "Under", "description": "Jeremiyah Love", "price": -114, "point": 41.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.621213270&selectionId=102331514", "sid": "102331514"},
+            {"name": "Over", "description": "Bam Knight", "price": -114, "point": 19.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.621229059&selectionId=89864096", "sid": "89864096"},
+            {"name": "Under", "description": "Bam Knight", "price": -114, "point": 19.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.621229059&selectionId=89864078", "sid": "89864078"},
+            {"name": "Over", "description": "Javonte Williams", "price": -114, "point": 76.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691162&selectionId=40891106", "sid": "40891106"},
+            {"name": "Under", "description": "Javonte Williams", "price": -114, "point": 76.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.620691162&selectionId=40891107", "sid": "40891107"},
+            {"name": "Over", "description": "Tyler Allgeier", "price": -114, "point": 13.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.621229060&selectionId=41171925", "sid": "41171925"},
+            {"name": "Under", "description": "Tyler Allgeier", "price": -114, "point": 13.5, "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.621229060&selectionId=41171924", "sid": "41171924"}
+          ]
+        }
+      ]
+    },
+    {
+      "key": "betrivers",
+      "title": "BetRivers",
+      "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874",
+      "sid": "1028823874",
+      "markets": [
+        {
+          "key": "player_pass_tds",
+          "last_update": "2026-11-01T13:54:27Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "Dak Prescott", "price": 112, "point": 2.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4394949491|{wagerAmount}", "sid": "4394949491"},
+            {"name": "Under", "description": "Dak Prescott", "price": -161, "point": 2.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4394949492|{wagerAmount}", "sid": "4394949492"},
+            {"name": "Over", "description": "Jacoby Brissett", "price": -167, "point": 1.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4394913824|{wagerAmount}", "sid": "4394913824"},
+            {"name": "Under", "description": "Jacoby Brissett", "price": 115, "point": 1.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4394913825|{wagerAmount}", "sid": "4394913825"}
+          ]
+        },
+        {
+          "key": "player_pass_yds",
+          "last_update": "2026-11-01T13:54:27Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "Jacoby Brissett", "price": -115, "point": 259.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4394955682|{wagerAmount}", "sid": "4394955682"},
+            {"name": "Under", "description": "Jacoby Brissett", "price": -125, "point": 259.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4394955683|{wagerAmount}", "sid": "4394955683"},
+            {"name": "Over", "description": "Dak Prescott", "price": -123, "point": 275.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4398807876|{wagerAmount}", "sid": "4398807876"},
+            {"name": "Under", "description": "Dak Prescott", "price": -118, "point": 275.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4398807877|{wagerAmount}", "sid": "4398807877"}
+          ]
+        },
+        {
+          "key": "player_reception_yds",
+          "last_update": "2026-11-01T13:54:27Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "Ryan Flournoy", "price": -122, "point": 36.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4394913954|{wagerAmount}", "sid": "4394913954"},
+            {"name": "Under", "description": "Ryan Flournoy", "price": -118, "point": 36.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4394913955|{wagerAmount}", "sid": "4394913955"},
+            {"name": "Over", "description": "Elijah Higgins", "price": -123, "point": 18.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4396763424|{wagerAmount}", "sid": "4396763424"},
+            {"name": "Under", "description": "Elijah Higgins", "price": -118, "point": 18.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4396763425|{wagerAmount}", "sid": "4396763425"},
+            {"name": "Over", "description": "Brevyn Spann-Ford", "price": -238, "point": 8.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4398475184|{wagerAmount}", "sid": "4398475184"},
+            {"name": "Under", "description": "Brevyn Spann-Ford", "price": 160, "point": 8.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4398475185|{wagerAmount}", "sid": "4398475185"},
+            {"name": "Over", "description": "Jake Ferguson", "price": -120, "point": 15.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4394950084|{wagerAmount}", "sid": "4394950084"},
+            {"name": "Under", "description": "Jake Ferguson", "price": -120, "point": 15.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4394950085|{wagerAmount}", "sid": "4394950085"},
+            {"name": "Over", "description": "Kendrick Bourne", "price": -118, "point": 36.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4398748792|{wagerAmount}", "sid": "4398748792"},
+            {"name": "Under", "description": "Kendrick Bourne", "price": -122, "point": 36.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4398748793|{wagerAmount}", "sid": "4398748793"},
+            {"name": "Over", "description": "CeeDee Lamb", "price": -122, "point": 84.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4398480743|{wagerAmount}", "sid": "4398480743"},
+            {"name": "Under", "description": "CeeDee Lamb", "price": -118, "point": 84.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4398480744|{wagerAmount}", "sid": "4398480744"},
+            {"name": "Over", "description": "George Pickens", "price": -122, "point": 65.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4394964822|{wagerAmount}", "sid": "4394964822"},
+            {"name": "Under", "description": "George Pickens", "price": -118, "point": 65.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4394964823|{wagerAmount}", "sid": "4394964823"},
+            {"name": "Over", "description": "Michael Wilson", "price": -118, "point": 57.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4396921345|{wagerAmount}", "sid": "4396921345"},
+            {"name": "Under", "description": "Michael Wilson", "price": -120, "point": 57.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4396921346|{wagerAmount}", "sid": "4396921346"},
+            {"name": "Over", "description": "Trey McBride", "price": -123, "point": 74.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4396820852|{wagerAmount}", "sid": "4396820852"},
+            {"name": "Under", "description": "Trey McBride", "price": -118, "point": 74.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4396820853|{wagerAmount}", "sid": "4396820853"},
+            {"name": "Over", "description": "Javonte Williams", "price": -118, "point": 11.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4394956309|{wagerAmount}", "sid": "4394956309"},
+            {"name": "Under", "description": "Javonte Williams", "price": -122, "point": 11.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4394956310|{wagerAmount}", "sid": "4394956310"}
+          ]
+        },
+        {
+          "key": "player_receptions",
+          "last_update": "2026-11-01T13:54:27Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "Elijah Higgins", "price": -182, "point": 1.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4394949258|{wagerAmount}", "sid": "4394949258"},
+            {"name": "Over", "description": "Trey McBride", "price": -118, "point": 7.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4394949242|{wagerAmount}", "sid": "4394949242"},
+            {"name": "Over", "description": "George Pickens", "price": -115, "point": 4.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4394904691|{wagerAmount}", "sid": "4394904691"},
+            {"name": "Over", "description": "Jake Ferguson", "price": -182, "point": 1.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4394913556|{wagerAmount}", "sid": "4394913556"},
+            {"name": "Over", "description": "Kendrick Bourne", "price": -135, "point": 3.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4394913578|{wagerAmount}", "sid": "4394913578"},
+            {"name": "Over", "description": "Michael Wilson", "price": -135, "point": 4.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4394904711|{wagerAmount}", "sid": "4394904711"},
+            {"name": "Over", "description": "Javonte Williams", "price": -164, "point": 1.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4394904725|{wagerAmount}", "sid": "4394904725"},
+            {"name": "Over", "description": "Ryan Flournoy", "price": 120, "point": 3.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4394964266|{wagerAmount}", "sid": "4394964266"},
+            {"name": "Over", "description": "CeeDee Lamb", "price": -133, "point": 6.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4394904743|{wagerAmount}", "sid": "4394904743"}
+          ]
+        },
+        {
+          "key": "player_rush_yds",
+          "last_update": "2026-11-01T13:54:27Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "Javonte Williams", "price": -118, "point": 77.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4394949651|{wagerAmount}", "sid": "4394949651"},
+            {"name": "Under", "description": "Javonte Williams", "price": -122, "point": 77.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4394949652|{wagerAmount}", "sid": "4394949652"},
+            {"name": "Over", "description": "Jacoby Brissett", "price": -125, "point": 9.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4396881889|{wagerAmount}", "sid": "4396881889"},
+            {"name": "Under", "description": "Jacoby Brissett", "price": -118, "point": 9.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4396881890|{wagerAmount}", "sid": "4396881890"},
+            {"name": "Over", "description": "Dak Prescott", "price": -127, "point": 9.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4394949479|{wagerAmount}", "sid": "4394949479"},
+            {"name": "Under", "description": "Dak Prescott", "price": -114, "point": 9.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4394949480|{wagerAmount}", "sid": "4394949480"},
+            {"name": "Over", "description": "Jeremiyah Love", "price": -118, "point": 43.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4398473979|{wagerAmount}", "sid": "4398473979"},
+            {"name": "Under", "description": "Jeremiyah Love", "price": -122, "point": 43.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4398473980|{wagerAmount}", "sid": "4398473980"},
+            {"name": "Over", "description": "Tyler Goodson", "price": -120, "point": 21.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4394955463|{wagerAmount}", "sid": "4394955463"},
+            {"name": "Under", "description": "Tyler Goodson", "price": -120, "point": 21.5, "link": "https://{state}.betrivers.com/?page=sportsbook#event/1028823874?coupon={pickType}|4394955464|{wagerAmount}", "sid": "4394955464"}
+          ]
+        }
+      ]
+    },
+    {
+      "key": "betonlineag",
+      "title": "BetOnline.ag",
+      "link": "https://sports.betonline.ag/sportsbook/football/nfl/game/491159700",
+      "sid": "491159700",
+      "markets": [
+        {
+          "key": "player_pass_tds",
+          "last_update": "2026-11-01T13:53:44Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "Jacoby Brissett", "price": -169, "point": 1.5, "link": null, "sid": null},
+            {"name": "Under", "description": "Jacoby Brissett", "price": 130, "point": 1.5, "link": null, "sid": null},
+            {"name": "Over", "description": "Dak Prescott", "price": 117, "point": 2.5, "link": null, "sid": null},
+            {"name": "Under", "description": "Dak Prescott", "price": -152, "point": 2.5, "link": null, "sid": null}
+          ]
+        },
+        {
+          "key": "player_pass_yds",
+          "last_update": "2026-11-01T13:53:44Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "Jacoby Brissett", "price": -114, "point": 256.5, "link": null, "sid": null},
+            {"name": "Under", "description": "Jacoby Brissett", "price": -114, "point": 256.5, "link": null, "sid": null},
+            {"name": "Over", "description": "Dak Prescott", "price": -116, "point": 269.5, "link": null, "sid": null},
+            {"name": "Under", "description": "Dak Prescott", "price": -111, "point": 269.5, "link": null, "sid": null}
+          ]
+        },
+        {
+          "key": "player_reception_yds",
+          "last_update": "2026-11-01T13:53:44Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "Javonte Williams", "price": -114, "point": 11.5, "link": null, "sid": null},
+            {"name": "Under", "description": "Javonte Williams", "price": -114, "point": 11.5, "link": null, "sid": null},
+            {"name": "Over", "description": "George Pickens", "price": -112, "point": 65.5, "link": null, "sid": null},
+            {"name": "Under", "description": "George Pickens", "price": -115, "point": 65.5, "link": null, "sid": null},
+            {"name": "Over", "description": "Jake Ferguson", "price": -116, "point": 14.5, "link": null, "sid": null},
+            {"name": "Under", "description": "Jake Ferguson", "price": -111, "point": 14.5, "link": null, "sid": null},
+            {"name": "Over", "description": "Trey McBride", "price": -114, "point": 74.5, "link": null, "sid": null},
+            {"name": "Under", "description": "Trey McBride", "price": -114, "point": 74.5, "link": null, "sid": null},
+            {"name": "Over", "description": "Elijah Higgins", "price": -109, "point": 17.5, "link": null, "sid": null},
+            {"name": "Under", "description": "Elijah Higgins", "price": -119, "point": 17.5, "link": null, "sid": null},
+            {"name": "Over", "description": "Brevyn Spann-Ford", "price": -115, "point": 14.5, "link": null, "sid": null},
+            {"name": "Under", "description": "Brevyn Spann-Ford", "price": -112, "point": 14.5, "link": null, "sid": null},
+            {"name": "Over", "description": "Ryan Flournoy", "price": -114, "point": 37.5, "link": null, "sid": null},
+            {"name": "Under", "description": "Ryan Flournoy", "price": -114, "point": 37.5, "link": null, "sid": null},
+            {"name": "Over", "description": "Michael Wilson", "price": -114, "point": 58.5, "link": null, "sid": null},
+            {"name": "Under", "description": "Michael Wilson", "price": -114, "point": 58.5, "link": null, "sid": null},
+            {"name": "Over", "description": "CeeDee Lamb", "price": -115, "point": 83.5, "link": null, "sid": null},
+            {"name": "Under", "description": "CeeDee Lamb", "price": -112, "point": 83.5, "link": null, "sid": null},
+            {"name": "Over", "description": "Jeremiyah Love", "price": -111, "point": 11.5, "link": null, "sid": null},
+            {"name": "Under", "description": "Jeremiyah Love", "price": -116, "point": 11.5, "link": null, "sid": null},
+            {"name": "Over", "description": "Kendrick Bourne", "price": -116, "point": 38.5, "link": null, "sid": null},
+            {"name": "Under", "description": "Kendrick Bourne", "price": -111, "point": 38.5, "link": null, "sid": null}
+          ]
+        },
+        {
+          "key": "player_receptions",
+          "last_update": "2026-11-01T13:53:44Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "CeeDee Lamb", "price": -119, "point": 6.5, "link": null, "sid": null},
+            {"name": "Under", "description": "CeeDee Lamb", "price": -109, "point": 6.5, "link": null, "sid": null},
+            {"name": "Over", "description": "George Pickens", "price": -110, "point": 4.5, "link": null, "sid": null},
+            {"name": "Under", "description": "George Pickens", "price": -118, "point": 4.5, "link": null, "sid": null},
+            {"name": "Over", "description": "Michael Wilson", "price": -132, "point": 4.5, "link": null, "sid": null},
+            {"name": "Under", "description": "Michael Wilson", "price": 102, "point": 4.5, "link": null, "sid": null},
+            {"name": "Over", "description": "Ryan Flournoy", "price": 102, "point": 3.5, "link": null, "sid": null},
+            {"name": "Under", "description": "Ryan Flournoy", "price": -132, "point": 3.5, "link": null, "sid": null},
+            {"name": "Over", "description": "Brevyn Spann-Ford", "price": -130, "point": 1.5, "link": null, "sid": null},
+            {"name": "Under", "description": "Brevyn Spann-Ford", "price": 100, "point": 1.5, "link": null, "sid": null},
+            {"name": "Over", "description": "Kendrick Bourne", "price": -122, "point": 3.5, "link": null, "sid": null},
+            {"name": "Under", "description": "Kendrick Bourne", "price": -106, "point": 3.5, "link": null, "sid": null},
+            {"name": "Over", "description": "Javonte Williams", "price": -179, "point": 1.5, "link": null, "sid": null},
+            {"name": "Under", "description": "Javonte Williams", "price": 137, "point": 1.5, "link": null, "sid": null},
+            {"name": "Over", "description": "Trey McBride", "price": -119, "point": 7.5, "link": null, "sid": null},
+            {"name": "Under", "description": "Trey McBride", "price": -109, "point": 7.5, "link": null, "sid": null},
+            {"name": "Over", "description": "Jake Ferguson", "price": -189, "point": 1.5, "link": null, "sid": null},
+            {"name": "Under", "description": "Jake Ferguson", "price": 143, "point": 1.5, "link": null, "sid": null},
+            {"name": "Over", "description": "Elijah Higgins", "price": 141, "point": 2.5, "link": null, "sid": null},
+            {"name": "Under", "description": "Elijah Higgins", "price": -185, "point": 2.5, "link": null, "sid": null},
+            {"name": "Over", "description": "Jeremiyah Love", "price": 132, "point": 2.5, "link": null, "sid": null},
+            {"name": "Under", "description": "Jeremiyah Love", "price": -172, "point": 2.5, "link": null, "sid": null}
+          ]
+        },
+        {
+          "key": "player_rush_yds",
+          "last_update": "2026-11-01T13:53:44Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "Jacoby Brissett", "price": -114, "point": 9.5, "link": null, "sid": null},
+            {"name": "Under", "description": "Jacoby Brissett", "price": -114, "point": 9.5, "link": null, "sid": null},
+            {"name": "Over", "description": "Dak Prescott", "price": -115, "point": 8.5, "link": null, "sid": null},
+            {"name": "Under", "description": "Dak Prescott", "price": -112, "point": 8.5, "link": null, "sid": null},
+            {"name": "Over", "description": "Javonte Williams", "price": -111, "point": 76.5, "link": null, "sid": null},
+            {"name": "Under", "description": "Javonte Williams", "price": -116, "point": 76.5, "link": null, "sid": null},
+            {"name": "Over", "description": "Tyler Goodson", "price": -114, "point": 18.5, "link": null, "sid": null},
+            {"name": "Under", "description": "Tyler Goodson", "price": -114, "point": 18.5, "link": null, "sid": null},
+            {"name": "Over", "description": "Jeremiyah Love", "price": -111, "point": 43.5, "link": null, "sid": null},
+            {"name": "Under", "description": "Jeremiyah Love", "price": -116, "point": 43.5, "link": null, "sid": null},
+            {"name": "Over", "description": "Zonovan Knight", "price": -114, "point": 20.5, "link": null, "sid": null},
+            {"name": "Under", "description": "Zonovan Knight", "price": -114, "point": 20.5, "link": null, "sid": null},
+            {"name": "Over", "description": "Tyler Allgeier", "price": -114, "point": 13.5, "link": null, "sid": null},
+            {"name": "Under", "description": "Tyler Allgeier", "price": -114, "point": 13.5, "link": null, "sid": null}
+          ]
+        }
+      ]
+    },
+    {
+      "key": "betmgm",
+      "title": "BetMGM",
+      "link": "https://sports.{state}.betmgm.com/en/sports/events/arizona-cardinals-@-dallas-cowboys-6%3A48496",
+      "sid": "6:48496",
+      "markets": [
+        {
+          "key": "player_pass_tds",
+          "last_update": "2026-11-01T13:53:53Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "Dak Prescott", "price": 125, "point": 2.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4281804-6935529&type=Single", "sid": "6935529"},
+            {"name": "Under", "description": "Dak Prescott", "price": -164, "point": 2.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4281804-6935530&type=Single", "sid": "6935530"},
+            {"name": "Over", "description": "Jacoby Brissett", "price": -164, "point": 1.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4281811-6935542&type=Single", "sid": "6935542"},
+            {"name": "Under", "description": "Jacoby Brissett", "price": 125, "point": 1.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4281811-6935543&type=Single", "sid": "6935543"}
+          ]
+        },
+        {
+          "key": "player_pass_yds",
+          "last_update": "2026-11-01T13:53:53Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "Dak Prescott", "price": -115, "point": 271.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4302733-6970453&type=Single", "sid": "6970453"},
+            {"name": "Under", "description": "Dak Prescott", "price": -115, "point": 271.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4302733-6970454&type=Single", "sid": "6970454"},
+            {"name": "Over", "description": "Jacoby Brissett", "price": -115, "point": 256.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4329212-7020535&type=Single", "sid": "7020535"},
+            {"name": "Under", "description": "Jacoby Brissett", "price": -115, "point": 256.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4329212-7020536&type=Single", "sid": "7020536"}
+          ]
+        },
+        {
+          "key": "player_reception_yds",
+          "last_update": "2026-11-01T13:53:53Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "Javonte Williams", "price": -120, "point": 11.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4281568-6934960&type=Single", "sid": "6934960"},
+            {"name": "Under", "description": "Javonte Williams", "price": -110, "point": 11.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4281568-6934961&type=Single", "sid": "6934961"},
+            {"name": "Over", "description": "CeeDee Lamb", "price": -105, "point": 82.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4281783-6935488&type=Single", "sid": "6935488"},
+            {"name": "Under", "description": "CeeDee Lamb", "price": -125, "point": 82.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4281783-6935489&type=Single", "sid": "6935489"},
+            {"name": "Over", "description": "Ryan Flournoy", "price": -115, "point": 36.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4288230-6944984&type=Single", "sid": "6944984"},
+            {"name": "Under", "description": "Ryan Flournoy", "price": -115, "point": 36.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4288230-6944985&type=Single", "sid": "6944985"},
+            {"name": "Over", "description": "Jake Ferguson", "price": -105, "point": 16.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4288561-6945574&type=Single", "sid": "6945574"},
+            {"name": "Under", "description": "Jake Ferguson", "price": -125, "point": 16.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4288561-6945575&type=Single", "sid": "6945575"},
+            {"name": "Over", "description": "Brevyn Spann-Ford", "price": -120, "point": 14.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4288727-6945799&type=Single", "sid": "6945799"},
+            {"name": "Under", "description": "Brevyn Spann-Ford", "price": -110, "point": 14.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4288727-6945800&type=Single", "sid": "6945800"},
+            {"name": "Over", "description": "Michael Wilson", "price": -120, "point": 56.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4289230-6946414&type=Single", "sid": "6946414"},
+            {"name": "Under", "description": "Michael Wilson", "price": -110, "point": 56.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4289230-6946415&type=Single", "sid": "6946415"},
+            {"name": "Over", "description": "Jeremiyah Love", "price": -120, "point": 11.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4301664-6968699&type=Single", "sid": "6968699"},
+            {"name": "Under", "description": "Jeremiyah Love", "price": -110, "point": 11.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4301664-6968700&type=Single", "sid": "6968700"},
+            {"name": "Over", "description": "Trey McBride", "price": -115, "point": 72.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4302743-6970470&type=Single", "sid": "6970470"},
+            {"name": "Under", "description": "Trey McBride", "price": -115, "point": 72.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4302743-6970471&type=Single", "sid": "6970471"},
+            {"name": "Over", "description": "Kendrick Bourne", "price": -115, "point": 36.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4323337-7009550&type=Single", "sid": "7009550"},
+            {"name": "Under", "description": "Kendrick Bourne", "price": -115, "point": 36.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4323337-7009551&type=Single", "sid": "7009551"},
+            {"name": "Over", "description": "George Pickens", "price": -115, "point": 65.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4329206-7020521&type=Single", "sid": "7020521"},
+            {"name": "Under", "description": "George Pickens", "price": -115, "point": 65.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4329206-7020522&type=Single", "sid": "7020522"}
+          ]
+        },
+        {
+          "key": "player_receptions",
+          "last_update": "2026-11-01T13:53:53Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "Javonte Williams", "price": 140, "point": 2.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4281564-6934954&type=Single", "sid": "6934954"},
+            {"name": "Under", "description": "Javonte Williams", "price": -189, "point": 2.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4281564-6934955&type=Single", "sid": "6934955"},
+            {"name": "Over", "description": "Trey McBride", "price": -115, "point": 7.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4281571-6934968&type=Single", "sid": "6934968"},
+            {"name": "Under", "description": "Trey McBride", "price": -115, "point": 7.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4281571-6934969&type=Single", "sid": "6934969"},
+            {"name": "Over", "description": "Michael Wilson", "price": -125, "point": 4.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4281573-6934972&type=Single", "sid": "6934972"},
+            {"name": "Under", "description": "Michael Wilson", "price": -105, "point": 4.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4281573-6934973&type=Single", "sid": "6934973"},
+            {"name": "Over", "description": "Kendrick Bourne", "price": -125, "point": 3.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4281577-6934979&type=Single", "sid": "6934979"},
+            {"name": "Under", "description": "Kendrick Bourne", "price": -105, "point": 3.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4281577-6934980&type=Single", "sid": "6934980"},
+            {"name": "Over", "description": "Brevyn Spann-Ford", "price": -149, "point": 1.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4288445-6945342&type=Single", "sid": "6945342"},
+            {"name": "Under", "description": "Brevyn Spann-Ford", "price": 110, "point": 1.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4288445-6945343&type=Single", "sid": "6945343"},
+            {"name": "Over", "description": "Jake Ferguson", "price": -200, "point": 1.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4288577-6945598&type=Single", "sid": "6945598"},
+            {"name": "Under", "description": "Jake Ferguson", "price": 145, "point": 1.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4288577-6945599&type=Single", "sid": "6945599"},
+            {"name": "Over", "description": "CeeDee Lamb", "price": -118, "point": 6.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4288638-6945666&type=Single", "sid": "6945666"},
+            {"name": "Under", "description": "CeeDee Lamb", "price": -111, "point": 6.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4288638-6945667&type=Single", "sid": "6945667"},
+            {"name": "Over", "description": "Ryan Flournoy", "price": 100, "point": 3.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4301634-6968645&type=Single", "sid": "6968645"},
+            {"name": "Under", "description": "Ryan Flournoy", "price": -135, "point": 3.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4301634-6968646&type=Single", "sid": "6968646"},
+            {"name": "Over", "description": "Jeremiyah Love", "price": 135, "point": 2.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4301646-6968663&type=Single", "sid": "6968663"},
+            {"name": "Under", "description": "Jeremiyah Love", "price": -185, "point": 2.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4301646-6968664&type=Single", "sid": "6968664"},
+            {"name": "Over", "description": "George Pickens", "price": -120, "point": 4.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4329220-7020551&type=Single", "sid": "7020551"},
+            {"name": "Under", "description": "George Pickens", "price": -110, "point": 4.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4329220-7020552&type=Single", "sid": "7020552"}
+          ]
+        },
+        {
+          "key": "player_rush_yds",
+          "last_update": "2026-11-01T13:53:53Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "Javonte Williams", "price": -115, "point": 77.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4281567-6934958&type=Single", "sid": "6934958"},
+            {"name": "Under", "description": "Javonte Williams", "price": -115, "point": 77.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4281567-6934959&type=Single", "sid": "6934959"},
+            {"name": "Over", "description": "Tyler Goodson", "price": -115, "point": 21.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4288228-6944981&type=Single", "sid": "6944981"},
+            {"name": "Under", "description": "Tyler Goodson", "price": -115, "point": 21.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4288228-6944982&type=Single", "sid": "6944982"},
+            {"name": "Over", "description": "Jacoby Brissett", "price": -145, "point": 8.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4288281-6945055&type=Single", "sid": "6945055"},
+            {"name": "Under", "description": "Jacoby Brissett", "price": 105, "point": 8.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4288281-6945056&type=Single", "sid": "6945056"},
+            {"name": "Over", "description": "Dak Prescott", "price": -154, "point": 6.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4288443-6945339&type=Single", "sid": "6945339"},
+            {"name": "Under", "description": "Dak Prescott", "price": 115, "point": 6.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4288443-6945340&type=Single", "sid": "6945340"},
+            {"name": "Over", "description": "Jeremiyah Love", "price": -115, "point": 43.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4329214-7020539&type=Single", "sid": "7020539"},
+            {"name": "Under", "description": "Jeremiyah Love", "price": -115, "point": 43.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4329214-7020540&type=Single", "sid": "7020540"},
+            {"name": "Over", "description": "Tyler Allgeier", "price": -120, "point": 13.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4329222-7020554&type=Single", "sid": "7020554"},
+            {"name": "Under", "description": "Tyler Allgeier", "price": -110, "point": 13.5, "link": "https://sports.{state}.betmgm.com/en/sports?options=6:48496-4329222-7020555&type=Single", "sid": "7020555"}
+          ]
+        }
+      ]
+    },
+    {
+      "key": "fanatics",
+      "title": "Fanatics",
+      "link": null,
+      "sid": "5686684",
+      "markets": [
+        {
+          "key": "player_pass_tds",
+          "last_update": "2026-11-01T13:54:11Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "Jacoby Brissett", "price": -164, "point": 1.5, "link": null, "sid": "1860743942"},
+            {"name": "Under", "description": "Jacoby Brissett", "price": 125, "point": 1.5, "link": null, "sid": "1860743966"}
+          ]
+        },
+        {
+          "key": "player_pass_yds",
+          "last_update": "2026-11-01T13:54:11Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "Dak Prescott", "price": -110, "point": 275.5, "link": null, "sid": "1860742852"},
+            {"name": "Under", "description": "Dak Prescott", "price": -120, "point": 275.5, "link": null, "sid": "1860742878"}
+          ]
+        },
+        {
+          "key": "player_reception_yds",
+          "last_update": "2026-11-01T13:54:11Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "Brevyn Spann-Ford", "price": -105, "point": 15.5, "link": null, "sid": "1860742193"},
+            {"name": "Under", "description": "Brevyn Spann-Ford", "price": -125, "point": 15.5, "link": null, "sid": "1860742214"}
+          ]
+        },
+        {
+          "key": "player_receptions",
+          "last_update": "2026-11-01T13:54:11Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "CeeDee Lamb", "price": -110, "point": 6.5, "link": null, "sid": "1860742422"},
+            {"name": "Under", "description": "CeeDee Lamb", "price": -120, "point": 6.5, "link": null, "sid": "1860742441"}
+          ]
+        },
+        {
+          "key": "player_rush_yds",
+          "last_update": "2026-11-01T13:54:11Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "Tyler Goodson", "price": -110, "point": 20.5, "link": null, "sid": "1860748244"},
+            {"name": "Under", "description": "Tyler Goodson", "price": -120, "point": 20.5, "link": null, "sid": "1860748265"}
+          ]
+        }
+      ]
+    },
+    {
+      "key": "bovada",
+      "title": "Bovada",
+      "link": "https://www.bovada.lv/sports/football/nfl/arizona-cardinals-dallas-cowboys-202611011300",
+      "sid": "29512996",
+      "markets": [
+        {
+          "key": "player_pass_tds",
+          "last_update": "2026-11-01T13:52:57Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "Dak Prescott", "price": 115, "point": 2.5, "link": null, "sid": "2459505653"},
+            {"name": "Under", "description": "Dak Prescott", "price": -149, "point": 2.5, "link": null, "sid": "2459505654"},
+            {"name": "Over", "description": "Jacoby Brissett", "price": -164, "point": 1.5, "link": null, "sid": "2459491426"},
+            {"name": "Under", "description": "Jacoby Brissett", "price": 125, "point": 1.5, "link": null, "sid": "2459491427"}
+          ]
+        },
+        {
+          "key": "player_pass_yds",
+          "last_update": "2026-11-01T13:52:57Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "Dak Prescott", "price": -244, "point": 240.5, "link": null, "sid": "2459505847"},
+            {"name": "Under", "description": "Dak Prescott", "price": 180, "point": 240.5, "link": null, "sid": "2459505848"},
+            {"name": "Over", "description": "Dak Prescott", "price": -185, "point": 250.5, "link": null, "sid": "2459505849"},
+            {"name": "Under", "description": "Dak Prescott", "price": 140, "point": 250.5, "link": null, "sid": "2459505850"},
+            {"name": "Over", "description": "Dak Prescott", "price": -145, "point": 260.5, "link": null, "sid": "2459505851"},
+            {"name": "Under", "description": "Dak Prescott", "price": 110, "point": 260.5, "link": null, "sid": "2459505852"},
+            {"name": "Over", "description": "Dak Prescott", "price": -115, "point": 270.5, "link": null, "sid": "2459506184"},
+            {"name": "Under", "description": "Dak Prescott", "price": -115, "point": 270.5, "link": null, "sid": "2459506185"},
+            {"name": "Over", "description": "Dak Prescott", "price": 110, "point": 280.5, "link": null, "sid": "2459505853"},
+            {"name": "Under", "description": "Dak Prescott", "price": -145, "point": 280.5, "link": null, "sid": "2459505854"},
+            {"name": "Over", "description": "Dak Prescott", "price": 140, "point": 290.5, "link": null, "sid": "2459505855"},
+            {"name": "Under", "description": "Dak Prescott", "price": -185, "point": 290.5, "link": null, "sid": "2459505856"},
+            {"name": "Over", "description": "Dak Prescott", "price": 170, "point": 300.5, "link": null, "sid": "2459506192"},
+            {"name": "Under", "description": "Dak Prescott", "price": -233, "point": 300.5, "link": null, "sid": "2459506193"},
+            {"name": "Over", "description": "Jacoby Brissett", "price": -250, "point": 226.5, "link": null, "sid": "2459491278"},
+            {"name": "Under", "description": "Jacoby Brissett", "price": 185, "point": 226.5, "link": null, "sid": "2459491279"},
+            {"name": "Over", "description": "Jacoby Brissett", "price": -189, "point": 236.5, "link": null, "sid": "2459491280"},
+            {"name": "Under", "description": "Jacoby Brissett", "price": 145, "point": 236.5, "link": null, "sid": "2459491281"},
+            {"name": "Over", "description": "Jacoby Brissett", "price": -145, "point": 246.5, "link": null, "sid": "2459491282"},
+            {"name": "Under", "description": "Jacoby Brissett", "price": 110, "point": 246.5, "link": null, "sid": "2459491283"},
+            {"name": "Over", "description": "Jacoby Brissett", "price": -115, "point": 256.5, "link": null, "sid": "2459490585"},
+            {"name": "Under", "description": "Jacoby Brissett", "price": -115, "point": 256.5, "link": null, "sid": "2459490586"},
+            {"name": "Over", "description": "Jacoby Brissett", "price": 110, "point": 266.5, "link": null, "sid": "2459491284"},
+            {"name": "Under", "description": "Jacoby Brissett", "price": -145, "point": 266.5, "link": null, "sid": "2459491285"},
+            {"name": "Over", "description": "Jacoby Brissett", "price": 140, "point": 276.5, "link": null, "sid": "2459491286"},
+            {"name": "Under", "description": "Jacoby Brissett", "price": -185, "point": 276.5, "link": null, "sid": "2459491287"},
+            {"name": "Over", "description": "Jacoby Brissett", "price": 170, "point": 286.5, "link": null, "sid": "2459491288"},
+            {"name": "Under", "description": "Jacoby Brissett", "price": -233, "point": 286.5, "link": null, "sid": "2459491289"}
+          ]
+        },
+        {
+          "key": "player_reception_yds",
+          "last_update": "2026-11-01T13:52:57Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "Brevyn Spann-Ford", "price": -115, "point": 14.5, "link": null, "sid": "2459583743"},
+            {"name": "Under", "description": "Brevyn Spann-Ford", "price": -115, "point": 14.5, "link": null, "sid": "2459583744"},
+            {"name": "Over", "description": "CeeDee Lamb", "price": -278, "point": 63.5, "link": null, "sid": "2459511043"},
+            {"name": "Under", "description": "CeeDee Lamb", "price": 200, "point": 63.5, "link": null, "sid": "2459511044"},
+            {"name": "Over", "description": "CeeDee Lamb", "price": -169, "point": 73.5, "link": null, "sid": "2459511045"},
+            {"name": "Under", "description": "CeeDee Lamb", "price": 130, "point": 73.5, "link": null, "sid": "2459511046"},
+            {"name": "Over", "description": "CeeDee Lamb", "price": -115, "point": 83.5, "link": null, "sid": "2459511024"},
+            {"name": "Under", "description": "CeeDee Lamb", "price": -115, "point": 83.5, "link": null, "sid": "2459511025"},
+            {"name": "Over", "description": "CeeDee Lamb", "price": 125, "point": 93.5, "link": null, "sid": "2459511047"},
+            {"name": "Under", "description": "CeeDee Lamb", "price": -164, "point": 93.5, "link": null, "sid": "2459511048"},
+            {"name": "Over", "description": "CeeDee Lamb", "price": 175, "point": 103.5, "link": null, "sid": "2459511049"},
+            {"name": "Under", "description": "CeeDee Lamb", "price": -238, "point": 103.5, "link": null, "sid": "2459511050"},
+            {"name": "Over", "description": "Elijah Higgins", "price": -120, "point": 16.5, "link": null, "sid": "2460935999"},
+            {"name": "Under", "description": "Elijah Higgins", "price": -110, "point": 16.5, "link": null, "sid": "2460936000"},
+            {"name": "Over", "description": "George Pickens", "price": -179, "point": 54.5, "link": null, "sid": "2459511078"},
+            {"name": "Under", "description": "George Pickens", "price": 135, "point": 54.5, "link": null, "sid": "2459511079"},
+            {"name": "Over", "description": "George Pickens", "price": -145, "point": 59.5, "link": null, "sid": "2459511080"},
+            {"name": "Under", "description": "George Pickens", "price": 110, "point": 59.5, "link": null, "sid": "2459511081"},
+            {"name": "Over", "description": "George Pickens", "price": -115, "point": 64.5, "link": null, "sid": "2459511026"},
+            {"name": "Under", "description": "George Pickens", "price": -115, "point": 64.5, "link": null, "sid": "2459511027"},
+            {"name": "Over", "description": "George Pickens", "price": 110, "point": 69.5, "link": null, "sid": "2459511716"},
+            {"name": "Under", "description": "George Pickens", "price": -145, "point": 69.5, "link": null, "sid": "2459511917"},
+            {"name": "Over", "description": "George Pickens", "price": 130, "point": 74.5, "link": null, "sid": "2459511495"},
+            {"name": "Under", "description": "George Pickens", "price": -169, "point": 74.5, "link": null, "sid": "2459511496"},
+            {"name": "Over", "description": "Jake Ferguson", "price": -115, "point": 14.5, "link": null, "sid": "2459583739"},
+            {"name": "Under", "description": "Jake Ferguson", "price": -115, "point": 14.5, "link": null, "sid": "2459583740"},
+            {"name": "Over", "description": "Javonte Williams", "price": -110, "point": 11.5, "link": null, "sid": "2459817368"},
+            {"name": "Under", "description": "Javonte Williams", "price": -120, "point": 11.5, "link": null, "sid": "2459817369"},
+            {"name": "Over", "description": "Jeremiyah Love", "price": -110, "point": 11.5, "link": null, "sid": "2461659246"},
+            {"name": "Under", "description": "Jeremiyah Love", "price": -120, "point": 11.5, "link": null, "sid": "2461659247"},
+            {"name": "Over", "description": "Kendrick Bourne", "price": -233, "point": 26.5, "link": null, "sid": "2459576550"},
+            {"name": "Under", "description": "Kendrick Bourne", "price": 170, "point": 26.5, "link": null, "sid": "2459576551"},
+            {"name": "Over", "description": "Kendrick Bourne", "price": -164, "point": 31.5, "link": null, "sid": "2459576552"},
+            {"name": "Under", "description": "Kendrick Bourne", "price": 125, "point": 31.5, "link": null, "sid": "2459576553"},
+            {"name": "Over", "description": "Kendrick Bourne", "price": -120, "point": 36.5, "link": null, "sid": "2459575916"},
+            {"name": "Under", "description": "Kendrick Bourne", "price": -110, "point": 36.5, "link": null, "sid": "2459576517"},
+            {"name": "Over", "description": "Kendrick Bourne", "price": 110, "point": 41.5, "link": null, "sid": "2459576554"},
+            {"name": "Under", "description": "Kendrick Bourne", "price": -145, "point": 41.5, "link": null, "sid": "2459576555"},
+            {"name": "Over", "description": "Kendrick Bourne", "price": 145, "point": 46.5, "link": null, "sid": "2459576556"},
+            {"name": "Under", "description": "Kendrick Bourne", "price": -189, "point": 46.5, "link": null, "sid": "2459576557"},
+            {"name": "Over", "description": "Michael Wilson", "price": -185, "point": 49.5, "link": null, "sid": "2459576542"},
+            {"name": "Under", "description": "Michael Wilson", "price": 140, "point": 49.5, "link": null, "sid": "2459576543"},
+            {"name": "Over", "description": "Michael Wilson", "price": -145, "point": 54.5, "link": null, "sid": "2459576544"},
+            {"name": "Under", "description": "Michael Wilson", "price": 110, "point": 54.5, "link": null, "sid": "2459576545"},
+            {"name": "Over", "description": "Michael Wilson", "price": -115, "point": 59.5, "link": null, "sid": "2459576082"},
+            {"name": "Under", "description": "Michael Wilson", "price": -115, "point": 59.5, "link": null, "sid": "2459576083"},
+            {"name": "Over", "description": "Michael Wilson", "price": 110, "point": 64.5, "link": null, "sid": "2459576546"},
+            {"name": "Under", "description": "Michael Wilson", "price": -145, "point": 64.5, "link": null, "sid": "2459576547"},
+            {"name": "Over", "description": "Michael Wilson", "price": 135, "point": 69.5, "link": null, "sid": "2459576548"},
+            {"name": "Under", "description": "Michael Wilson", "price": -179, "point": 69.5, "link": null, "sid": "2459576549"},
+            {"name": "Over", "description": "Reggie Virgil", "price": -115, "point": 11.5, "link": null, "sid": "2463574387"},
+            {"name": "Under", "description": "Reggie Virgil", "price": -115, "point": 11.5, "link": null, "sid": "2463574388"},
+            {"name": "Over", "description": "Ryan Flournoy", "price": -222, "point": 27.5, "link": null, "sid": "2459583093"},
+            {"name": "Under", "description": "Ryan Flournoy", "price": 165, "point": 27.5, "link": null, "sid": "2459583094"},
+            {"name": "Over", "description": "Ryan Flournoy", "price": -161, "point": 32.5, "link": null, "sid": "2459583559"},
+            {"name": "Under", "description": "Ryan Flournoy", "price": 120, "point": 32.5, "link": null, "sid": "2459583560"},
+            {"name": "Over", "description": "Ryan Flournoy", "price": -115, "point": 37.5, "link": null, "sid": "2459583741"},
+            {"name": "Under", "description": "Ryan Flournoy", "price": -115, "point": 37.5, "link": null, "sid": "2459583742"},
+            {"name": "Over", "description": "Ryan Flournoy", "price": 115, "point": 42.5, "link": null, "sid": "2459583095"},
+            {"name": "Under", "description": "Ryan Flournoy", "price": -149, "point": 42.5, "link": null, "sid": "2459583096"},
+            {"name": "Over", "description": "Ryan Flournoy", "price": 150, "point": 47.5, "link": null, "sid": "2459583561"},
+            {"name": "Under", "description": "Ryan Flournoy", "price": -200, "point": 47.5, "link": null, "sid": "2459583562"},
+            {"name": "Over", "description": "Trey McBride", "price": -179, "point": 63.5, "link": null, "sid": "2459490834"},
+            {"name": "Under", "description": "Trey McBride", "price": 135, "point": 63.5, "link": null, "sid": "2459490835"},
+            {"name": "Over", "description": "Trey McBride", "price": -145, "point": 68.5, "link": null, "sid": "2459490836"},
+            {"name": "Under", "description": "Trey McBride", "price": 110, "point": 68.5, "link": null, "sid": "2459490837"},
+            {"name": "Over", "description": "Trey McBride", "price": -115, "point": 73.5, "link": null, "sid": "2459491336"},
+            {"name": "Under", "description": "Trey McBride", "price": -115, "point": 73.5, "link": null, "sid": "2459491337"},
+            {"name": "Over", "description": "Trey McBride", "price": 105, "point": 78.5, "link": null, "sid": "2459491307"},
+            {"name": "Under", "description": "Trey McBride", "price": -135, "point": 78.5, "link": null, "sid": "2459491308"},
+            {"name": "Over", "description": "Trey McBride", "price": 130, "point": 83.5, "link": null, "sid": "2459491309"},
+            {"name": "Under", "description": "Trey McBride", "price": -169, "point": 83.5, "link": null, "sid": "2459491310"}
+          ]
+        },
+        {
+          "key": "player_receptions",
+          "last_update": "2026-11-01T13:52:57Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "Brevyn Spann-Ford", "price": -149, "point": 1.5, "link": null, "sid": "2459583737"},
+            {"name": "Under", "description": "Brevyn Spann-Ford", "price": 115, "point": 1.5, "link": null, "sid": "2459583738"},
+            {"name": "Over", "description": "CeeDee Lamb", "price": -115, "point": 6.5, "link": null, "sid": "2459511020"},
+            {"name": "Under", "description": "CeeDee Lamb", "price": -115, "point": 6.5, "link": null, "sid": "2459511021"},
+            {"name": "Over", "description": "Elijah Higgins", "price": 145, "point": 2.5, "link": null, "sid": "2460935985"},
+            {"name": "Under", "description": "Elijah Higgins", "price": -189, "point": 2.5, "link": null, "sid": "2460935986"},
+            {"name": "Over", "description": "George Pickens", "price": -110, "point": 4.5, "link": null, "sid": "2459511022"},
+            {"name": "Under", "description": "George Pickens", "price": -120, "point": 4.5, "link": null, "sid": "2459511023"},
+            {"name": "Over", "description": "Jake Ferguson", "price": -200, "point": 1.5, "link": null, "sid": "2459584563"},
+            {"name": "Under", "description": "Jake Ferguson", "price": 150, "point": 1.5, "link": null, "sid": "2459584564"},
+            {"name": "Over", "description": "Javonte Williams", "price": -185, "point": 1.5, "link": null, "sid": "2459583735"},
+            {"name": "Under", "description": "Javonte Williams", "price": 140, "point": 1.5, "link": null, "sid": "2459583736"},
+            {"name": "Over", "description": "Jeremiyah Love", "price": 130, "point": 2.5, "link": null, "sid": "2461659242"},
+            {"name": "Under", "description": "Jeremiyah Love", "price": -169, "point": 2.5, "link": null, "sid": "2461659243"},
+            {"name": "Over", "description": "Kendrick Bourne", "price": -130, "point": 3.5, "link": null, "sid": "2459575912"},
+            {"name": "Under", "description": "Kendrick Bourne", "price": 100, "point": 3.5, "link": null, "sid": "2459575913"},
+            {"name": "Over", "description": "Michael Wilson", "price": -135, "point": 4.5, "link": null, "sid": "2459575914"},
+            {"name": "Under", "description": "Michael Wilson", "price": 105, "point": 4.5, "link": null, "sid": "2459575915"},
+            {"name": "Over", "description": "Reggie Virgil", "price": -233, "point": 0.5, "link": null, "sid": "2463574385"},
+            {"name": "Under", "description": "Reggie Virgil", "price": 170, "point": 0.5, "link": null, "sid": "2463574386"},
+            {"name": "Over", "description": "Ryan Flournoy", "price": -105, "point": 3.5, "link": null, "sid": "2459583733"},
+            {"name": "Under", "description": "Ryan Flournoy", "price": -125, "point": 3.5, "link": null, "sid": "2459583734"},
+            {"name": "Over", "description": "Trey McBride", "price": -125, "point": 7.5, "link": null, "sid": "2459491274"},
+            {"name": "Under", "description": "Trey McBride", "price": -105, "point": 7.5, "link": null, "sid": "2459491275"}
+          ]
+        },
+        {
+          "key": "player_rush_yds",
+          "last_update": "2026-11-01T13:52:57Z",
+          "link": null,
+          "sid": null,
+          "outcomes": [
+            {"name": "Over", "description": "Bam Knight", "price": -115, "point": 20.5, "link": null, "sid": "2461656894"},
+            {"name": "Under", "description": "Bam Knight", "price": -115, "point": 20.5, "link": null, "sid": "2461656895"},
+            {"name": "Over", "description": "Dak Prescott", "price": -115, "point": 8.5, "link": null, "sid": "2459536623"},
+            {"name": "Under", "description": "Dak Prescott", "price": -115, "point": 8.5, "link": null, "sid": "2459536624"},
+            {"name": "Over", "description": "Jacoby Brissett", "price": -115, "point": 9.5, "link": null, "sid": "2459536621"},
+            {"name": "Under", "description": "Jacoby Brissett", "price": -115, "point": 9.5, "link": null, "sid": "2459536622"},
+            {"name": "Over", "description": "Javonte Williams", "price": -357, "point": 55.5, "link": null, "sid": "2459511742"},
+            {"name": "Under", "description": "Javonte Williams", "price": 250, "point": 55.5, "link": null, "sid": "2459511743"},
+            {"name": "Over", "description": "Javonte Williams", "price": -189, "point": 65.5, "link": null, "sid": "2459511918"},
+            {"name": "Under", "description": "Javonte Williams", "price": 145, "point": 65.5, "link": null, "sid": "2459511919"},
+            {"name": "Over", "description": "Javonte Williams", "price": -115, "point": 75.5, "link": null, "sid": "2459510647"},
+            {"name": "Under", "description": "Javonte Williams", "price": -115, "point": 75.5, "link": null, "sid": "2459510648"},
+            {"name": "Over", "description": "Javonte Williams", "price": 140, "point": 85.5, "link": null, "sid": "2459511920"},
+            {"name": "Under", "description": "Javonte Williams", "price": -185, "point": 85.5, "link": null, "sid": "2459511921"},
+            {"name": "Over", "description": "Javonte Williams", "price": 215, "point": 95.5, "link": null, "sid": "2459511744"},
+            {"name": "Under", "description": "Javonte Williams", "price": -294, "point": 95.5, "link": null, "sid": "2459511745"},
+            {"name": "Over", "description": "Jeremiyah Love", "price": -238, "point": 33.5, "link": null, "sid": "2461525458"},
+            {"name": "Under", "description": "Jeremiyah Love", "price": 175, "point": 33.5, "link": null, "sid": "2461525459"},
+            {"name": "Over", "description": "Jeremiyah Love", "price": -161, "point": 38.5, "link": null, "sid": "2461525460"},
+            {"name": "Under", "description": "Jeremiyah Love", "price": 120, "point": 38.5, "link": null, "sid": "2461525461"},
+            {"name": "Over", "description": "Jeremiyah Love", "price": -115, "point": 43.5, "link": null, "sid": "2461525444"},
+            {"name": "Under", "description": "Jeremiyah Love", "price": -115, "point": 43.5, "link": null, "sid": "2461525445"},
+            {"name": "Over", "description": "Jeremiyah Love", "price": 120, "point": 48.5, "link": null, "sid": "2461525462"},
+            {"name": "Under", "description": "Jeremiyah Love", "price": -161, "point": 48.5, "link": null, "sid": "2461525463"},
+            {"name": "Over", "description": "Jeremiyah Love", "price": 155, "point": 53.5, "link": null, "sid": "2461525464"},
+            {"name": "Under", "description": "Jeremiyah Love", "price": -208, "point": 53.5, "link": null, "sid": "2461525465"},
+            {"name": "Over", "description": "Tyler Allgeier", "price": -110, "point": 13.5, "link": null, "sid": "2461656160"},
+            {"name": "Under", "description": "Tyler Allgeier", "price": -120, "point": 13.5, "link": null, "sid": "2461656161"},
+            {"name": "Over", "description": "Tyler Goodson", "price": -120, "point": 20.5, "link": null, "sid": "2459713067"},
+            {"name": "Under", "description": "Tyler Goodson", "price": -110, "point": 20.5, "link": null, "sid": "2459713068"}
+          ]
+        }
+      ]
+    }
+  ]
+}

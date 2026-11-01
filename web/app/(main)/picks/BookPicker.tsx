@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { isTrackable, untrackablePropMessage } from "@/lib/ai-picks"
 
 /**
  * Say what the link really does. Only a betslip link adds the pick for the
@@ -53,10 +54,16 @@ export default function BookPicker({
   preferredBook?: string | null
   /** 2-letter state, so state-hosted books can open a filled betslip. */
   state?: string | null
-  /** Show "I placed this". Off for parlay legs, which are not single bets. */
+  /**
+   * Show "I placed this". Off for parlay legs, which are not single bets. A
+   * player prop in a sport the engine does not grade is never trackable.
+   */
   trackable?: boolean
   initialStake?: string
 }) {
+  // An ungraded prop would sit "pending" in My Bets forever.
+  const propUngraded = !isTrackable({ marketType, sport }, 1)
+  const canTrack = trackable && !propUngraded
   const [open, setOpen] = useState(false)
   const [data, setData] = useState<Comparison | null>(null)
   const [stake, setStake] = useState(initialStake)
@@ -196,7 +203,7 @@ export default function BookPicker({
                         {linkLabel(o.linkKind, o.bookName)}
                       </a>
                     )}
-                    {trackable && (
+                    {canTrack && (
                       <button
                         onClick={() => logBet(o)}
                         disabled={loggedBook === o.book}
@@ -210,6 +217,8 @@ export default function BookPicker({
                 </div>
               ))}
 
+              {/* A caller that turned tracking off says why itself. */}
+              {trackable && propUngraded && <p className="text-xs text-gray-500">{untrackablePropMessage(sport)}</p>}
               <p className="text-xs text-gray-400">{data.note}</p>
               <p className="text-xs text-gray-600 leading-relaxed">⚠ {data.disclaimer}</p>
             </>

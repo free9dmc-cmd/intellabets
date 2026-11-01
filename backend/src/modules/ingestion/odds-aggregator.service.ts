@@ -4,7 +4,7 @@ import axios, { AxiosInstance } from "axios"
 import { fromAmerican, normalizeMarketName } from "../sportsbook/utils/odds-normalizer"
 import type { MarketLine, Sport } from "../sportsbook/types/provider.types"
 import type { BookMarket } from "../predictions/devig"
-import { PROP_LABELS, PROP_MARKETS } from "./prop-markets"
+import { PROP_LABELS, PROP_MARKETS, UNSAFE_PLAYER_CHARS } from "./prop-markets"
 
 /**
  * A single game with its markets grouped by market type, each carrying every
@@ -83,10 +83,13 @@ export class OddsAggregatorService {
   /** What the last calls to The Odds API returned, for the status endpoint. */
   private feed: OddsFeedStatus = { lastSuccessAt: null, lastError: null, quota: null }
 
+  /** PROPS_SPORTS entries already warned about, so the warning is logged once. */
+  private readonly warnedPropsKeys = new Set<string>()
+
   constructor(private readonly config: ConfigService) {
     this.apiKey = config.get<string>("THE_ODDS_API_KEY", "")
     this.http = axios.create({
-      baseURL: "https://api.the-odds-api.com/v4",
+      baseURL: this.baseUrl(),
       timeout: 12_000,
       params: { apiKey: this.apiKey },
     })
@@ -106,19 +109,31 @@ export class OddsAggregatorService {
     return { ...this.feed }
   }
 
+  /**
+   * ODDS_API_BASE_URL points the engine at a stand-in API (the local E2E fake,
+   * backend/test/e2e/fake-odds-api.mjs). It is ignored in production, so a
+   * stray value there can never send the real key somewhere else.
+   */
+  private baseUrl(): string {
+    const official = "https://api.the-odds-api.com/v4"
+    const override = (this.config.get<string>("ODDS_API_BASE_URL", "") ?? "").trim()
+    if (!override) return official
+    if (this.config.get<string>("NODE_ENV") === "production") {
+      this.logger.warn("ODDS_API_BASE_URL is ignored in production")
+      return official
+    }
+    this.logger.warn(`Using ODDS_API_BASE_URL=${override} instead of The Odds API`)
+    return override
+  }
+
   /** The Odds API reports credits on every response, including most errors. */
   private recordQuota(headers: unknown) {
-    const h = (headers ?? {}) as Record<string, unknown>
-    const num = (k: string) => {
-      const n = Number(h[k])
-      return Number.isFinite(n) ? n : null
-    }
-    const remaining = num("x-requests-remaining")
+    const remaining = headerNumber(headers, "x-requests-remaining")
     if (remaining === null) return
     this.feed.quota = {
       remaining,
-      used: num("x-requests-used"),
-      lastCost: num("x-requests-last"),
+      used: headerNumber(headers, "x-requests-used"),
+      lastCost: headerNumber(headers, "x-requests-last"),
       at: new Date().toISOString(),
     }
   }
@@ -154,18 +169,16 @@ export class OddsAggregatorService {
    * roughly doubles credits per call. "us_ex" adds prediction exchanges.
    */
   regions(): string {
-    const raw = this.config.get<string>("ODDS_REGIONS", "us") ?? "us"
-    // US regions only. us_dfs (pick'em) is out of scope for the book comparison.
-    const allowed = new Set(["us", "us2", "us_ex"])
-    const picked = Array.from(
-      new Set(
-        raw
-          .split(",")
-          .map((r) => r.trim().toLowerCase())
-          .filter((r) => allowed.has(r))
-      )
-    )
-    return picked.length ? picked.join(",") : "us"
+    return parseRegions(this.config.get<string>("ODDS_REGIONS", "us") ?? "us")
+  }
+
+  /**
+   * The regions player props are requested in, from PROPS_REGIONS (default
+   * "us", same allowed set as regions()). Kept apart from ODDS_REGIONS so
+   * adding us2 for game lines does not double what every props call costs.
+   */
+  propsRegions(): string {
+    return parseRegions(this.config.get<string>("PROPS_REGIONS", "us") ?? "us")
   }
 
   isConfigured(): boolean {
@@ -206,6 +219,36 @@ export class OddsAggregatorService {
   }
 
   /**
+   * Sport keys the scheduled props job runs for, from PROPS_SPORTS
+   * (comma-separated, default empty: off). A key needs prop markets and must
+   * also be in activeSportKeys(), because props are graded inside settleSport,
+   * which is only scheduled for active sports. Other keys are dropped with a
+   * warning.
+   */
+  propsSportKeys(): string[] {
+    const raw = this.config.get<string>("PROPS_SPORTS", "") ?? ""
+    const requested = Array.from(new Set(raw.split(",").map((s) => s.trim()).filter(Boolean)))
+    const active = new Set(this.activeSportKeys())
+    return requested.filter((key) => {
+      const reason = !this.propMarketsFor(key).length
+        ? "it has no prop markets"
+        : !active.has(key)
+          ? "it is not in ACTIVE_SPORTS"
+          : null
+      if (reason && !this.warnedPropsKeys.has(key)) {
+        this.warnedPropsKeys.add(key)
+        this.logger.warn(`PROPS_SPORTS: ignoring ${key} because ${reason}`)
+      }
+      return !reason
+    })
+  }
+
+  /** The Sport name stored on Game rows for an Odds API sport key, e.g. "NBA". */
+  sportFor(sportKey: string): Sport | null {
+    return this.SPORT_KEYS[sportKey] ?? null
+  }
+
+  /**
    * Fetch final scores for recently completed games (used for settlement).
    * @param daysFrom how many days back to include completed games (max 3)
    */
@@ -233,36 +276,50 @@ export class OddsAggregatorService {
     return PROP_MARKETS[sportKey] ?? []
   }
 
-  /** List scheduled/live events for a sport (cheap — 1 credit). */
-  async fetchEvents(sportKey: string): Promise<{ id: string; homeTeam: string; awayTeam: string; commenceTime: Date }[]> {
-    const { data } = await this.http.get<OddsApiGame[]>(`/sports/${sportKey}/events`)
-    return data.map((e) => ({
-      id: e.id,
-      homeTeam: e.home_team,
-      awayTeam: e.away_team,
-      commenceTime: new Date(e.commence_time),
-    }))
+  /**
+   * List scheduled/live events for a sport. The listing has cost 0 credits so
+   * far; cost and remaining come from this response's own headers (the shared
+   * feed.quota is overwritten by concurrent poll jobs), so a caller can tell
+   * if that changes.
+   */
+  async fetchEvents(sportKey: string): Promise<{ events: OddsEvent[]; cost: number | null; remaining: number | null }> {
+    const res = await this.http.get<OddsApiGame[]>(`/sports/${sportKey}/events`)
+    return {
+      events: res.data.map((e) => ({
+        id: e.id,
+        homeTeam: e.home_team,
+        awayTeam: e.away_team,
+        commenceTime: new Date(e.commence_time),
+      })),
+      ...creditsFrom(res.headers),
+    }
   }
 
   /**
-   * Fetch player props for a single event across all books.
-   * Each (player, prop) becomes its own 2-way (Over/Under) market so the engine
-   * can de-vig it exactly like a game total.
+   * Fetch player props for a single event across all books, in propsRegions().
+   * Each (player, prop, number) becomes its own 2-way (Over/Under) market so the
+   * engine can de-vig it exactly like a game total. A call costs (markets
+   * returned x regions) credits, read from this response's headers; books is
+   * null only when the sport has no prop markets (and nothing was requested).
+   * Failures throw OddsApiError.
    */
-  async fetchEventProps(sportKey: string, eventId: string): Promise<GameBooks | null> {
+  async fetchEventProps(
+    sportKey: string,
+    eventId: string
+  ): Promise<{ books: GameBooks | null; cost: number | null; remaining: number | null }> {
     const markets = this.propMarketsFor(sportKey)
-    if (markets.length === 0) return null
+    if (markets.length === 0) return { books: null, cost: 0, remaining: null }
 
-    const { data } = await this.http.get<OddsApiGame>(`/sports/${sportKey}/events/${eventId}/odds`, {
+    const res = await this.http.get<OddsApiGame>(`/sports/${sportKey}/events/${eventId}/odds`, {
       params: {
-        regions: this.regions(),
+        regions: this.propsRegions(),
         markets: markets.join(","),
         oddsFormat: "american",
         includeLinks: "true",
         includeSids: "true",
       },
     })
-    return this.transformProps(data)
+    return { books: this.transformProps(res.data), ...creditsFrom(res.headers) }
   }
 
   // ─── transform ────────────────────────────────────────────────────────────
@@ -316,34 +373,56 @@ export class OddsAggregatorService {
     const sport = this.SPORT_KEYS[g.sport_key] ?? "NFL"
     // Key = "<propKey>|<player>" so each player's line is its own 2-way market.
     const booksByMarket = new Map<string, BookMarket[]>()
+    // (book, prop, player, number) already taken, so a repeated market cannot
+    // put one book in the same consensus twice.
+    const seen = new Set<string>()
 
     for (const bm of g.bookmakers) {
       for (const m of bm.markets) {
-        // Group this book's outcomes for this prop by player (description field).
-        const byPlayer = new Map<string, OddsApiOutcome[]>()
+        // Group this book's outcomes for this prop by player (description
+        // field) and number. Most books post one number per player; some
+        // (Bovada) post a ladder of them in one market, and each number is
+        // its own Over/Under bet that other books may price.
+        const byLine = new Map<string, { player: string; point: number; outs: OddsApiOutcome[] }>()
         for (const o of m.outcomes) {
-          const player = o.description ?? o.name
-          const arr = byPlayer.get(player) ?? []
-          arr.push(o)
-          byPlayer.set(player, arr)
+          const player = o.description
+          // The name is part of the outcome id and the board ref, whose
+          // separators it must not contain. A prop without a number is not a
+          // two-way line.
+          if (!player || UNSAFE_PLAYER_CHARS.test(player)) continue
+          if (typeof o.point !== "number" || !Number.isFinite(o.point)) continue
+          const groupKey = `${player}\u0000${o.point}`
+          const group = byLine.get(groupKey) ?? { player, point: o.point, outs: [] }
+          group.outs.push(o)
+          byLine.set(groupKey, group)
         }
 
-        for (const [player, outs] of byPlayer.entries()) {
-          // Need both Over and Under to de-vig; skip single-sided.
-          if (outs.length < 2) continue
+        for (const { player, point, outs } of byLine.values()) {
+          // De-vigging needs exactly one Over and one Under at the same number.
+          const over = outs.filter((o) => o.name.toLowerCase() === "over")
+          const under = outs.filter((o) => o.name.toLowerCase() === "under")
+          if (outs.length !== 2 || over.length !== 1 || under.length !== 1) continue
+          const seenKey = `${bm.key}\u0000${m.key}\u0000${player}\u0000${point}`
+          if (seen.has(seenKey)) continue
+          seen.add(seenKey)
+
           const label = PROP_LABELS[m.key] ?? m.key
           const key = `${m.key}|${player}`
+          const sides: [string, OddsApiOutcome][] = [
+            ["Over", over[0]],
+            ["Under", under[0]],
+          ]
           const line: MarketLine = {
             id: `${g.id}:${bm.key}:${m.key}:${player}`,
             type: "prop",
             name: key,
             rawName: m.key,
-            outcomes: outs.map((o) => ({
-              id: `${g.id}:${m.key}:${player}:${o.name}:${o.point ?? ""}`,
-              name: o.name, // "Over" / "Under"
-              description: `${player} ${o.name} ${o.point ?? ""} ${label}`.trim(),
+            outcomes: sides.map(([side, o]) => ({
+              id: `${g.id}:${m.key}:${player}:${side}:${point}`,
+              name: side,
+              description: `${player} ${side} ${point} ${label}`,
               odds: fromAmerican(o.price),
-              point: o.point,
+              point,
               isMain: true,
               link: o.link ?? m.link ?? undefined,
               sid: o.sid ?? undefined,
@@ -369,6 +448,44 @@ export class OddsAggregatorService {
       booksByMarket,
     }
   }
+}
+
+/** One event from The Odds API's /events listing. */
+export interface OddsEvent {
+  id: string
+  homeTeam: string
+  awayTeam: string
+  commenceTime: Date
+}
+
+/** US regions only. us_dfs (pick'em) is out of scope for the book comparison. */
+const ALLOWED_REGIONS = new Set(["us", "us2", "us_ex"])
+
+/** A comma-separated regions setting, filtered to ALLOWED_REGIONS; "us" when none is left. */
+function parseRegions(raw: string): string {
+  const picked = Array.from(
+    new Set(
+      raw
+        .split(",")
+        .map((r) => r.trim().toLowerCase())
+        .filter((r) => ALLOWED_REGIONS.has(r))
+    )
+  )
+  return picked.length ? picked.join(",") : "us"
+}
+
+/** A numeric response header, or null when it is missing or not a number. */
+function headerNumber(headers: unknown, key: string): number | null {
+  const h = (headers ?? {}) as Record<string, unknown>
+  const raw = h[key]
+  if (raw == null || raw === "") return null
+  const n = Number(raw)
+  return Number.isFinite(n) ? n : null
+}
+
+/** What one call cost and the credits left after it, from its own headers. */
+function creditsFrom(headers: unknown): { cost: number | null; remaining: number | null } {
+  return { cost: headerNumber(headers, "x-requests-last"), remaining: headerNumber(headers, "x-requests-remaining") }
 }
 
 // ─── The Odds API response shapes ─────────────────────────────────────────────

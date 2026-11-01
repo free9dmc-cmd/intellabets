@@ -1,0 +1,30 @@
+{
+ "id": 2026020227,
+ "season": 20262027,
+ "gameType": 2,
+ "gameDate": "2026-11-01",
+ "startTimeUTC": "2026-11-01T18:00:00Z",
+ "gameState": "FUT",
+ "gameScheduleState": "OK",
+ "awayTeam": {
+  "id": 52,
+  "commonName": {
+   "default": "Jets"
+  },
+  "abbrev": "WPG",
+  "placeName": {
+   "default": "Winnipeg"
+  }
+ },
+ "homeTeam": {
+  "id": 12,
+  "commonName": {
+   "default": "Hurricanes"
+  },
+  "abbrev": "CAR",
+  "placeName": {
+   "default": "Carolina",
+   "fr": "Caroline"
+  }
+ }
+}

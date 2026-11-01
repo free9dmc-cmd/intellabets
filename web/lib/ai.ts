@@ -8,6 +8,7 @@ import {
   type BetType,
   type RiskLevel,
   type SlipCandidate,
+  type SlipKind,
 } from "./ai-picks"
 import { sportsbookName } from "./sportsbooks"
 
@@ -87,14 +88,16 @@ Field meanings:
 - price: what the sportsbook pays, in American odds.
 - priceVsFair: the expected return at that price against the engine's estimate, in percent. Positive means the price is better than fair. Negative, which is normal, means the sportsbook's margin makes the price slightly worse than fair.
 
-Write only from these numbers. For a bet whose priceVsFair is zero or negative, do not use the words "value", "edge", "undervalued", "underpriced" or "bargain" at all; say plainly that it is priced near or slightly below fair. Never mention injuries, statistics, trends, records, streaks, weather, lineups or news: you have none, and inventing them would mislead people betting real money. Keep the tone plain and measured. Do not use the words "lock", "sure thing", "certainty", "risk-free" or "guarantee", not even to deny them; the page already explains that every bet can lose.`
+Write only from these numbers. For a bet whose priceVsFair is zero or negative, do not use the words "value", "edge", "undervalued", "underpriced" or "bargain" at all; say plainly that it is priced near or slightly below fair. Never mention injuries, statistics, trends, records, streaks, weather, lineups or news: you have none, and inventing them would mislead people betting real money. Never mention a player's or team's averages, recent games, minutes, usage, role, matchups, opponents' defense, pace or form: you have none of that data. Keep the tone plain and measured. Do not use the words "lock", "sure thing", "certainty", "risk-free" or "guarantee", not even to deny them; the page already explains that every bet can lose.`
 
 function candidateLine(c: SlipCandidate, label: string) {
   return {
     label,
     game: `${c.game.awayTeam} @ ${c.game.homeTeam}`,
     gameId: c.gameId,
-    market: c.marketType,
+    // A prop's marketType is just "prop"; name the stat (and the player) instead.
+    market: c.marketKey ? `player prop: ${c.stat ?? c.marketKey}` : c.marketType,
+    ...(c.player ? { player: c.player } : {}),
     pick: c.selection,
     price: `${americanFromDecimal(c.offeredOdds)} at ${sportsbookName(c.offeredBook)}`,
     priceVsFair: `${c.edgePercent > 0 ? "+" : ""}${c.edgePercent.toFixed(1)}%`,
@@ -116,18 +119,22 @@ function engineChoice<C extends SlipCandidate>(
   candidates: C[],
   sport: string,
   betType: BetType,
-  legs: number
+  legs: number,
+  kind: SlipKind
 ): AISlipChoice<C> | null {
   const picks = defaultSelection(candidates, betType, legs)
   if (!picks) return null
   const reasons: Record<string, string> = {}
   for (const p of picks) reasons[p.id] = numericReason(p)
+  const props = kind === "props"
   return {
     picks,
-    title: `${sport} ${BET_TYPE_LABEL[betType]}`,
-    description: "The pricing engine's best-priced picks for this risk level.",
-    analysis:
-      "Chosen by the pricing engine from live sportsbook prices. The AI write-up is unavailable right now, so each leg shows the engine's win chance and how its price compares with fair.",
+    title: props ? `${sport} player-prop ${BET_TYPE_LABEL[betType]}` : `${sport} ${BET_TYPE_LABEL[betType]}`,
+    description: props
+      ? "The pricing engine's best-priced player props for this risk level."
+      : "The pricing engine's best-priced picks for this risk level.",
+    // Prop prices are captured hours before the game, so they are not called live.
+    analysis: `Chosen by the pricing engine from ${props ? "sportsbook player-prop" : "live sportsbook"} prices. The AI write-up is unavailable right now, so each leg shows the engine's win chance and how its price compares with fair.`,
     reasons,
     writtenBy: "engine",
   }
@@ -148,21 +155,25 @@ export async function chooseAISlip<C extends SlipCandidate>(params: {
   riskLevel: RiskLevel
   legs: number
   candidates: C[]
+  /** Game lines (the default) or player props. */
+  kind?: SlipKind
   /** Time the model call may take, so the request ends before its deadline. */
   budgetMs: number
 }): Promise<AISlipChoice<C> | null> {
   const { sport, betType, riskLevel, legs } = params
+  const kind = params.kind ?? "lines"
+  const props = kind === "props"
   const candidates = params.candidates.slice(0, LABELS.length)
   if (candidates.length < legs) return null
 
   if (!isAnthropicKeyWellFormed(anthropicKey())) {
     console.error("AI picks: ANTHROPIC_API_KEY missing or malformed, using the engine's ranking")
-    return engineChoice(candidates, sport, betType, legs)
+    return engineChoice(candidates, sport, betType, legs, kind)
   }
   const timeout = Math.min(params.budgetMs, MAX_MODEL_MS)
   if (timeout < MIN_MODEL_BUDGET_MS) {
     console.error("AI picks: not enough time left for the model, using the engine's ranking")
-    return engineChoice(candidates, sport, betType, legs)
+    return engineChoice(candidates, sport, betType, legs, kind)
   }
 
   const byLabel = new Map(candidates.map((c, i) => [LABELS[i], c]))
@@ -170,10 +181,12 @@ export async function chooseAISlip<C extends SlipCandidate>(params: {
     betType === "parlay"
       ? "Every leg must come from a different game (different gameId)."
       : betType === "same-game-parlay"
-        ? "Every leg must come from the SAME game (same gameId), each from a different market."
+        ? props
+          ? "Every leg must come from the SAME game (same gameId), each on a different player or a different stat. Never two legs on the same player and stat."
+          : "Every leg must come from the SAME game (same gameId), each from a different market."
         : "Choose the single best bet."
 
-  const prompt = `Build a ${BET_TYPE_LABEL[betType]} for ${sport}.
+  const prompt = `Build a ${props ? "player-prop " : ""}${BET_TYPE_LABEL[betType]} for ${sport}.
 Risk level: ${RISK_LABEL[riskLevel]}.
 Choose exactly ${legs} leg${legs === 1 ? "" : "s"}. ${rules}
 Prefer the best priceVsFair. Candidates are listed best-priced first.
@@ -204,7 +217,7 @@ ${JSON.stringify(
 
     if (response.stop_reason === "refusal" || response.stop_reason === "max_tokens") {
       console.error(`AI picks: model stopped with ${response.stop_reason}, using the engine's ranking`)
-      return engineChoice(candidates, sport, betType, legs)
+      return engineChoice(candidates, sport, betType, legs, kind)
     }
     const textBlock = response.content.find(
       (b): b is Extract<typeof b, { type: "text" }> => b.type === "text"
@@ -223,12 +236,13 @@ ${JSON.stringify(
       (picks.length === out.legs.length ? slipProblem(picks, betType, legs) : "chose an unknown label") ??
       copyProblem([out.title, out.description, out.analysis].join("\n"), {
         belowFair: picks.some((p) => p.edgePercent <= 0),
+        props,
       }) ??
-      out.legs.map((l, i) => copyProblem(l.reasoning, { belowFair: picks[i].edgePercent <= 0 })).find(Boolean) ??
+      out.legs.map((l, i) => copyProblem(l.reasoning, { belowFair: picks[i].edgePercent <= 0, props })).find(Boolean) ??
       null
     if (problem) {
       console.error(`AI picks: model's slip ${problem}, using the engine's ranking`)
-      return engineChoice(candidates, sport, betType, legs)
+      return engineChoice(candidates, sport, betType, legs, kind)
     }
 
     const reasons: Record<string, string> = {}
@@ -245,6 +259,6 @@ ${JSON.stringify(
     }
   } catch (err) {
     console.error("AI picks: model call failed, using the engine's ranking:", err)
-    return engineChoice(candidates, sport, betType, legs)
+    return engineChoice(candidates, sport, betType, legs, kind)
   }
 }

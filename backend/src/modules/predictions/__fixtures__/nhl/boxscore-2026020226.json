@@ -1,0 +1,581 @@
+{
+ "id": 2026020226,
+ "season": 20262027,
+ "gameType": 2,
+ "gameDate": "2026-10-31",
+ "startTimeUTC": "2026-11-01T02:00:00Z",
+ "gameState": "OFF",
+ "gameScheduleState": "OK",
+ "awayTeam": {
+  "id": 20,
+  "commonName": {
+   "default": "Flames"
+  },
+  "abbrev": "CGY",
+  "score": 2,
+  "sog": 27,
+  "placeName": {
+   "default": "Calgary"
+  }
+ },
+ "homeTeam": {
+  "id": 21,
+  "commonName": {
+   "default": "Avalanche"
+  },
+  "abbrev": "COL",
+  "score": 5,
+  "sog": 33,
+  "placeName": {
+   "default": "Colorado"
+  }
+ },
+ "playerByGameStats": {
+  "awayTeam": {
+   "forwards": [
+    {
+     "playerId": 8474150,
+     "sweaterNumber": 11,
+     "name": {
+      "default": "M. Backlund"
+     },
+     "position": "C",
+     "goals": 0,
+     "assists": 1,
+     "points": 1,
+     "sog": 5,
+     "toi": "19:03"
+    },
+    {
+     "playerId": 8480028,
+     "sweaterNumber": 16,
+     "name": {
+      "default": "M. Frost"
+     },
+     "position": "C",
+     "goals": 0,
+     "assists": 0,
+     "points": 0,
+     "sog": 1,
+     "toi": "14:18"
+    },
+    {
+     "playerId": 8481068,
+     "sweaterNumber": 17,
+     "name": {
+      "default": "Y. Sharangovich",
+      "cs": "J. Šarangovič",
+      "fi": "J. Sharanhovitsh",
+      "sk": "J. Šarangovič"
+     },
+     "position": "C",
+     "goals": 0,
+     "assists": 0,
+     "points": 0,
+     "sog": 3,
+     "toi": "17:52"
+    },
+    {
+     "playerId": 8476458,
+     "sweaterNumber": 22,
+     "name": {
+      "default": "R. Strome"
+     },
+     "position": "C",
+     "goals": 0,
+     "assists": 1,
+     "points": 1,
+     "sog": 1,
+     "toi": "11:48"
+    },
+    {
+     "playerId": 8482679,
+     "sweaterNumber": 27,
+     "name": {
+      "default": "M. Coronato"
+     },
+     "position": "R",
+     "goals": 0,
+     "assists": 0,
+     "points": 0,
+     "sog": 2,
+     "toi": "15:33"
+    },
+    {
+     "playerId": 8484154,
+     "sweaterNumber": 38,
+     "name": {
+      "default": "J. Castagna"
+     },
+     "position": "C",
+     "goals": 0,
+     "assists": 0,
+     "points": 0,
+     "sog": 1,
+     "toi": "12:36"
+    },
+    {
+     "playerId": 8483609,
+     "sweaterNumber": 43,
+     "name": {
+      "default": "A. Klapka"
+     },
+     "position": "R",
+     "goals": 0,
+     "assists": 0,
+     "points": 0,
+     "sog": 3,
+     "toi": "11:29"
+    },
+    {
+     "playerId": 8484234,
+     "sweaterNumber": 61,
+     "name": {
+      "default": "A. Suniev"
+     },
+     "position": "L",
+     "goals": 0,
+     "assists": 0,
+     "points": 0,
+     "sog": 1,
+     "toi": "15:23"
+    },
+    {
+     "playerId": 8484958,
+     "sweaterNumber": 72,
+     "name": {
+      "default": "M. Tsyplakov",
+      "cs": "M. Cyplakov",
+      "sk": "M. Cyplakov"
+     },
+     "position": "R",
+     "goals": 0,
+     "assists": 0,
+     "points": 0,
+     "sog": 0,
+     "toi": "10:11"
+    },
+    {
+     "playerId": 8481028,
+     "sweaterNumber": 76,
+     "name": {
+      "default": "M. Pospisil",
+      "cs": "M. Pospíšil",
+      "sk": "M. Pospíšil"
+     },
+     "position": "C",
+     "goals": 1,
+     "assists": 0,
+     "points": 1,
+     "sog": 2,
+     "toi": "14:36"
+    },
+    {
+     "playerId": 8480797,
+     "sweaterNumber": 86,
+     "name": {
+      "default": "J. Farabee"
+     },
+     "position": "L",
+     "goals": 1,
+     "assists": 0,
+     "points": 1,
+     "sog": 3,
+     "toi": "17:34"
+    },
+    {
+     "playerId": 8484860,
+     "sweaterNumber": 92,
+     "name": {
+      "default": "M. Gridin"
+     },
+     "position": "R",
+     "goals": 0,
+     "assists": 0,
+     "points": 0,
+     "sog": 2,
+     "toi": "13:36"
+    }
+   ],
+   "defense": [
+    {
+     "playerId": 8480860,
+     "sweaterNumber": 7,
+     "name": {
+      "default": "K. Bahl"
+     },
+     "position": "D",
+     "goals": 0,
+     "assists": 0,
+     "points": 0,
+     "sog": 1,
+     "toi": "23:02"
+    },
+    {
+     "playerId": 8484768,
+     "sweaterNumber": 19,
+     "name": {
+      "default": "Z. Parekh"
+     },
+     "position": "D",
+     "goals": 0,
+     "assists": 1,
+     "points": 1,
+     "sog": 0,
+     "toi": "18:04"
+    },
+    {
+     "playerId": 8480727,
+     "sweaterNumber": 28,
+     "name": {
+      "default": "Z. Whitecloud"
+     },
+     "position": "D",
+     "goals": 0,
+     "assists": 0,
+     "points": 0,
+     "sog": 1,
+     "toi": "20:32"
+    },
+    {
+     "playerId": 8482165,
+     "sweaterNumber": 37,
+     "name": {
+      "default": "Y. Kuznetsov"
+     },
+     "position": "D",
+     "goals": 0,
+     "assists": 0,
+     "points": 0,
+     "sog": 0,
+     "toi": "18:44"
+    },
+    {
+     "playerId": 8478136,
+     "sweaterNumber": 55,
+     "name": {
+      "default": "J. Middleton"
+     },
+     "position": "D",
+     "goals": 0,
+     "assists": 0,
+     "points": 0,
+     "sog": 0,
+     "toi": "16:51"
+    },
+    {
+     "playerId": 8483495,
+     "sweaterNumber": 71,
+     "name": {
+      "default": "S. Nemec",
+      "cs": "Š. Nemec",
+      "sk": "Š. Nemec"
+     },
+     "position": "D",
+     "goals": 0,
+     "assists": 0,
+     "points": 0,
+     "sog": 1,
+     "toi": "23:06"
+    }
+   ],
+   "goalies": [
+    {
+     "playerId": 8481692,
+     "sweaterNumber": 32,
+     "name": {
+      "default": "D. Wolf"
+     },
+     "position": "G",
+     "toi": "00:00",
+     "starter": false,
+     "shotsAgainst": 0,
+     "saves": 0
+    },
+    {
+     "playerId": 8482949,
+     "sweaterNumber": 35,
+     "name": {
+      "default": "A. Sergeev"
+     },
+     "position": "G",
+     "toi": "60:00",
+     "starter": true,
+     "shotsAgainst": 33,
+     "saves": 28
+    }
+   ]
+  },
+  "homeTeam": {
+   "forwards": [
+    {
+     "playerId": 8482768,
+     "sweaterNumber": 9,
+     "name": {
+      "default": "F. Svechkov"
+     },
+     "position": "C",
+     "goals": 0,
+     "assists": 0,
+     "points": 0,
+     "sog": 0,
+     "toi": "12:12"
+    },
+    {
+     "playerId": 8478462,
+     "sweaterNumber": 10,
+     "name": {
+      "default": "N. Roy"
+     },
+     "position": "C",
+     "goals": 0,
+     "assists": 0,
+     "points": 0,
+     "sog": 0,
+     "toi": "13:32"
+    },
+    {
+     "playerId": 8475754,
+     "sweaterNumber": 11,
+     "name": {
+      "default": "B. Nelson"
+     },
+     "position": "C",
+     "goals": 1,
+     "assists": 0,
+     "points": 1,
+     "sog": 3,
+     "toi": "13:38"
+    },
+    {
+     "playerId": 8486171,
+     "sweaterNumber": 13,
+     "name": {
+      "default": "T. Hughes"
+     },
+     "position": "R",
+     "goals": 0,
+     "assists": 0,
+     "points": 0,
+     "sog": 2,
+     "toi": "17:00"
+    },
+    {
+     "playerId": 8480448,
+     "sweaterNumber": 17,
+     "name": {
+      "default": "P. Kelly"
+     },
+     "position": "C",
+     "goals": 0,
+     "assists": 0,
+     "points": 0,
+     "sog": 0,
+     "toi": "12:27"
+    },
+    {
+     "playerId": 8477492,
+     "sweaterNumber": 29,
+     "name": {
+      "default": "N. MacKinnon"
+     },
+     "position": "C",
+     "goals": 1,
+     "assists": 1,
+     "points": 2,
+     "sog": 5,
+     "toi": "19:06"
+    },
+    {
+     "playerId": 8484149,
+     "sweaterNumber": 54,
+     "name": {
+      "default": "G. Brindley"
+     },
+     "position": "C",
+     "goals": 0,
+     "assists": 0,
+     "points": 0,
+     "sog": 1,
+     "toi": "12:00"
+    },
+    {
+     "playerId": 8477476,
+     "sweaterNumber": 62,
+     "name": {
+      "default": "A. Lehkonen"
+     },
+     "position": "L",
+     "goals": 2,
+     "assists": 0,
+     "points": 2,
+     "sog": 4,
+     "toi": "15:48"
+    },
+    {
+     "playerId": 8475768,
+     "sweaterNumber": 71,
+     "name": {
+      "default": "J. Schwartz"
+     },
+     "position": "L",
+     "goals": 0,
+     "assists": 0,
+     "points": 0,
+     "sog": 2,
+     "toi": "14:36"
+    },
+    {
+     "playerId": 8480039,
+     "sweaterNumber": 88,
+     "name": {
+      "default": "M. Necas",
+      "cs": "M. Nečas",
+      "sk": "M. Nečas"
+     },
+     "position": "C",
+     "goals": 1,
+     "assists": 1,
+     "points": 2,
+     "sog": 2,
+     "toi": "20:02"
+    },
+    {
+     "playerId": 8475172,
+     "sweaterNumber": 91,
+     "name": {
+      "default": "N. Kadri"
+     },
+     "position": "C",
+     "goals": 0,
+     "assists": 1,
+     "points": 1,
+     "sog": 2,
+     "toi": "19:57"
+    },
+    {
+     "playerId": 8476455,
+     "sweaterNumber": 92,
+     "name": {
+      "default": "G. Landeskog"
+     },
+     "position": "L",
+     "goals": 0,
+     "assists": 1,
+     "points": 1,
+     "sog": 1,
+     "toi": "15:23"
+    }
+   ],
+   "defense": [
+    {
+     "playerId": 8478038,
+     "sweaterNumber": 7,
+     "name": {
+      "default": "D. Toews"
+     },
+     "position": "D",
+     "goals": 0,
+     "assists": 2,
+     "points": 2,
+     "sog": 1,
+     "toi": "20:48"
+    },
+    {
+     "playerId": 8480069,
+     "sweaterNumber": 8,
+     "name": {
+      "default": "C. Makar"
+     },
+     "position": "D",
+     "goals": 0,
+     "assists": 4,
+     "points": 4,
+     "sog": 3,
+     "toi": "24:27"
+    },
+    {
+     "playerId": 8476967,
+     "sweaterNumber": 27,
+     "name": {
+      "default": "B. Kulak"
+     },
+     "position": "D",
+     "goals": 0,
+     "assists": 0,
+     "points": 0,
+     "sog": 3,
+     "toi": "17:32"
+    },
+    {
+     "playerId": 8478454,
+     "sweaterNumber": 47,
+     "name": {
+      "default": "N. Juulsen"
+     },
+     "position": "D",
+     "goals": 0,
+     "assists": 0,
+     "points": 0,
+     "sog": 0,
+     "toi": "15:24"
+    },
+    {
+     "playerId": 8484258,
+     "sweaterNumber": 70,
+     "name": {
+      "default": "S. Malinski"
+     },
+     "position": "D",
+     "goals": 0,
+     "assists": 0,
+     "points": 0,
+     "sog": 3,
+     "toi": "18:40"
+    },
+    {
+     "playerId": 8470613,
+     "sweaterNumber": 84,
+     "name": {
+      "default": "B. Burns"
+     },
+     "position": "D",
+     "goals": 0,
+     "assists": 0,
+     "points": 0,
+     "sog": 1,
+     "toi": "17:28"
+    }
+   ],
+   "goalies": [
+    {
+     "playerId": 8478406,
+     "sweaterNumber": 39,
+     "name": {
+      "default": "M. Blackwood"
+     },
+     "position": "G",
+     "toi": "60:00",
+     "starter": true,
+     "shotsAgainst": 27,
+     "saves": 25
+    },
+    {
+     "playerId": 8475809,
+     "sweaterNumber": 41,
+     "name": {
+      "default": "S. Wedgewood"
+     },
+     "position": "G",
+     "toi": "00:00",
+     "starter": false,
+     "shotsAgainst": 0,
+     "saves": 0
+    }
+   ]
+  }
+ },
+ "gameOutcome": {
+  "lastPeriodType": "REG"
+ }
+}

@@ -11,6 +11,9 @@ import { getPredictionResults, isEngineConfigured } from "@/lib/engine"
  * duplicating scores and settlement logic here we ask what happened to the
  * pick each bet was based on and mirror it. Bets not tied to a pick stay
  * pending — we have no basis to grade those.
+ *
+ * "void" is a player prop whose player did not play: books refund those, so
+ * the stake comes back and the bet neither wins nor loses.
  */
 export async function POST() {
   const session = await getServerSession(authOptions)
@@ -34,14 +37,14 @@ export async function POST() {
 
   for (const bet of pending) {
     const result = byPrediction.get(bet.predictionId as string)
-    if (!result || !["won", "lost", "push"].includes(result.status)) continue
+    if (!result || !["won", "lost", "push", "void"].includes(result.status)) continue
 
-    // Payout convention: a win returns stake x odds; a push returns the stake;
-    // a loss returns nothing. Profit is always payout minus stake.
+    // Payout convention: a win returns stake x odds; a push or a void returns
+    // the stake; a loss returns nothing. Profit is always payout minus stake.
     const actualPayout =
       result.status === "won"
         ? Math.round(bet.stake * bet.oddsDecimal * 100) / 100
-        : result.status === "push"
+        : result.status === "push" || result.status === "void"
           ? bet.stake
           : 0
 

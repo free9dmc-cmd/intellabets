@@ -3,9 +3,26 @@ import { Prisma } from "@prisma/client"
 import { PrismaService } from "../../common/prisma/prisma.service"
 import { PredictionEngineService } from "./prediction-engine.service"
 import { AIAnalystService } from "./ai-analyst.service"
-import { OddsAggregatorService } from "../ingestion/odds-aggregator.service"
+import { OddsAggregatorService, OddsApiError } from "../ingestion/odds-aggregator.service"
+import type { GameBooks } from "../ingestion/odds-aggregator.service"
+import { GRADED_PROP_SPORT_KEYS, parsePropOutcomeId } from "../ingestion/prop-markets"
 import { RealtimeService } from "../realtime/realtime.service"
 import { MlbStatsService } from "./mlb-stats.service"
+import { NhlPropsGrader } from "./nhl-props.grader"
+import {
+  HOLDS_GAME_LINES,
+  HOLDS_PROPS,
+  MAX_PRICE_AGE_MS,
+  boardSideKey,
+  booksByMarketFrom,
+  gameLinesFrom,
+  inProbBand,
+  isGameLine,
+  propFields,
+  propsFrom,
+  propsMaxPriceAgeMs,
+  type BoardKind,
+} from "./board-helpers"
 import {
   STRATEGIES,
   computeLineMovement,
@@ -31,7 +48,8 @@ export class PredictionsService {
     private readonly ai: AIAnalystService,
     private readonly aggregator: OddsAggregatorService,
     private readonly realtime: RealtimeService,
-    private readonly mlbStats: MlbStatsService
+    private readonly mlbStats: MlbStatsService,
+    private readonly nhlProps: NhlPropsGrader
   ) {}
 
   /**
@@ -51,7 +69,7 @@ export class PredictionsService {
     const slate = await this.aggregator.fetchSlate(sportKey)
     let predictionCount = 0
     for (const gb of slate) {
-      predictionCount += await this.analyzeAndPersist(gb, { config, allowStarted: false })
+      predictionCount += await this.analyzeAndPersist(gb, { config, sportKey, allowStarted: false })
     }
 
     this.logger.log(`${sportKey}: ${slate.length} games, ${predictionCount} new predictions`)
@@ -69,7 +87,7 @@ export class PredictionsService {
     const live = slate.filter((gb) => gb.commenceTime.getTime() <= Date.now())
     let predictionCount = 0
     for (const gb of live) {
-      predictionCount += await this.analyzeAndPersist(gb, { config, allowStarted: true, isLive: true })
+      predictionCount += await this.analyzeAndPersist(gb, { config, sportKey, allowStarted: true, isLive: true })
     }
 
     this.logger.log(`${sportKey} LIVE: ${live.length} in-play games, ${predictionCount} predictions`)
@@ -77,44 +95,88 @@ export class PredictionsService {
   }
 
   /**
-   * Ingest player props for a sport's events and generate +EV prop predictions.
-   * One API call per event, so capped by maxEvents to protect quota.
+   * Ingest player props for a sport's next events now (the admin endpoint;
+   * the scheduled props job is PropsIngestService). Each event call costs
+   * (markets x regions) credits and is written to the PropsFetch ledger, so it
+   * counts toward the props job's monthly cap. Engine +EV prop picks are only
+   * created for sports whose props can be graded (GRADED_PROP_SPORT_KEYS);
+   * for the others the call stores the props snapshot for the board only.
    */
-  async ingestPropsAndPredict(sportKey: string, maxEvents = 5, config: EngineConfig = {}): Promise<{ events: number; predictions: number }> {
-    if (!this.aggregator.isConfigured()) return { events: 0, predictions: 0 }
-    if (this.aggregator.propMarketsFor(sportKey).length === 0) {
+  async ingestPropsAndPredict(
+    sportKey: string,
+    maxEvents = 5,
+    config: EngineConfig = {}
+  ): Promise<{ events: number; predictions: number; credits: number }> {
+    if (!this.aggregator.isConfigured()) return { events: 0, predictions: 0, credits: 0 }
+    const markets = this.aggregator.propMarketsFor(sportKey)
+    if (markets.length === 0) {
       this.logger.warn(`No prop markets configured for ${sportKey}`)
-      return { events: 0, predictions: 0 }
+      return { events: 0, predictions: 0, credits: 0 }
     }
 
-    const events = await this.aggregator.fetchEvents(sportKey)
-    // Prioritise soonest/in-play events.
-    const targets = events
+    const listing = await this.aggregator.fetchEvents(sportKey)
+    let credits = 0
+    if (listing.cost) {
+      this.logger.error(`${sportKey}: the events listing cost ${listing.cost} credits; it is no longer free`)
+      await this.prisma.propsFetch.create({ data: { sportKey, kind: "listing", cost: listing.cost } })
+      credits += listing.cost
+    }
+    // Soonest first. Started games are left out (their pregame props are
+    // gone), and so are games more than 36 hours away, whose props are rarely
+    // posted yet, so maxEvents goes to games that have them.
+    const now = Date.now()
+    const targets = listing.events
+      .filter((e) => e.commenceTime.getTime() > now && e.commenceTime.getTime() <= now + MANUAL_PROPS_HORIZON_MS)
       .sort((a, b) => a.commenceTime.getTime() - b.commenceTime.getTime())
       .slice(0, maxEvents)
 
+    const estimate = markets.length * this.aggregator.propsRegions().split(",").length
     let predictionCount = 0
     for (const ev of targets) {
-      const gb = await this.aggregator.fetchEventProps(sportKey, ev.id).catch(() => null)
+      // Claim the call in the ledger first, at the estimate, so it counts even
+      // if the process dies mid-call; the real cost replaces it below.
+      const claim = await this.prisma.propsFetch.create({
+        data: { sportKey, eventId: ev.id, slot: null, kind: "manual", cost: estimate },
+        select: { id: true },
+      })
+      let fetched: Awaited<ReturnType<OddsAggregatorService["fetchEventProps"]>>
+      try {
+        fetched = await this.aggregator.fetchEventProps(sportKey, ev.id)
+      } catch (err) {
+        // The claim keeps the estimate: a failed call may still have been charged.
+        credits += estimate
+        // A rejected key or an exhausted quota fails every later call too.
+        if (err instanceof OddsApiError && err.isAuthFailure) throw err
+        this.logger.error(
+          `${ev.awayTeam} @ ${ev.homeTeam}: props fetch failed: ${err instanceof Error ? err.message : String(err)}`
+        )
+        continue
+      }
+      const gb = fetched.books
       const marketCount = gb?.booksByMarket.size ?? 0
-      this.logger.log(`${ev.awayTeam} @ ${ev.homeTeam}: ${marketCount} prop markets posted`)
+      const cost = fetched.cost ?? estimate
+      credits += cost
+      await this.prisma.propsFetch.update({ where: { id: claim.id }, data: { cost, markets: marketCount } })
+      this.logger.log(`${ev.awayTeam} @ ${ev.homeTeam}: ${marketCount} prop markets posted (${cost} credits)`)
       if (!gb || marketCount === 0) continue
-      const isLive = gb.commenceTime.getTime() <= Date.now()
-      predictionCount += await this.analyzeAndPersist(gb, { config, allowStarted: true, isProp: true, isLive })
+      predictionCount += await this.analyzeAndPersist(gb, { config, sportKey, allowStarted: false, isProp: true })
     }
 
-    this.logger.log(`${sportKey} PROPS: ${targets.length} events, ${predictionCount} predictions`)
-    return { events: targets.length, predictions: predictionCount }
+    this.logger.log(`${sportKey} PROPS: ${targets.length} events, ${predictionCount} predictions, ${credits} credits`)
+    return { events: targets.length, predictions: predictionCount, credits }
   }
 
   /**
-   * Shared path: upsert game, snapshot odds, run the engine, AI-review, persist
-   * surviving +EV bets, and broadcast them. Returns the number persisted.
+   * Store one event's player props for the board: upsert the game and save a
+   * props snapshot, with no engine run and no picks. The scheduled props job
+   * calls this, so it never marks a game live.
    */
-  private async analyzeAndPersist(
-    gb: Awaited<ReturnType<OddsAggregatorService["fetchSlate"]>>[number],
-    opts: { config: EngineConfig; allowStarted: boolean; isProp?: boolean; isLive?: boolean }
-  ): Promise<number> {
+  async savePropsSnapshot(gb: GameBooks): Promise<void> {
+    await this.saveSnapshot(gb, { isLive: false, isProp: true })
+  }
+
+  /** Upsert a game by its canonical id and snapshot every book's odds for it. */
+  private async saveSnapshot(gb: GameBooks, opts: { isLive: boolean; isProp: boolean }) {
     const minsToStart = (gb.commenceTime.getTime() - Date.now()) / 60000
 
     const game = await this.prisma.game.upsert({
@@ -138,7 +200,9 @@ export class PredictionsService {
     // all -- and open on the wrong side, since a snapshot 5 minutes after
     // kickoff is an in-play price, not a closing one. Several snapshots may
     // now qualify; the reader takes the latest, which is the one we want.
-    const isClosing = minsToStart > 0 && minsToStart <= 60
+    // Closing prices are read from game-line snapshots only, so a props
+    // snapshot is never flagged.
+    const isClosing = !opts.isProp && minsToStart > 0 && minsToStart <= 60
     await this.prisma.oddsSnapshot.create({
       data: {
         gameId: game.id,
@@ -147,9 +211,24 @@ export class PredictionsService {
         markets: serializeBooks(gb.booksByMarket) as Prisma.InputJsonValue,
       },
     })
+    return { game, minsToStart }
+  }
+
+  /**
+   * Shared path: upsert game, snapshot odds, run the engine, AI-review, persist
+   * surviving +EV bets, and broadcast them. Returns the number persisted.
+   */
+  private async analyzeAndPersist(
+    gb: GameBooks,
+    opts: { config: EngineConfig; sportKey: string; allowStarted: boolean; isProp?: boolean; isLive?: boolean }
+  ): Promise<number> {
+    const { game, minsToStart } = await this.saveSnapshot(gb, { isLive: !!opts.isLive, isProp: !!opts.isProp })
 
     // Pre-game jobs only predict on games that haven't started.
     if (!opts.allowStarted && minsToStart <= 0) return 0
+    // A prop pick in a sport with no grader would stay pending forever, so
+    // those props are kept for the board only.
+    if (opts.isProp && !GRADED_PROP_SPORT_KEYS.has(opts.sportKey)) return 0
 
     const valueBets = this.engine.analyzeGame(
       { id: game.id, canonicalId: gb.canonicalId, sport: gb.sport, homeTeam: gb.homeTeam, awayTeam: gb.awayTeam, commenceTime: gb.commenceTime },
@@ -203,6 +282,10 @@ export class PredictionsService {
 
     const scores = await this.aggregator.fetchScores(sportKey, 2)
     let settled = 0
+    const propGraders: Record<string, (gameId: string, home: string, away: string, start: Date) => Promise<number>> = {
+      baseball_mlb: (...args) => this.settleMlbProps(...args),
+      icehockey_nhl: (...args) => this.nhlProps.settle(...args),
+    }
 
     for (const s of scores) {
       if (s.homeScore == null || s.awayScore == null) continue
@@ -234,10 +317,11 @@ export class PredictionsService {
         settled++
       }
 
-      // Grade player props (MLB only for now — free MLB Stats API).
-      if (sportKey === "baseball_mlb") {
-        settled += await this.settleMlbProps(game.id, game.homeTeam, game.awayTeam, game.commenceTime)
-      }
+      // Grade player props where a free stats feed exists (MLB Stats API,
+      // NHL api-web). Chosen by sport key: NBA and NHL share stat keys such as
+      // player_points, so the stat alone does not say which feed to ask.
+      const gradeProps = propGraders[sportKey]
+      if (gradeProps) settled += await gradeProps(game.id, game.homeTeam, game.awayTeam, game.commenceTime)
     }
 
     this.logger.log(`${sportKey}: settled ${settled} predictions`)
@@ -429,12 +513,37 @@ export class PredictionsService {
    * limited to +EV picks: a bet whose price is below fair is included with its
    * true (negative) edge, so a slip can always be built and is always honest
    * about the price. With a book, only bets that book prices are returned, at
-   * that book's price. Prices older than MAX_PRICE_AGE_MS are left out.
+   * that book's price. Prices older than maxPriceAgeMs are left out: 90
+   * minutes for game lines, PROPS_MAX_PRICE_AGE_MIN (330) for player props,
+   * which are fetched only a couple of times per game.
+   *
+   * kind "props" offers player props (marketType "prop", with the player and
+   * stat), one bet per player, stat and side. minProb/maxProb keep bets whose
+   * win chance is in that band, before the limit, so a narrow band is not
+   * emptied by better-edged bets outside it.
    */
-  async board(opts: { sport?: string; book?: string | null; limit?: number } = {}) {
+  async board(
+    opts: {
+      sport?: string
+      book?: string | null
+      limit?: number
+      kind?: BoardKind
+      minProb?: number
+      maxProb?: number
+    } = {}
+  ) {
     const now = Date.now()
+    const kind: BoardKind = opts.kind ?? "lines"
+    const props = kind === "props"
+    const maxPriceAgeMs = props ? propsMaxPriceAgeMs() : MAX_PRICE_AGE_MS
     const limit = Math.min(Math.max(opts.limit ?? 60, 1), 200)
-    const empty = { candidates: [] as BoardCandidate[], pricesAsOf: null as string | null, booksWithPrices: [] as string[] }
+    const empty = {
+      kind,
+      candidates: [] as BoardCandidate[],
+      pricesAsOf: null as string | null,
+      booksWithPrices: [] as string[],
+      maxPriceAgeMs,
+    }
     const bookKey = resolveBookKey(opts.book)
     // Offshore and unregistered books are never offered, even when asked for.
     if (bookKey && !isRoutableBook(bookKey)) return empty
@@ -448,13 +557,13 @@ export class PredictionsService {
     })
     if (games.length === 0) return empty
 
-    // The newest game-line snapshot per game, picked in the database: Prisma
-    // runs `distinct` in memory, which would load every snapshot's markets.
+    // The newest snapshot of this kind per game, picked in the database:
+    // Prisma runs `distinct` in memory, which would load every snapshot's markets.
     const latest = await this.prisma.$queryRaw<{ id: string }[]>`
       SELECT DISTINCT ON ("gameId") id FROM "OddsSnapshot"
       WHERE "gameId" IN (${Prisma.join(games.map((g) => g.id))})
-        AND "capturedAt" > ${utcTimestamp(new Date(now - MAX_PRICE_AGE_MS))}::timestamp
-        AND ${HOLDS_GAME_LINES}
+        AND "capturedAt" > ${utcTimestamp(new Date(now - maxPriceAgeMs))}::timestamp
+        AND ${props ? HOLDS_PROPS : HOLDS_GAME_LINES}
       ORDER BY "gameId", "capturedAt" DESC`
     const snaps =
       latest.length === 0
@@ -479,13 +588,19 @@ export class PredictionsService {
     for (const snap of snaps) {
       const game = byId.get(snap.gameId)
       if (!game) continue
-      const booksByMarket = gameLinesFrom(snap.markets)
+      const booksByMarket = props ? propsFrom(snap.markets) : gameLinesFrom(snap.markets)
       for (const books of booksByMarket.values()) {
         for (const b of books) if (isRoutableBook(b.book)) booksWithPrices.add(b.book)
       }
       const bets = this.engine.analyzeGame(asEngineGame(game), booksByMarket, { minEdgePercent: -100 })
+      const pricesAsOf = snap.capturedAt.toISOString()
       let used = false
       for (const bet of bets) {
+        // A prop's marketType from the engine is its "<stat>|<player>" key.
+        // Rows and candidates always say "prop"; the key travels as marketKey.
+        // A prop whose outcome id cannot be read back could not become a leg.
+        const prop = props ? propFields(bet.marketType, bet.outcomeId) : null
+        if (props && !prop) continue
         let decimal = bet.offeredDecimal
         let book = bet.offeredBook
         if (bookKey) {
@@ -500,7 +615,10 @@ export class PredictionsService {
           predictionId: engineIds.get(ref) ?? null,
           gameId: game.id,
           outcomeId: bet.outcomeId,
-          marketType: bet.marketType,
+          marketType: prop ? "prop" : bet.marketType,
+          marketKey: prop?.marketKey ?? null,
+          player: prop?.player ?? null,
+          stat: prop?.stat ?? null,
           selection: bet.selection,
           outcomeName: bet.outcomeName,
           point: bet.point ?? null,
@@ -510,6 +628,7 @@ export class PredictionsService {
           edgePercent: Math.round((bet.fairProbability * decimal - 1) * 10000) / 100,
           confidence: bet.confidence,
           numBooks: bet.numBooks,
+          pricesAsOf,
           game: {
             id: game.id,
             sport: game.sport,
@@ -526,19 +645,23 @@ export class PredictionsService {
 
     candidates.sort((a, b) => b.edgePercent - a.edgePercent || b.confidence - a.confidence)
     // Without a book, one side of a market can appear at several numbers
-    // (-3 and -3.5); keep its best-priced one. A team giving points and the
-    // same team getting them (-1.5 vs +1.5) are different bets, so stay apart.
+    // (-3 and -3.5, or Over 24.5 and Over 25.5 points); keep its best-priced
+    // one (see boardSideKey). The band is applied first, so a side keeps its
+    // best number inside the band rather than vanishing with one outside it.
     const sides = new Set<string>()
     const board = candidates.filter((c) => {
-      const side = `${c.gameId}|${c.marketType}|${c.outcomeName}|${Math.sign(c.point ?? 0)}`
+      if (!inProbBand(c.fairProbability, opts)) return false
+      const side = boardSideKey(c)
       if (sides.has(side)) return false
       sides.add(side)
       return true
     })
     return {
+      kind,
       candidates: board.slice(0, limit),
       pricesAsOf: oldest?.toISOString() ?? null,
       booksWithPrices: Array.from(booksWithPrices).sort(),
+      maxPriceAgeMs,
     }
   }
 
@@ -563,13 +686,26 @@ export class PredictionsService {
 
     const game = await this.prisma.game.findUnique({ where: { id: gameId } })
     if (!game || game.commenceTime.getTime() <= Date.now()) return null
-    // The board offers game lines only, so a ref is always one.
-    const snap = await this.latestSnapshot(gameId, "moneyline")
+    // A ref is a game line or a player prop; a prop's outcome id names its
+    // stat and player, so only that one market of the props snapshot is priced.
+    const prop = parsePropOutcomeId(outcomeId)
+    const snap = await this.latestSnapshot(gameId, prop ? "prop" : "moneyline")
     if (!snap) return null
+    let markets: Map<string, BookMarket[]>
+    if (prop) {
+      const key = `${prop.statKey}|${prop.player}`
+      markets = new Map(Array.from(propsFrom(snap.markets)).filter(([k]) => k === key))
+    } else {
+      markets = gameLinesFrom(snap.markets)
+    }
     const bet = this.engine
-      .analyzeGame(asEngineGame(game), gameLinesFrom(snap.markets), { minEdgePercent: -100 })
+      .analyzeGame(asEngineGame(game), markets, { minEdgePercent: -100 })
       .find((b) => b.outcomeId === outcomeId)
     if (!bet) return null
+    // Settlement grades game lines by type and props as "prop"; any other
+    // stored type would be graded a push, refunding a decided bet.
+    const marketType = prop ? "prop" : bet.marketType
+    if (marketType !== "prop" && !isGameLine(marketType)) return null
     return this.prisma.$transaction(async (tx) => {
       // Two users choosing the same bet at once must share one row: lock on
       // the ref, then look again before creating.
@@ -585,7 +721,7 @@ export class PredictionsService {
           gameId,
           userId: null,
           source: "board",
-          marketType: bet.marketType,
+          marketType,
           outcomeId: bet.outcomeId,
           selection: bet.selection,
           outcomeName: bet.outcomeName,
@@ -606,10 +742,11 @@ export class PredictionsService {
   /**
    * The newest snapshot of a game holding this kind of market. Game lines and
    * player props are captured by separate jobs into separate snapshots, so the
-   * newest snapshot of any kind can be missing the market entirely.
+   * newest snapshot of any kind can be missing the market entirely. Anything
+   * that is not a game line is a prop.
    */
   private async latestSnapshot(gameId: string, marketType: string) {
-    const holds = isGameLine(marketType) ? HOLDS_GAME_LINES : Prisma.sql`NOT ${HOLDS_GAME_LINES}`
+    const holds = isGameLine(marketType) ? HOLDS_GAME_LINES : HOLDS_PROPS
     const [row] = await this.prisma.$queryRaw<{ id: string }[]>`
       SELECT id FROM "OddsSnapshot" WHERE "gameId" = ${gameId} AND ${holds}
       ORDER BY "capturedAt" DESC LIMIT 1`
@@ -639,9 +776,14 @@ export class PredictionsService {
     opts: { book?: string | null; state?: string | null; stake?: number; refs?: string[] } = {}
   ) {
     const fromRefs: string[] = []
+    // A ref whose outcome is no longer in the game's latest prices (the book
+    // moved its number, or the game started) is returned by name rather than
+    // dropped, so the caller can say the slip needs building again.
+    const unresolvedRefs: string[] = []
     for (const ref of opts.refs ?? []) {
       const id = await this.predictionIdForRef(ref)
       if (id) fromRefs.push(id)
+      else unresolvedRefs.push(ref)
     }
     const unique = Array.from(new Set([...ids.filter(Boolean), ...fromRefs])).slice(0, MAX_BETSLIP_LEGS)
     const stake = opts.stake && Number.isFinite(opts.stake) && opts.stake > 0 ? opts.stake : 10
@@ -692,6 +834,7 @@ export class PredictionsService {
         selection: p.selection,
         fairProbability: fair,
         confidence: p.confidence,
+        pricesAsOf: snap?.capturedAt.toISOString() ?? null,
         atBook: atBook ? legPrice(atBook, fair) : null,
         best: comparison.best ? legPrice(comparison.best, fair) : null,
       })
@@ -725,6 +868,8 @@ export class PredictionsService {
     let note: string
     if (!bookKey) note = "No sportsbook chosen, so each leg shows the best price at any licensed book. Pick your sportsbook to see its own prices."
     else if (legs.length === 0) note = "None of these picks were found."
+    else if (unresolvedRefs.length > 0)
+      note = `${unresolvedRefs.length} of these picks ${unresolvedRefs.length === 1 ? "is" : "are"} no longer in the latest prices, so ${unresolvedRefs.length === 1 ? "it was" : "they were"} left out. Build the slip again.`
     else if (missing > 0) note = `${bookName} has no current price for ${missing} of these ${legs.length} legs. Swap those legs or use another book.`
     else if (notBetslip > 0)
       note = `${notBetslip} of ${legs.length} legs open the game or ${bookName}'s home page rather than the betslip: find the selection there and add it yourself${legs.length > 1 ? ", then choose Parlay" : ""}.`
@@ -743,6 +888,7 @@ export class PredictionsService {
       parlayLink,
       note,
       pricesAsOf: oldestPrices?.toISOString() ?? null,
+      unresolvedRefs,
       disclaimer:
         "Prices change constantly. Confirm every leg in your sportsbook before placing — if a price has moved against you, the edge may be gone.",
     }
@@ -958,6 +1104,8 @@ export interface BetslipLeg {
   selection: string
   fairProbability: number
   confidence: number
+  /** When this leg's prices were captured (its game's latest snapshot of this kind). */
+  pricesAsOf: string | null
   /** The requested book's price and link, or null if it does not price this leg. */
   atBook: LegPrice | null
   best: LegPrice | null
@@ -978,8 +1126,8 @@ function legPrice(o: BookOption, fairProbability: number): LegPrice {
 /** Upcoming games the board looks at. */
 const BOARD_WINDOW_MS = 8 * 86_400_000
 
-/** Older prices are not offered: the engine polls every 30 minutes. */
-const MAX_PRICE_AGE_MS = 90 * 60_000
+/** Games the admin props call fetches: props are rarely posted further out. */
+const MANUAL_PROPS_HORIZON_MS = 36 * 3_600_000
 
 /** One bet on the board. `ref` identifies it until it becomes a prediction. */
 export interface BoardCandidate {
@@ -988,7 +1136,13 @@ export interface BoardCandidate {
   predictionId: string | null
   gameId: string
   outcomeId: string
+  /** moneyline | spread | total, or "prop" for every player prop. */
   marketType: string
+  /** A prop's "<stat>|<player>" key, e.g. "player_points|LeBron James"; null for game lines. */
+  marketKey: string | null
+  player: string | null
+  /** The prop's stat as shown, e.g. "Points"; null for game lines. */
+  stat: string | null
   selection: string
   outcomeName: string
   point: number | null
@@ -1000,6 +1154,8 @@ export interface BoardCandidate {
   edgePercent: number
   confidence: number
   numBooks: number
+  /** When this game's prices were captured. */
+  pricesAsOf: string
   game: { id: string; sport: string; league: string; homeTeam: string; awayTeam: string; commenceTime: string }
 }
 
@@ -1007,28 +1163,6 @@ export interface BoardCandidate {
 function asEngineGame<G extends { sport: string }>(game: G): G & { sport: Sport } {
   return game as G & { sport: Sport }
 }
-
-/** A stored snapshot's markets as the engine's input shape. */
-function booksByMarketFrom(markets: unknown): Map<string, BookMarket[]> {
-  return new Map(Object.entries((markets ?? {}) as Record<string, BookMarket[]>))
-}
-
-/** The markets the game-line poll captures; props are keyed "<market>|<player>". */
-const GAME_LINE_MARKETS: readonly string[] = ["moneyline", "spread", "total"]
-
-function isGameLine(marketType: string): boolean {
-  return GAME_LINE_MARKETS.includes(marketType)
-}
-
-/** A snapshot's game-line markets only. */
-function gameLinesFrom(markets: unknown): Map<string, BookMarket[]> {
-  return new Map(Array.from(booksByMarketFrom(markets)).filter(([type]) => isGameLine(type)))
-}
-
-/** SQL: the snapshot holds game lines (markets is jsonb keyed by market type). */
-const HOLDS_GAME_LINES = Prisma.sql`(
-  (markets -> 'moneyline') IS NOT NULL OR (markets -> 'spread') IS NOT NULL OR (markets -> 'total') IS NOT NULL
-)`
 
 /**
  * A Date as the text of a UTC timestamp, for comparing with a Prisma DateTime

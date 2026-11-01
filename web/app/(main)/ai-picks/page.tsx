@@ -4,7 +4,17 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { formatCurrency } from "@/lib/utils"
 import { isNativePlatform, purchaseNative, IAP_PRODUCTS } from "@/lib/native-iap"
-import { AI_SPORTS, LEG_COUNT, type BetType, type RiskLevel } from "@/lib/ai-picks"
+import {
+  AI_SPORTS,
+  PROP_SPORTS,
+  isPropSport,
+  isTrackable,
+  legCount,
+  untrackablePropMessage,
+  type BetType,
+  type RiskLevel,
+  type SlipKind,
+} from "@/lib/ai-picks"
 import { SPORTSBOOK_CHOICES, US_STATE_CODES } from "@/lib/sportsbooks"
 import type { BetslipLeg, LegPrice } from "@/lib/engine"
 import BookPicker from "../picks/BookPicker"
@@ -18,6 +28,8 @@ interface AISlip {
   description: string
   analysis: string
   writtenBy: "ai" | "engine"
+  /** Absent from a response that predates player props (game lines). */
+  kind?: SlipKind
   sport: string
   betType: BetType
   riskLevel: RiskLevel
@@ -32,9 +44,16 @@ interface AISlip {
   parlayLink: { url: string } | null
   note: string
   sameGameWarning: string | null
+  /** For player props: how old their prices can be, and what the win chance is not. */
+  propsNote?: string | null
   pricesAsOf: string | null
   disclaimer: string
 }
+
+const KINDS: { value: SlipKind; label: string }[] = [
+  { value: "lines", label: "Game lines" },
+  { value: "props", label: "Player props" },
+]
 
 const BET_TYPES: { value: BetType; label: string }[] = [
   { value: "single", label: "Single Bet" },
@@ -73,12 +92,17 @@ function vsFair(edge: number): string {
   return edge > 0 ? `${edge.toFixed(1)}% above fair` : `${Math.abs(edge).toFixed(1)}% below fair`
 }
 
-function minutesAgo(iso: string): string {
+/** "just now", "25 min ago", "2 h 10 min ago": prop prices can be hours old. */
+function timeAgo(iso: string): string {
   const m = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 60_000))
-  return m < 1 ? "just now" : `${m} min ago`
+  if (m < 1) return "just now"
+  if (m < 60) return `${m} min ago`
+  const h = Math.floor(m / 60)
+  return m % 60 === 0 ? `${h} h ago` : `${h} h ${m % 60} min ago`
 }
 
 export default function AIPicksPage() {
+  const [kind, setKind] = useState<SlipKind>("lines")
   const [sport, setSport] = useState<string>("NFL")
   const [betType, setBetType] = useState<BetType>("parlay")
   const [riskLevel, setRiskLevel] = useState<RiskLevel>("medium")
@@ -99,6 +123,7 @@ export default function AIPicksPage() {
       if (typeof saved.book === "string") savedBook = saved.book
       if (typeof saved.state === "string") setState(saved.state)
       if (typeof saved.stake === "string") setStake(saved.stake)
+      if (saved.kind === "lines" || saved.kind === "props") setKind(saved.kind)
     } catch {}
     if (savedBook) setBook(savedBook)
     fetch("/api/premium")
@@ -111,20 +136,26 @@ export default function AIPicksPage() {
       .catch(() => setHasAccess(false))
   }, [])
 
+  // Props cover fewer sports; keep the chosen sport when it has them.
+  const chooseKind = (next: SlipKind) => {
+    setKind(next)
+    if (next === "props" && !isPropSport(sport)) setSport("NBA")
+  }
+
   const generate = async () => {
     setLoading(true)
     setError("")
     setNotice("")
     setResult(null)
     try {
-      localStorage.setItem(PREFS_KEY, JSON.stringify({ book, state, stake }))
+      localStorage.setItem(PREFS_KEY, JSON.stringify({ book, state, stake, kind }))
     } catch {}
 
     try {
       const res = await fetch("/api/ai-picks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sport, betType, riskLevel, book: book || null, state: state || null, stake }),
+        body: JSON.stringify({ kind, sport, betType, riskLevel, book: book || null, state: state || null, stake }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
@@ -166,6 +197,7 @@ export default function AIPicksPage() {
             "Real upcoming games and live prices, never made-up matchups",
             "NFL, college football, NBA, NHL, MLB and more as the engine covers them",
             "Single bets, parlays and same-game parlays",
+            "Player-prop betslips for NBA, NFL and NHL",
             "Favorites / Balanced / Underdogs risk levels",
             "Links that take each leg to your sportsbook",
             "The engine's win chance and how each price compares with fair",
@@ -228,8 +260,10 @@ export default function AIPicksPage() {
     )
   }
 
-  const legs = LEG_COUNT[riskLevel][betType]
+  const legs = legCount(kind, riskLevel, betType)
   const chosenBook = SPORTSBOOK_CHOICES.find((b) => b.key === book)
+  // Player props cover NBA, NFL and NHL only (chooseKind moves the sport onto one).
+  const sports: readonly string[] = kind === "props" ? PROP_SPORTS : AI_SPORTS
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
@@ -245,11 +279,29 @@ export default function AIPicksPage() {
 
       {/* Generator card */}
       <div className="card p-6">
+        <div className="flex gap-2 mb-4" role="group" aria-label="What to bet on">
+          {KINDS.map((k) => (
+            <button
+              key={k.value}
+              type="button"
+              onClick={() => chooseKind(k.value)}
+              aria-pressed={kind === k.value}
+              className={`flex-1 text-sm px-3 py-2 rounded-lg border font-medium transition-all ${
+                kind === k.value
+                  ? "bg-purple-500/20 text-purple-300 border-purple-500/40"
+                  : "border-gray-700 text-gray-500 hover:border-gray-600 hover:text-gray-300"
+              }`}
+            >
+              {k.label}
+            </button>
+          ))}
+        </div>
+
         <div className="grid sm:grid-cols-3 gap-4 mb-4">
           <div>
             <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">Sport</label>
             <select value={sport} onChange={(e) => setSport(e.target.value)} className="input-dark text-sm py-2.5">
-              {AI_SPORTS.map((s) => <option key={s}>{s}</option>)}
+              {sports.map((s) => <option key={s}>{s}</option>)}
             </select>
           </div>
           <div>
@@ -296,6 +348,7 @@ export default function AIPicksPage() {
         <div className="mb-4 text-sm text-gray-400 p-3 rounded-lg bg-white/3 border border-gray-800 space-y-1">
           <p>
             {RISK_LEVELS.find((r) => r.value === riskLevel)?.desc} {legs} leg{legs === 1 ? "" : "s"}.
+            {kind === "props" && " Most player props are priced near 50/50, so Favorites and Underdogs have few."}
           </p>
           {!book && betType !== "single" && (
             <p className="text-yellow-400/80 text-xs">Choose your sportsbook: a parlay has to be placed at one book.</p>
@@ -391,6 +444,7 @@ export default function AIPicksPage() {
             </p>
           )}
           {result.sameGameWarning && <p className="text-xs text-yellow-400/80">{result.sameGameWarning}</p>}
+          {result.propsNote && <p className="text-xs text-yellow-400/80">{result.propsNote}</p>}
 
           <div className="space-y-3">
             <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide">Picks</h3>
@@ -402,7 +456,9 @@ export default function AIPicksPage() {
                     <div>
                       <div className="font-medium text-white text-sm">{leg.matchup}</div>
                       <div className="text-xs text-gray-400 mt-0.5">
-                        {leg.selection} · <span className="capitalize">{leg.marketType}</span> · {kickoff(leg.commenceTime)}
+                        {leg.selection} ·{" "}
+                        {leg.marketType === "prop" ? "Player prop" : <span className="capitalize">{leg.marketType}</span>} ·{" "}
+                        {kickoff(leg.commenceTime)}
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0">
@@ -421,6 +477,11 @@ export default function AIPicksPage() {
                         <span className={price.edgePercent > 0 ? "text-emerald-400" : "text-gray-300"}>
                           {vsFair(price.edgePercent)}
                         </span>
+                      </span>
+                    )}
+                    {leg.pricesAsOf && (
+                      <span>
+                        Prices from <span className="text-gray-300">{timeAgo(leg.pricesAsOf)}</span>
                       </span>
                     )}
                   </div>
@@ -448,14 +509,19 @@ export default function AIPicksPage() {
                     </a>
                   )}
 
+                  {result.legs.length === 1 && !isTrackable(leg, 1) && (
+                    <p className="text-xs text-gray-500 mt-2">{untrackablePropMessage(leg.sport)}</p>
+                  )}
+
                   <BookPicker
                     predictionId={leg.predictionId}
                     sport={leg.sport}
                     marketType={leg.marketType}
                     preferredBook={result.book?.key ?? null}
                     state={result.state}
-                    // Logging one leg of a parlay as a single would record the wrong bet.
-                    trackable={result.legs.length === 1}
+                    // Logging one leg of a parlay as a single would record the wrong bet,
+                    // and an ungraded prop would stay pending forever.
+                    trackable={isTrackable(leg, result.legs.length)}
                     initialStake={String(result.stake)}
                   />
                 </div>
@@ -472,7 +538,7 @@ export default function AIPicksPage() {
 
           <p className="text-xs text-gray-600 leading-relaxed">
             ⚠ {result.disclaimer}
-            {result.pricesAsOf && ` Prices from ${minutesAgo(result.pricesAsOf)}.`} &ldquo;Below fair&rdquo; is the
+            {result.pricesAsOf && ` Prices from ${timeAgo(result.pricesAsOf)}.`} &ldquo;Below fair&rdquo; is the
             sportsbook&apos;s margin; most bets carry one. The win chance is the engine&apos;s estimate, not a guarantee.
             Only bet where it is legal in your state. 21+. Gambling problem? Call 1-800-GAMBLER.
           </p>

@@ -1,0 +1,128 @@
+{
+ "prevDate": "2026-10-31",
+ "currentDate": "2026-11-01",
+ "nextDate": "2026-11-02",
+ "games": [
+  {
+   "id": 2026020227,
+   "season": 20262027,
+   "gameType": 2,
+   "gameDate": "2026-11-01",
+   "startTimeUTC": "2026-11-01T18:00:00Z",
+   "easternUTCOffset": "-05:00",
+   "gameState": "FUT",
+   "gameScheduleState": "OK",
+   "awayTeam": {
+    "id": 52,
+    "name": {
+     "default": "Jets"
+    },
+    "abbrev": "WPG"
+   },
+   "homeTeam": {
+    "id": 12,
+    "name": {
+     "default": "Hurricanes"
+    },
+    "abbrev": "CAR"
+   }
+  },
+  {
+   "id": 2026020228,
+   "season": 20262027,
+   "gameType": 2,
+   "gameDate": "2026-11-01",
+   "startTimeUTC": "2026-11-01T20:30:00Z",
+   "easternUTCOffset": "-05:00",
+   "gameState": "FUT",
+   "gameScheduleState": "OK",
+   "awayTeam": {
+    "id": 30,
+    "name": {
+     "default": "Wild"
+    },
+    "abbrev": "MIN"
+   },
+   "homeTeam": {
+    "id": 15,
+    "name": {
+     "default": "Capitals"
+    },
+    "abbrev": "WSH"
+   }
+  },
+  {
+   "id": 2026020229,
+   "season": 20262027,
+   "gameType": 2,
+   "gameDate": "2026-11-01",
+   "startTimeUTC": "2026-11-01T21:00:00Z",
+   "easternUTCOffset": "-05:00",
+   "gameState": "FUT",
+   "gameScheduleState": "OK",
+   "awayTeam": {
+    "id": 68,
+    "name": {
+     "default": "Mammoth"
+    },
+    "abbrev": "UTA"
+   },
+   "homeTeam": {
+    "id": 4,
+    "name": {
+     "default": "Flyers"
+    },
+    "abbrev": "PHI"
+   }
+  },
+  {
+   "id": 2026020230,
+   "season": 20262027,
+   "gameType": 2,
+   "gameDate": "2026-11-01",
+   "startTimeUTC": "2026-11-01T23:00:00Z",
+   "easternUTCOffset": "-05:00",
+   "gameState": "FUT",
+   "gameScheduleState": "OK",
+   "awayTeam": {
+    "id": 22,
+    "name": {
+     "default": "Oilers"
+    },
+    "abbrev": "EDM"
+   },
+   "homeTeam": {
+    "id": 3,
+    "name": {
+     "default": "Rangers"
+    },
+    "abbrev": "NYR"
+   }
+  },
+  {
+   "id": 2026020231,
+   "season": 20262027,
+   "gameType": 2,
+   "gameDate": "2026-11-01",
+   "startTimeUTC": "2026-11-02T01:00:00Z",
+   "easternUTCOffset": "-05:00",
+   "gameState": "FUT",
+   "gameScheduleState": "OK",
+   "awayTeam": {
+    "id": 9,
+    "name": {
+     "default": "Senators",
+     "fr": "Sénateurs"
+    },
+    "abbrev": "OTT"
+   },
+   "homeTeam": {
+    "id": 24,
+    "name": {
+     "default": "Ducks"
+    },
+    "abbrev": "ANA"
+   }
+  }
+ ]
+}

@@ -2,6 +2,7 @@ import { Controller, Get, Post, Query, UseGuards, BadRequestException } from "@n
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from "@nestjs/swagger"
 import { IngestionService } from "./ingestion.service"
 import { OddsAggregatorService } from "./odds-aggregator.service"
+import { PropsIngestService } from "./props-ingest.service"
 import { PredictionsService } from "../predictions/predictions.service"
 import { JwtAuthGuard, RolesGuard } from "../auth/guards/jwt-auth.guard"
 import { RequireAdmin } from "../auth/decorators/current-user.decorator"
@@ -17,14 +18,16 @@ import { ServiceOrPremiumGuard } from "../auth/guards/service-or-premium.guard"
 export class IngestionStatusController {
   constructor(
     private readonly aggregator: OddsAggregatorService,
-    private readonly predictions: PredictionsService
+    private readonly predictions: PredictionsService,
+    private readonly propsIngest: PropsIngestService
   ) {}
 
   @Get("status")
   @UseGuards(ServiceOrPremiumGuard)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: "Odds feed health: last successful call, last error, credits left, and how fresh the data is",
+    summary:
+      "Odds feed health: last successful call, last error, credits left, how fresh the data is, and the player-props job's monthly credits",
   })
   async status() {
     return {
@@ -33,6 +36,7 @@ export class IngestionStatusController {
       regions: this.aggregator.regions(),
       feed: this.aggregator.status(),
       data: await this.predictions.feedStats(),
+      props: await this.propsIngest.status(),
     }
   }
 }
@@ -73,7 +77,10 @@ export class IngestionController {
   }
 
   @Post("props")
-  @ApiOperation({ summary: "Ingest player props + predict now (admin). Costs 1 API credit per event." })
+  @ApiOperation({
+    summary:
+      "Ingest player props + predict now (admin). Costs (markets x regions) credits per event; counts toward PROPS_CREDIT_CAP_MONTH",
+  })
   @ApiQuery({ name: "sport", required: true })
   @ApiQuery({ name: "maxEvents", required: false, description: "Cap events to protect quota (default 5)" })
   async propsNow(@Query("sport") sport: string, @Query("maxEvents") maxEvents?: string) {

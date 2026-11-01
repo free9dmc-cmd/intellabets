@@ -3,17 +3,22 @@ import { Logger } from "@nestjs/common"
 import type { Job } from "bull"
 import { PredictionsService } from "../predictions/predictions.service"
 import { OddsApiError } from "./odds-aggregator.service"
+import { PropsIngestService } from "./props-ingest.service"
 
 export const INGESTION_QUEUE = "ingestion"
 
 interface PollJob { sportKey: string }
 interface SettleJob { sportKey: string }
+interface PropsJob { sportKey: string }
 
 @Processor(INGESTION_QUEUE)
 export class IngestionProcessor {
   private readonly logger = new Logger(IngestionProcessor.name)
 
-  constructor(private readonly predictions: PredictionsService) {}
+  constructor(
+    private readonly predictions: PredictionsService,
+    private readonly propsIngest: PropsIngestService
+  ) {}
 
   @Process({ name: "poll", concurrency: 2 })
   async handlePoll(job: Job<PollJob>) {
@@ -34,6 +39,19 @@ export class IngestionProcessor {
       return await this.predictions.settleSport(sportKey)
     } catch (err) {
       await this.failJob(job, `Settle failed for ${sportKey}`, err)
+    }
+  }
+
+  // PropsIngestService.run also queues runs one at a time, because Bull adds
+  // the concurrency of every named processor on a queue together.
+  @Process({ name: "props", concurrency: 1 })
+  async handleProps(job: Job<PropsJob>) {
+    const { sportKey } = job.data
+    this.logger.debug(`Fetching props for ${sportKey}`)
+    try {
+      return await this.propsIngest.run(sportKey)
+    } catch (err) {
+      await this.failJob(job, `Props failed for ${sportKey}`, err)
     }
   }
 

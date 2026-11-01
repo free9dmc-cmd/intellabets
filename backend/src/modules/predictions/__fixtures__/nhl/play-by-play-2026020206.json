@@ -1,0 +1,530 @@
+{
+ "id": 2026020206,
+ "season": 20262027,
+ "gameType": 2,
+ "gameDate": "2026-10-29",
+ "startTimeUTC": "2026-10-29T23:00:00Z",
+ "gameState": "OFF",
+ "gameScheduleState": "OK",
+ "awayTeam": {
+  "id": 29,
+  "commonName": {
+   "default": "Blue Jackets"
+  },
+  "abbrev": "CBJ",
+  "placeName": {
+   "default": "Columbus"
+  }
+ },
+ "homeTeam": {
+  "id": 12,
+  "commonName": {
+   "default": "Hurricanes"
+  },
+  "abbrev": "CAR",
+  "placeName": {
+   "default": "Carolina",
+   "fr": "Caroline"
+  }
+ },
+ "rosterSpots": [
+  {
+   "teamId": 12,
+   "playerId": 8475235,
+   "firstName": {
+    "default": "Nicolas"
+   },
+   "lastName": {
+    "default": "Deslauriers"
+   },
+   "sweaterNumber": 44,
+   "positionCode": "L"
+  },
+  {
+   "teamId": 29,
+   "playerId": 8475660,
+   "firstName": {
+    "default": "Cam"
+   },
+   "lastName": {
+    "default": "Talbot"
+   },
+   "sweaterNumber": 33,
+   "positionCode": "G"
+  },
+  {
+   "teamId": 29,
+   "playerId": 8475745,
+   "firstName": {
+    "default": "Charlie"
+   },
+   "lastName": {
+    "default": "Coyle"
+   },
+   "sweaterNumber": 3,
+   "positionCode": "C"
+  },
+  {
+   "teamId": 29,
+   "playerId": 8475790,
+   "firstName": {
+    "default": "Erik"
+   },
+   "lastName": {
+    "default": "Gudbranson"
+   },
+   "sweaterNumber": 44,
+   "positionCode": "D"
+  },
+  {
+   "teamId": 12,
+   "playerId": 8476873,
+   "firstName": {
+    "default": "Mark"
+   },
+   "lastName": {
+    "default": "Jankowski"
+   },
+   "sweaterNumber": 77,
+   "positionCode": "L"
+  },
+  {
+   "teamId": 12,
+   "playerId": 8476906,
+   "firstName": {
+    "default": "Shayne"
+   },
+   "lastName": {
+    "default": "Gostisbehere"
+   },
+   "sweaterNumber": 4,
+   "positionCode": "D"
+  },
+  {
+   "teamId": 12,
+   "playerId": 8476921,
+   "firstName": {
+    "default": "Jordan"
+   },
+   "lastName": {
+    "default": "Martinook"
+   },
+   "sweaterNumber": 48,
+   "positionCode": "L"
+  },
+  {
+   "teamId": 29,
+   "playerId": 8476923,
+   "firstName": {
+    "default": "Damon"
+   },
+   "lastName": {
+    "default": "Severson"
+   },
+   "sweaterNumber": 78,
+   "positionCode": "D"
+  },
+  {
+   "teamId": 12,
+   "playerId": 8476958,
+   "firstName": {
+    "default": "Jaccob"
+   },
+   "lastName": {
+    "default": "Slavin"
+   },
+   "sweaterNumber": 74,
+   "positionCode": "D"
+  },
+  {
+   "teamId": 12,
+   "playerId": 8477478,
+   "firstName": {
+    "default": "William"
+   },
+   "lastName": {
+    "default": "Carrier"
+   },
+   "sweaterNumber": 28,
+   "positionCode": "L"
+  },
+  {
+   "teamId": 29,
+   "playerId": 8477497,
+   "firstName": {
+    "default": "Sean"
+   },
+   "lastName": {
+    "default": "Monahan"
+   },
+   "sweaterNumber": 23,
+   "positionCode": "C"
+  },
+  {
+   "teamId": 29,
+   "playerId": 8477501,
+   "firstName": {
+    "default": "Valeri",
+    "cs": "Valerij",
+    "sk": "Valerij"
+   },
+   "lastName": {
+    "default": "Nichushkin",
+    "cs": "Ničuškin",
+    "fi": "Nitshushkin",
+    "sk": "Ničuškin"
+   },
+   "sweaterNumber": 43,
+   "positionCode": "R"
+  },
+  {
+   "teamId": 12,
+   "playerId": 8477940,
+   "firstName": {
+    "default": "Nikolaj"
+   },
+   "lastName": {
+    "default": "Ehlers"
+   },
+   "sweaterNumber": 27,
+   "positionCode": "L"
+  },
+  {
+   "teamId": 29,
+   "playerId": 8478046,
+   "firstName": {
+    "default": "Danton"
+   },
+   "lastName": {
+    "default": "Heinen"
+   },
+   "sweaterNumber": 58,
+   "positionCode": "L"
+  },
+  {
+   "teamId": 12,
+   "playerId": 8478427,
+   "firstName": {
+    "default": "Sebastian"
+   },
+   "lastName": {
+    "default": "Aho"
+   },
+   "sweaterNumber": 20,
+   "positionCode": "C"
+  },
+  {
+   "teamId": 29,
+   "playerId": 8478460,
+   "firstName": {
+    "default": "Zach"
+   },
+   "lastName": {
+    "default": "Werenski"
+   },
+   "sweaterNumber": 8,
+   "positionCode": "D"
+  },
+  {
+   "teamId": 29,
+   "playerId": 8478856,
+   "firstName": {
+    "default": "Conor"
+   },
+   "lastName": {
+    "default": "Garland"
+   },
+   "sweaterNumber": 83,
+   "positionCode": "R"
+  },
+  {
+   "teamId": 12,
+   "playerId": 8478970,
+   "firstName": {
+    "default": "Jalen"
+   },
+   "lastName": {
+    "default": "Chatfield"
+   },
+   "sweaterNumber": 5,
+   "positionCode": "D"
+  },
+  {
+   "teamId": 29,
+   "playerId": 8479066,
+   "firstName": {
+    "default": "Ryan"
+   },
+   "lastName": {
+    "default": "Lomberg"
+   },
+   "sweaterNumber": 94,
+   "positionCode": "L"
+  },
+  {
+   "teamId": 29,
+   "playerId": 8479371,
+   "firstName": {
+    "default": "Dante"
+   },
+   "lastName": {
+    "default": "Fabbro"
+   },
+   "sweaterNumber": 15,
+   "positionCode": "D"
+  },
+  {
+   "teamId": 29,
+   "playerId": 8479671,
+   "firstName": {
+    "default": "Mathieu"
+   },
+   "lastName": {
+    "default": "Olivier"
+   },
+   "sweaterNumber": 24,
+   "positionCode": "R"
+  },
+  {
+   "teamId": 12,
+   "playerId": 8479976,
+   "firstName": {
+    "default": "Juuso"
+   },
+   "lastName": {
+    "default": "Välimäki",
+    "de": "Valimaki",
+    "es": "Valimaki",
+    "fr": "Valimaki"
+   },
+   "sweaterNumber": 8,
+   "positionCode": "D"
+  },
+  {
+   "teamId": 12,
+   "playerId": 8480336,
+   "firstName": {
+    "default": "Sean"
+   },
+   "lastName": {
+    "default": "Walker"
+   },
+   "sweaterNumber": 26,
+   "positionCode": "D"
+  },
+  {
+   "teamId": 12,
+   "playerId": 8480762,
+   "firstName": {
+    "default": "Eric"
+   },
+   "lastName": {
+    "default": "Robinson"
+   },
+   "sweaterNumber": 50,
+   "positionCode": "L"
+  },
+  {
+   "teamId": 12,
+   "playerId": 8480817,
+   "firstName": {
+    "default": "K'Andre"
+   },
+   "lastName": {
+    "default": "Miller"
+   },
+   "sweaterNumber": 19,
+   "positionCode": "D"
+  },
+  {
+   "teamId": 12,
+   "playerId": 8480829,
+   "firstName": {
+    "default": "Jesperi"
+   },
+   "lastName": {
+    "default": "Kotkaniemi"
+   },
+   "sweaterNumber": 82,
+   "positionCode": "C"
+  },
+  {
+   "teamId": 12,
+   "playerId": 8480830,
+   "firstName": {
+    "default": "Andrei",
+    "cs": "Andrej",
+    "sk": "Andrej"
+   },
+   "lastName": {
+    "default": "Svechnikov",
+    "cs": "Svečnikov",
+    "fi": "Svetshnikov",
+    "sk": "Svečnikov"
+   },
+   "sweaterNumber": 37,
+   "positionCode": "R"
+  },
+  {
+   "teamId": 29,
+   "playerId": 8481161,
+   "firstName": {
+    "default": "Jake",
+    "sv": "v"
+   },
+   "lastName": {
+    "default": "Christiansen"
+   },
+   "sweaterNumber": 2,
+   "positionCode": "D"
+  },
+  {
+   "teamId": 12,
+   "playerId": 8481611,
+   "firstName": {
+    "default": "Pyotr",
+    "cs": "Pjotr",
+    "fi": "Pjotr",
+    "sk": "Pjotr"
+   },
+   "lastName": {
+    "default": "Kochetkov",
+    "fi": "Kotshetkov"
+   },
+   "sweaterNumber": 52,
+   "positionCode": "G"
+  },
+  {
+   "teamId": 12,
+   "playerId": 8482093,
+   "firstName": {
+    "default": "Seth"
+   },
+   "lastName": {
+    "default": "Jarvis"
+   },
+   "sweaterNumber": 24,
+   "positionCode": "R"
+  },
+  {
+   "teamId": 29,
+   "playerId": 8482660,
+   "firstName": {
+    "default": "Kent"
+   },
+   "lastName": {
+    "default": "Johnson"
+   },
+   "sweaterNumber": 91,
+   "positionCode": "C"
+  },
+  {
+   "teamId": 12,
+   "playerId": 8482702,
+   "firstName": {
+    "default": "Logan"
+   },
+   "lastName": {
+    "default": "Stankoven"
+   },
+   "sweaterNumber": 22,
+   "positionCode": "C"
+  },
+  {
+   "teamId": 29,
+   "playerId": 8482705,
+   "firstName": {
+    "default": "Cole"
+   },
+   "lastName": {
+    "default": "Sillinger"
+   },
+   "sweaterNumber": 4,
+   "positionCode": "C"
+  },
+  {
+   "teamId": 29,
+   "playerId": 8482720,
+   "firstName": {
+    "default": "Matthew"
+   },
+   "lastName": {
+    "default": "Knies"
+   },
+   "sweaterNumber": 89,
+   "positionCode": "L"
+  },
+  {
+   "teamId": 12,
+   "playerId": 8482809,
+   "firstName": {
+    "default": "Jackson"
+   },
+   "lastName": {
+    "default": "Blake"
+   },
+   "sweaterNumber": 53,
+   "positionCode": "R"
+  },
+  {
+   "teamId": 29,
+   "playerId": 8482982,
+   "firstName": {
+    "default": "Jet"
+   },
+   "lastName": {
+    "default": "Greaves"
+   },
+   "sweaterNumber": 73,
+   "positionCode": "G"
+  },
+  {
+   "teamId": 29,
+   "playerId": 8483432,
+   "firstName": {
+    "default": "Luca"
+   },
+   "lastName": {
+    "default": "Del Bel Belluz"
+   },
+   "sweaterNumber": 93,
+   "positionCode": "C"
+  },
+  {
+   "teamId": 29,
+   "playerId": 8483485,
+   "firstName": {
+    "default": "Denton"
+   },
+   "lastName": {
+    "default": "Mateychuk"
+   },
+   "sweaterNumber": 5,
+   "positionCode": "D"
+  },
+  {
+   "teamId": 12,
+   "playerId": 8483548,
+   "firstName": {
+    "default": "Brandon"
+   },
+   "lastName": {
+    "default": "Bussi"
+   },
+   "sweaterNumber": 32,
+   "positionCode": "G"
+  },
+  {
+   "teamId": 29,
+   "playerId": 8484166,
+   "firstName": {
+    "default": "Adam"
+   },
+   "lastName": {
+    "default": "Fantilli"
+   },
+   "sweaterNumber": 19,
+   "positionCode": "C"
+  }
+ ]
+}

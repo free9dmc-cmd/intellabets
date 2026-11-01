@@ -66,6 +66,44 @@ services:
         value: "45"
       - key: SETTLE_INTERVAL_MIN
         value: "180"
+      # Player props (AI Picks "Player props"). A separate job per sport, every
+      # PROPS_INTERVAL_MIN, fetches each event at most twice: once in the early
+      # window and once in the late window before it starts (minutes, lo-hi).
+      # Each event call costs (prop markets returned x PROPS_REGIONS) credits:
+      # up to 4 for NBA, 5 for NFL and 2 for NHL; the /events listing is free.
+      # Two calls an event comes to about 3,300-3,450 credits a month, which
+      # with game lines is about 17,400 of the 20K plan. The PropsFetch table
+      # in the engine database counts the spend: early-window calls stop at 80%
+      # of PROPS_CREDIT_CAP_MONTH, late ones at the cap (UTC calendar month),
+      # and every props call stops while fewer than PROPS_MIN_REMAINING_CREDITS
+      # would be left, so game lines keep their credits. Set PROPS_SPORTS to ""
+      # and restart to pause props. Each sport must also be in ACTIVE_SPORTS.
+      # (ODDS_API_BASE_URL, for the local fake API, is ignored in production.)
+      - key: PROPS_SPORTS
+        value: basketball_nba,americanfootball_nfl,icehockey_nhl
+      - key: PROPS_INTERVAL_MIN
+        value: "30"
+      - key: PROPS_EARLY_WINDOW_MIN
+        value: "240-360"
+      - key: PROPS_LATE_WINDOW_MIN
+        value: "45-105"
+      # Props keep their own regions, so adding us2 to ODDS_REGIONS for game
+      # lines does not double what props cost. All the routable prop books
+      # (FanDuel, DraftKings, BetMGM, Caesars, BetRivers) are in us.
+      - key: PROPS_REGIONS
+        value: us
+      - key: PROPS_CREDIT_CAP_MONTH
+        value: "3500"
+      - key: PROPS_MIN_REMAINING_CREDITS
+        value: "1000"
+      # The props board refuses prices older than this. An early fetch at 360
+      # minutes and a late one just above 45 are 315 minutes apart.
+      - key: PROPS_MAX_PRICE_AGE_MIN
+        value: "330"
+      # Props snapshots (a few hundred KB each) are deleted once their game
+      # started more than this many days ago; game-line snapshots are kept.
+      - key: PROPS_SNAPSHOT_RETENTION_DAYS
+        value: "2"
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: THE_ODDS_API_KEY

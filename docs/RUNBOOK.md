@@ -42,6 +42,8 @@ Both deploy automatically from `main`.
 | `ANTHROPIC_API_KEY` | AI picks + support chat | Support chat returns "something went wrong". AI Picks still builds slips, but from the engine's ranking, labelled "Engine Analysis" with no write-up; Vercel logs `AI picks: ... using the engine's ranking` |
 | `ENGINE_API_URL` | Engine base URL | Picks pages empty |
 | `ENGINE_SERVICE_KEY` | Service-to-service auth | Picks pages empty, **no error shown** |
+| `PROPS_SPORTS` *(Render)* | Sports whose player props are fetched, e.g. `basketball_nba,americanfootball_nfl,icehockey_nhl` | Empty: no props job, the Player props switch says none are priced |
+| `PROPS_CREDIT_CAP_MONTH` / `PROPS_MIN_REMAINING_CREDITS` *(Render)* | Props credit cap (3500) and floor (1000) | See "Player props" under AI Picks |
 | `STRIPE_SECRET_KEY` | *(dead — account terminated)* | See Known issues |
 | `DEMO_BILLING` | **Never set in production** | Grants paid access with no payment |
 
@@ -181,11 +183,72 @@ How a slip is built:
 on Engine Picks and never count in the engine's scoreboard
 (`/predictions/performance`).
 
-The board offers game lines only (moneyline, spread, total), each priced
-from the newest game-line snapshot, so an admin props ingest never hides a
-game's lines. Each line number gets its own consensus from the books that
-price exactly that number (`groupByLine` in `devig.ts`), and needs at least
-3 such books.
+The board has two kinds (`kind=lines|props`), chosen on the page with the
+"Game lines / Player props" switch:
+- **Game lines** (moneyline, spread, total) come from the newest game-line
+  snapshot, refused when older than 90 minutes.
+- **Player props** (NBA, NFL, NHL) come from the newest props snapshot,
+  refused when older than `PROPS_MAX_PRICE_AGE_MIN` (330). Each candidate is
+  `marketType "prop"` with `marketKey` `"<stat>|<player>"`; the board keeps
+  each player-stat-side's best-priced number.
+
+Either way, each line number gets its own consensus from the books that
+price exactly that number (`groupByLine` in `devig.ts`) and needs at least
+3 such books, and the risk band (`minProb`/`maxProb`) is applied before the
+limit.
+
+### Player props
+
+Not a player-performance model: the win chance comes only from sportsbook
+prices with their margin removed, and the copy check rejects any averages,
+recent games, minutes, matchups or news.
+
+**Fetching** (`PropsIngestService`, Bull job `props`, every
+`PROPS_INTERVAL_MIN`): each game's props are fetched at most twice, once in
+the early window (240-360 min before start) and once in the late window
+(45-105 min). The free `/events` listing finds the games. Every call is
+recorded in the engine's `PropsFetch` table (one row per event and window),
+which enforces `PROPS_CREDIT_CAP_MONTH` (3,500 per UTC month; early fetches
+stop at 80%) and stops all prop calls when the credits left drop below
+`PROPS_MIN_REMAINING_CREDITS` (1,000). Expected spend is about 3,300 a
+month: NBA 4, NFL 5 and NHL 2 credits per fetch. Props snapshots are
+deleted `PROPS_SNAPSHOT_RETENTION_DAYS` (2) after their game starts. Logs:
+`Scheduled props every 30m for ...` at boot and
+`<sport> PROPS: fetched X (early a, late b), skipped y, credits z, month n/cap`
+per run. `GET /ingestion/status` shows `props.creditsThisMonth`. The
+admin `POST /ingestion/props` records its spend in the same table but is not
+blocked by the cap.
+
+Check the month's spend on the engine database:
+`SELECT sum(cost) FROM "PropsFetch" WHERE "fetchedAt" >= date_trunc('month', now() at time zone 'utc')`.
+
+**Pausing props:** set `PROPS_SPORTS` to empty on Render; the restart removes
+the job. Props cost does not depend on `ODDS_REGIONS` (props use
+`PROPS_REGIONS`, default `us`).
+
+**Betslips:** every prop leg links to the book's betslip where the feed has
+a link (FanDuel, DraftKings, BetMGM, Caesars, BetRivers; the state-hosted
+ones need the user's state). Cross-game prop parlays get a one-tap link at
+FanDuel, DraftKings, BetMGM and Caesars; same-game prop parlays get per-leg
+links and "choose Same Game Parlay there". Caesars and BetRivers often post
+no NFL or NHL props.
+
+**Grading:** NHL props are graded from the NHL's own (undocumented)
+`api-web.nhle.com` box scores during settlement, once the game is `OFF`
+(`NhlPropsGrader`): a player not dressed is `void`; an ambiguous or
+unmatched name stays pending with a `Prop <id> left pending` warning, to be
+graded by hand. MLB props keep `settleMlbProps`. **NBA and NFL props are
+not graded** (no reliable free source), so they cannot be tracked in My
+Bets. Tracking is allowed per sport by `TRACKABLE_PROP_SPORTS` in
+`web/lib/ai-picks.ts` (MLB only); after checking a night of NHL grading
+(`Graded N NHL props` in the engine logs, compared with NHL.com box scores),
+add `"NHL"` there. `/api/bets/sync` copies `void` as a refund.
+
+**Local test with no credits:** `node backend/test/e2e/fake-odds-api.mjs`
+serves the sample props (`backend/src/modules/ingestion/__fixtures__/`) on
+port 4010; run the engine with `ODDS_API_BASE_URL=http://127.0.0.1:4010/v4`
+(ignored when `NODE_ENV=production`), `PROPS_SPORTS` set and
+`PROPS_INTERVAL_MIN=1`.
 
 **Do not roll the engine back past the commit that added
 `Prediction.source`** without a plan. The engine boots with

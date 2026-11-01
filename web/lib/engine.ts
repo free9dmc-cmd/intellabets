@@ -200,6 +200,7 @@ export interface BetslipLeg {
   matchup: string
   commenceTime: string
   started: boolean
+  /** moneyline | spread | total, or "prop" for a player prop. */
   marketType: string
   selection: string
   fairProbability: number
@@ -207,6 +208,8 @@ export interface BetslipLeg {
   /** The chosen book's price and link; null when that book does not price this leg. */
   atBook: LegPrice | null
   best: LegPrice | null
+  /** When this leg's prices were captured. Absent from an engine that predates props. */
+  pricesAsOf?: string | null
 }
 
 export interface EngineBetslip {
@@ -221,6 +224,8 @@ export interface EngineBetslip {
   note: string
   pricesAsOf: string | null
   disclaimer: string
+  /** Refs the engine could not find in its latest prices; their legs are left out. */
+  unresolvedRefs?: string[]
 }
 
 /**
@@ -248,7 +253,17 @@ export interface BoardCandidate {
   predictionId: string | null
   gameId: string
   outcomeId: string
+  /** moneyline | spread | total, or "prop" for every player prop. */
   marketType: string
+  // The prop fields and pricesAsOf are absent from an engine that predates
+  // props; a props board is only used when the engine says kind "props".
+  /** A prop's "<stat>|<player>" key, e.g. "player_points|LeBron James"; null for game lines. */
+  marketKey?: string | null
+  player?: string | null
+  /** The prop's stat as shown, e.g. "Points"; null for game lines. */
+  stat?: string | null
+  /** When this bet's game was last priced (ISO). */
+  pricesAsOf?: string
   selection: string
   outcomeName: string
   point: number | null
@@ -264,20 +279,39 @@ export interface BoardCandidate {
 }
 
 export interface Board {
+  /** What the board holds. Absent from an engine that predates props (always game lines). */
+  kind?: "lines" | "props"
   candidates: BoardCandidate[]
   pricesAsOf: string | null
   /** Licensed books with prices in the snapshots looked at. */
   booksWithPrices: string[]
+  /** Prices older than this were left out: 90 minutes for game lines, longer for props. */
+  maxPriceAgeMs?: number
 }
 
-/** Every upcoming bet in a sport, best value first; with a book, only that book's prices. */
+/**
+ * Every upcoming bet in a sport, best value first; with a book, only that
+ * book's prices. kind "props" asks for player props instead of game lines;
+ * minProb/maxProb keep bets whose win chance is in that band, applied before
+ * the limit.
+ */
 export function getBoard(
   sport: string,
-  opts: { book?: string | null; limit?: number; timeoutMs?: number } = {}
+  opts: {
+    book?: string | null
+    limit?: number
+    kind?: "lines" | "props"
+    minProb?: number
+    maxProb?: number
+    timeoutMs?: number
+  } = {}
 ): Promise<Board | null> {
   const qs = new URLSearchParams({ sport })
   if (opts.book) qs.set("book", opts.book)
   if (opts.limit) qs.set("limit", String(opts.limit))
+  if (opts.kind) qs.set("kind", opts.kind)
+  if (opts.minProb !== undefined) qs.set("minProb", String(opts.minProb))
+  if (opts.maxProb !== undefined) qs.set("maxProb", String(opts.maxProb))
   return engineFetch(`/predictions/board?${qs}`, { timeoutMs: opts.timeoutMs })
 }
 
@@ -295,6 +329,13 @@ export interface IngestionStatus {
     lastPickAt: string | null
     upcomingGames: number
     livePicks: number
+  }
+  /** The player-props job. Absent from an engine that predates it. */
+  props?: {
+    sports: string[]
+    creditsThisMonth: number
+    cap: number
+    lastFetchAt: string | null
   }
 }
 

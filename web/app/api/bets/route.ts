@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { isTrackable, untrackablePropMessage } from "@/lib/ai-picks"
 
 /**
  * Bets the user placed at their own sportsbook.
@@ -75,6 +76,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "selection and book are required" }, { status: 400 })
   }
 
+  const predictionId = typeof body.predictionId === "string" ? body.predictionId : null
+  const sport = String(body.sport ?? "").slice(0, 40)
+  const marketType = String(body.marketType ?? "other").slice(0, 40)
+  // A bet tied to a pick is graded from it; a player prop the engine cannot
+  // grade would stay pending (and count as money at risk) forever.
+  if (predictionId && !isTrackable({ marketType, sport }, 1)) {
+    return NextResponse.json({ error: untrackablePropMessage(sport) }, { status: 400 })
+  }
+
   const american = oddsDecimal >= 2
     ? `+${Math.round((oddsDecimal - 1) * 100)}`
     : `${Math.round(-100 / (oddsDecimal - 1))}`
@@ -82,12 +92,12 @@ export async function POST(req: Request) {
   const bet = await prisma.placedBet.create({
     data: {
       userId: session.user.id,
-      predictionId: typeof body.predictionId === "string" ? body.predictionId : null,
+      predictionId,
       matchup: String(body.matchup ?? "").slice(0, 200),
-      sport: String(body.sport ?? "").slice(0, 40),
+      sport,
       book: String(body.book).slice(0, 40),
       selection: String(body.selection).slice(0, 200),
-      marketType: String(body.marketType ?? "other").slice(0, 40),
+      marketType,
       oddsDecimal,
       oddsAmerican: american,
       stake,

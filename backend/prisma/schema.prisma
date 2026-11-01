@@ -90,6 +90,21 @@ model OddsSnapshot {
   @@index([gameId, isClosing])
 }
 
+/// Odds API credits the player-props job spent, and its once-per-window dedupe.
+model PropsFetch {
+  id        String   @id @default(cuid())
+  sportKey  String
+  eventId   String?
+  /// "<oddsEventId>:early|late" for a scheduled event call; null for listings and manual calls.
+  slot      String?  @unique
+  kind      String   // "event" | "listing" | "manual"
+  cost      Int      // x-requests-last; the estimate while in flight or when the call failed
+  markets   Int      @default(0) // two-way player lines the call returned
+  fetchedAt DateTime @default(now())
+
+  @@index([fetchedAt])
+}
+
 // ─── Predictions & tracking ─────────────────────────────────────────────────
 
 model Prediction {
