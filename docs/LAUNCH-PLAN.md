@@ -20,20 +20,20 @@ cannot even let anyone sign up.
 
 | | Status |
 |---|---|
-| **Login and registration** | ❌ **broken in production — see P0.1. Nobody can create an account or log in.** |
+| Login and registration | ✅ sign-in reaches the database again (verified 2026-11-02: a sign-in with an unregistered email returns "No account found with that email", not the missing-column error). Creating an account was **not** re-tested live — it would add a real user |
 | Site live at intellabets.com | ✅ verified |
 | Engine live, serving real odds | ✅ verified 2026-10-25 (the feed was down 2026-09-14 to 2026-10-25 on a rejected Odds API key; see RUNBOOK) |
-| Revenue bypasses closed | ✅ `POST /api/premium`, `/api/subscriptions` → 404 |
+| Revenue bypasses closed | ✅ `POST /api/premium`, `/api/subscriptions` → 404. Every payment webhook refuses an unsigned request (verified 2026-11-02): RevenueCat 401 (secret set, fails closed), web3 `/confirm` 401, Stripe / NOWPayments / Authorize.Net 400 on the missing or invalid signature |
 | Checkout fails safely when unauthenticated | ✅ `POST /api/checkout` → 401 (code inspection: falls through to a clean 503 once authenticated, if `STRIPE_SECRET_KEY` is absent/malformed — **not re-verified live**, since no account could be created to test it authenticated) |
 | Private betslips protected | ✅ signed-out requests leak nothing |
 | Legal + pricing pages public | ✅ required for store review and underwriting |
 | Security headers, CORS allowlist | ✅ verified live |
 | **Payment processing** | ❌ **no processor** |
 | Support chat | ❌ Anthropic key invalid (unverified today — could not reach `/api/admin/health`, itself blocked by the same DB drift) |
-| Rate limiting enforced | ⚠️ needs the `RateLimit` table in Neon |
+| Rate limiting enforced | ⚠️ unverified — the 7-request test cannot work from the cloud sandbox (its IP changes per request; RUNBOOK). Check the `rate-limit-store` row of `/api/admin/health` |
 | Mobile apps | ❌ Expo shell only, no screens |
 
-**One sentence: the funnel is dead at the front door, before payment even enters the picture.**
+**One sentence: visitors can get in the door again; the funnel now stops at payment, because there is no processor.**
 
 ---
 
@@ -42,7 +42,18 @@ cannot even let anyone sign up.
 Nothing else matters until these are done, in this order — #1 first, since
 nothing downstream of it is reachable.
 
-### 1. Fix the broken database schema — login and registration are down
+### 1. ~~Fix the broken database schema~~ — resolved (verified 2026-11-02)
+**Status 2026-11-02:** the schema was synced at some point after this was
+written (the log does not record when). Sign-in now reaches a `User` lookup
+that selects every column without error, and the RevenueCat webhook answers
+401, so its secret is set. Still open from the steps below: step 6, the audit
+for free grants made while the webhook was open — nothing in the repo records
+that it was done. Not re-verified: account creation itself, and whether the
+other missing tables (`SupportTicket`, `SupportMessage`, `PlacedBet`,
+`RateLimit`) now exist; `docs/sql/verify.sql` answers both.
+
+The original diagnosis, kept for the record:
+
 Confirmed live on 2026-09-24:
 - `POST /api/register` with valid, unique input → 500 `{"error":"Failed to create account"}`
 - `POST /api/auth/callback/credentials` with any credentials → NextAuth error URL containing
@@ -195,8 +206,8 @@ policy in the terms matches what the processor will actually do.
 
 ## Open questions for the owner
 
-1. **Run the P0.1 fix** (steps above: set `REVENUECAT_WEBHOOK_SECRET` + redeploy, then `docs/sql/schema-sync.sql` in the Neon SQL Editor). The automated runs have no database credentials and no GitHub push access, so login and registration stay broken until the owner does this.
-2. **Push access for the automated runs** — the session's git proxy denies pushes to this repo ("not in this session's authorized repository set"). Add the repo to the routine's sources with write access, or apply the patch files each run hands over. Do not give the runs production database credentials.
+1. **Finish P0.1:** the schema fix is in (verified 2026-11-02). Remaining: run `docs/sql/verify.sql` in the Neon SQL Editor to confirm the `SUMMARY … OK` row, and do step 6, the audit for free grants made while the RevenueCat webhook was open.
+2. **Push access for the automated runs** — resolved: since 2026-10-31 the runs push to their own branch and open a draft PR for the owner to merge (they still cannot push to `main`). Do not give the runs production database credentials.
 3. Stripe's termination reason code — needed for the 2Accept application
 4. Business entity and bank account — are formation docs ready to submit?
 5. Launch target date, to work backwards from

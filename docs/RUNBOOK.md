@@ -394,7 +394,11 @@ replaced the key and moved the engine to Render Starter; odds resumed at
 security upgrade (`baac150`) was then deployed by API and the `intellabets.com`
 alias assigned by hand (see "Symptoms → causes").
 
-**Login and registration are broken in production right now (found 2026-09-24).**
+**Resolved (verified 2026-11-02): login and registration broken in production
+(found 2026-09-24).** A sign-in with an unregistered email now returns "No
+account found with that email" — the full-row `User` lookup succeeds — so the
+schema sync below was applied at some point. Account creation was not
+re-tested live. The original entry:
 `prisma.user.findUnique()` / `.create()` fail because `User.premiumStripeSubId`
 (schema change committed 2026-09-10, `payoutsEnabled` likely too) was never
 applied to the production Neon database. Confirmed live: `POST /api/register`
@@ -411,7 +415,10 @@ and redeploy first (see LAUNCH-PLAN.md P0.1 for the order and why).
 is unset** (found 2026-09-25). Anyone can POST a purchase event and grant any
 user premium or AI access, or credit tipster earnings; user ids are public via
 `/api/leaderboard` and profiles. Fixed in code (fails closed with 503 when the
-secret is unset) but not yet deployed — until then, keep the variable set.
+secret is unset). **Verified 2026-11-02:** the live webhook answers an unsigned
+POST with 401, so the fail-closed code is deployed and the secret is set. The
+audit for grants made while it was open (LAUNCH-PLAN P0.1 step 6) is not
+recorded as done.
 
 **Support chat is failing for a non-schema reason.** One anonymous test message
 got the catch-branch reply ("Something went wrong on our side..."), which wraps
