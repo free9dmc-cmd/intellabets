@@ -191,7 +191,7 @@ underwriter reviewing the site will be looking for exactly it.
 
 ### Channels, in order of fit
 
-1. **r/sportsbook and betting forums** — sharp audience, allergic to hype, receptive to method. Participate honestly; do not spam picks.
+1. **r/sportsbook and betting forums** — sharp audience, allergic to hype, receptive to method. Participate honestly; do not spam picks. Drafts for the owner to post personally: `docs/marketing/forum-posts.md` (2026-11-03). It has a by-hand de-vig explainer, the "what's your record?" answer, and a line-shopping post that waits on PR #21. It also has a pre-posting checklist: read each forum's self-promotion rules, disclose affiliation, no performance figures or picks, and 21+ wording on any post with a link.
 2. **Long-form SEO** — "de-vig calculator", "closing line value", "line shopping" have real intent and weak incumbents.
 3. **YouTube/TikTok explainers** — showing the vig calculation on a real slate is inherently demonstrable.
 4. **Paid** — last. Do not pay for traffic to a page that can't take payment.
