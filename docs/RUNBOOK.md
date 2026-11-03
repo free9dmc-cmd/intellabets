@@ -322,6 +322,16 @@ Overrides only take effect on a fresh resolve. After changing one, delete
 `package-lock.json` and every `node_modules`, then reinstall. The sandbox
 scripts already wipe `node_modules` whenever `package.json` changes.
 
+**Re-checked 2026-11-03.** A new advisory, `follow-redirects` 1.16.0–1.16.1
+(GHSA-mrwp-f3q8-3g9p: sensitive headers and custom credentials can follow a
+redirect to another host), reached the root lockfile through `axios`. Fixed by
+moving the lockfile entry to 1.16.2, a patch release `axios ^1.16.0` already
+accepts, so no `package.json` or override changed. Root `npm audit --omit=dev`
+went from 22 high to 21, and those 21 trace back only to the two accepted
+advisories below. Dependabot's backend `zod` / `follow-redirects` alerts come
+from the root lockfile: resolving `backend/package.json` standalone, as Render's
+Docker build does, audits at **0** (follow-redirects 1.16.2, no `zod`).
+
 **What is left, and why it is accepted for now.**
 
 `zod` <4.6.6 (high):
@@ -334,7 +344,7 @@ scripts already wipe `node_modules` whenever `package.json` changes.
   visitor's own browser.
 - **Next step.** Re-check when AppKit 2.x ships.
 
-`decode-uri-component` (moderate):
+`decode-uri-component` (moderate when written; npm rates it high as of 2026-11-03):
 - **Source.** It reaches the tree only through `@walletconnect/ethereum-provider`
   2.21.1, which `@wagmi/connectors` 6.2.0 pins, via `query-string`.
 - **Impact.** Denial of service, in the browser.
