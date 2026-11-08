@@ -68,7 +68,8 @@ export default function DevigCalculatorPage() {
           and no calculator or service can guarantee a profit.
         </p>
         <p>
-          More on the method: <Link href="/how-it-works" className="text-purple-400 hover:underline">How it works</Link>{" "}
+          More on the method: <Link href="/how-it-works" className="text-purple-400 hover:underline">How it works</Link>,{" "}
+          <Link href="/line-shopping" className="text-purple-400 hover:underline">Line shopping explained</Link>{" "}
           and <Link href="/closing-line-value" className="text-purple-400 hover:underline">Closing Line Value explained</Link>.
         </p>
       </section>

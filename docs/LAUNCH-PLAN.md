@@ -20,20 +20,20 @@ cannot even let anyone sign up.
 
 | | Status |
 |---|---|
-| **Login and registration** | ❌ **broken in production — see P0.1. Nobody can create an account or log in.** |
+| Login and registration | ✅ sign-in reaches the database again (verified 2026-11-02: a sign-in with an unregistered email returns "No account found with that email", not the missing-column error). Creating an account was **not** re-tested live — it would add a real user |
 | Site live at intellabets.com | ✅ verified |
 | Engine live, serving real odds | ✅ verified 2026-10-25 (the feed was down 2026-09-14 to 2026-10-25 on a rejected Odds API key; see RUNBOOK) |
-| Revenue bypasses closed | ✅ `POST /api/premium`, `/api/subscriptions` → 404 |
+| Revenue bypasses closed | ✅ `POST /api/premium`, `/api/subscriptions` → 404. Every payment webhook refuses an unsigned request (verified 2026-11-02): RevenueCat 401 (secret set, fails closed), web3 `/confirm` 401, Stripe / NOWPayments / Authorize.Net 400 on the missing or invalid signature |
 | Checkout fails safely when unauthenticated | ✅ `POST /api/checkout` → 401 (code inspection: falls through to a clean 503 once authenticated, if `STRIPE_SECRET_KEY` is absent/malformed — **not re-verified live**, since no account could be created to test it authenticated) |
 | Private betslips protected | ✅ signed-out requests leak nothing |
 | Legal + pricing pages public | ✅ required for store review and underwriting |
 | Security headers, CORS allowlist | ✅ verified live |
 | **Payment processing** | ❌ **no processor** |
 | Support chat | ❌ Anthropic key invalid (unverified today — could not reach `/api/admin/health`, itself blocked by the same DB drift) |
-| Rate limiting enforced | ⚠️ needs the `RateLimit` table in Neon |
+| Rate limiting enforced | ⚠️ unverified — the 7-request test cannot work from the cloud sandbox (its IP changes per request; RUNBOOK). Check the `rate-limit-store` row of `/api/admin/health` |
 | Mobile apps | ❌ Expo shell only, no screens |
 
-**One sentence: the funnel is dead at the front door, before payment even enters the picture.**
+**One sentence: visitors can get in the door again; the funnel now stops at payment, because there is no processor.**
 
 ---
 
@@ -42,7 +42,18 @@ cannot even let anyone sign up.
 Nothing else matters until these are done, in this order — #1 first, since
 nothing downstream of it is reachable.
 
-### 1. Fix the broken database schema — login and registration are down
+### 1. ~~Fix the broken database schema~~ — resolved (verified 2026-11-02)
+**Status 2026-11-02:** the schema was synced at some point after this was
+written (the log does not record when). Sign-in now reaches a `User` lookup
+that selects every column without error, and the RevenueCat webhook answers
+401, so its secret is set. Still open from the steps below: step 6, the audit
+for free grants made while the webhook was open — nothing in the repo records
+that it was done. Not re-verified: account creation itself, and whether the
+other missing tables (`SupportTicket`, `SupportMessage`, `PlacedBet`,
+`RateLimit`) now exist; `docs/sql/verify.sql` answers both.
+
+The original diagnosis, kept for the record:
+
 Confirmed live on 2026-09-24:
 - `POST /api/register` with valid, unique input → 500 `{"error":"Failed to create account"}`
 - `POST /api/auth/callback/credentials` with any credentials → NextAuth error URL containing
@@ -172,14 +183,15 @@ underwriter reviewing the site will be looking for exactly it.
 - [x] **Why we don't publish a win rate** — folded into `/how-it-works` rather than a separate page, since it's the natural next paragraph after the de-vig explanation.
 - [x] **CLV explainer** — `/closing-line-value`, shipped 2026-10-07. Worked example labeled illustrative, limits of CLV, and an explicit statement that no average is published yet (sample too small under corrected settlement). Added to middleware publicRoutes and sitemap. Linked from `/how-it-works` footer 2026-10-08.
 - [x] **FAQ** — folded into `/how-it-works` (see above) rather than a separate page.
-- [ ] **Onboarding emails** — still open. Blocked in practice: there's no transactional email sending configured yet (P1), and no new users are being created right now (P0.1), so nothing would trigger them today anyway.
+- [ ] **Onboarding emails** — copy written 2026-11-02, not yet sent. `web/lib/onboarding-emails.ts` has two templates in the same `{ subject, text, html }` shape as the password-reset email, ready for `sendEmail()`: a **welcome** email (transactional, once at signup) and a **method explainer** follow-up (marketing). The follow-up's input type requires an unsubscribe URL and a postal address (CAN-SPAM), so it cannot be built without them. Display names are HTML-escaped. `onboarding-emails.test.ts` enforces the copy rules: 21+ and 1-800-GAMBLER in every part, no percentage other than the 100% in the margin explanation, no ROI / win-rate / earnings wording, "guarantee" only as a denial. Still needed before sending (owner): `RESEND_API_KEY` and a verified sending domain (`/api/admin/health` "email" row), a postal address for the footer, an unsubscribe endpoint, and a decision on whether to send the follow-up at all. Sign-ups work again (P0.1 resolved), so wiring the welcome email into `/api/register` is the next code step once email is configured.
 - [x] **SEO metadata** — `/how-it-works` has full metadata + OG tags; added `app/sitemap.ts` and `app/robots.ts` (Next.js auto-generates `/sitemap.xml` and `/robots.txt` from these), listing only routes actually public per `middleware.ts`. Per-page metadata on the other marketing pages (terms/privacy/contact/premium) already existed before this run.
 - [x] **Responsible gambling page** — `/responsible-gambling`, added 2026-10-08 (not yet deployed/verified live at time of writing). Warning signs, control tips, US/UK help lines, no performance figures. In middleware publicRoutes and sitemap; linked from `/how-it-works`. Linked from the homepage footer (replacing the external NCPG link) and from a caveat line at the foot of `/premium` on 2026-10-30. Verified live 2026-10-31 after the `intellabets.com` alias was moved (it had not deployed — see RUNBOOK "Push builds green but the site does not change"). The shared in-app footer (`components/Footer.tsx`) still pointed at the external NCPG site; switched to `/responsible-gambling` 2026-10-31.
-- [x] **No-vig calculator** — `/devig-calculator`, built 2026-10-31 for the "de-vig calculator" search term (Channels → long-form SEO). One book's 2-way or 3-way prices in; margin, fair probabilities and no-vig prices out, plus an optional expected-value check of another book's price. Maths in `lib/devig.ts`, mirroring the engine's proportional method, unit-tested against the `/how-it-works` worked example. No performance figures. Public in middleware, in the sitemap, linked from `/how-it-works`. Ships via PR, not yet live.
+- [x] **No-vig calculator** — `/devig-calculator`, built 2026-10-31 for the "de-vig calculator" search term (Channels → long-form SEO). One book's 2-way or 3-way prices in; margin, fair probabilities and no-vig prices out, plus an optional expected-value check of another book's price. Maths in `lib/devig.ts`, mirroring the engine's proportional method, unit-tested against the `/how-it-works` worked example. No performance figures. Public in middleware, in the sitemap, linked from `/how-it-works`. Live 2026-11-01 (PR #20, alias moved by hand).
+- [x] **Line shopping explainer** — `/line-shopping`, built 2026-11-01 for the "line shopping" search term (Channels → long-form SEO). Worked example of one side at three books with break-even rates and payouts, computed at build time from `lib/devig.ts` / `lib/utils.ts` rather than typed in; why -3 and -3.5 are different bets; what a better price does and does not do. Illustrative prices only, no performance figures. Public in middleware, in the sitemap, linked from `/devig-calculator`. Ships via PR, not yet live.
 
 ### Channels, in order of fit
 
-1. **r/sportsbook and betting forums** — sharp audience, allergic to hype, receptive to method. Participate honestly; do not spam picks.
+1. **r/sportsbook and betting forums** — sharp audience, allergic to hype, receptive to method. Participate honestly; do not spam picks. Drafts for the owner to post personally: `docs/marketing/forum-posts.md` (2026-11-03). It has a by-hand de-vig explainer, the "what's your record?" answer, and a line-shopping post that waits on PR #21. It also has a pre-posting checklist: read each forum's self-promotion rules, disclose affiliation, no performance figures or picks, and 21+ wording on any post with a link.
 2. **Long-form SEO** — "de-vig calculator", "closing line value", "line shopping" have real intent and weak incumbents.
 3. **YouTube/TikTok explainers** — showing the vig calculation on a real slate is inherently demonstrable.
 4. **Paid** — last. Do not pay for traffic to a page that can't take payment.
@@ -194,8 +206,8 @@ policy in the terms matches what the processor will actually do.
 
 ## Open questions for the owner
 
-1. **Run the P0.1 fix** (steps above: set `REVENUECAT_WEBHOOK_SECRET` + redeploy, then `docs/sql/schema-sync.sql` in the Neon SQL Editor). The automated runs have no database credentials and no GitHub push access, so login and registration stay broken until the owner does this.
-2. **Push access for the automated runs** — the session's git proxy denies pushes to this repo ("not in this session's authorized repository set"). Add the repo to the routine's sources with write access, or apply the patch files each run hands over. Do not give the runs production database credentials.
+1. **Finish P0.1:** the schema fix is in (verified 2026-11-02). Remaining: run `docs/sql/verify.sql` in the Neon SQL Editor to confirm the `SUMMARY … OK` row, and do step 6, the audit for free grants made while the RevenueCat webhook was open.
+2. **Push access for the automated runs** — resolved: since 2026-10-31 the runs push to their own branch and open a draft PR for the owner to merge (they still cannot push to `main`). Do not give the runs production database credentials.
 3. Stripe's termination reason code — needed for the 2Accept application
 4. Business entity and bank account — are formation docs ready to submit?
 5. Launch target date, to work backwards from

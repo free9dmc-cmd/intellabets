@@ -322,6 +322,16 @@ Overrides only take effect on a fresh resolve. After changing one, delete
 `package-lock.json` and every `node_modules`, then reinstall. The sandbox
 scripts already wipe `node_modules` whenever `package.json` changes.
 
+**Re-checked 2026-11-03.** A new advisory, `follow-redirects` 1.16.0–1.16.1
+(GHSA-mrwp-f3q8-3g9p: sensitive headers and custom credentials can follow a
+redirect to another host), reached the root lockfile through `axios`. Fixed by
+moving the lockfile entry to 1.16.2, a patch release `axios ^1.16.0` already
+accepts, so no `package.json` or override changed. Root `npm audit --omit=dev`
+went from 22 high to 21, and those 21 trace back only to the two accepted
+advisories below. Dependabot's backend `zod` / `follow-redirects` alerts come
+from the root lockfile: resolving `backend/package.json` standalone, as Render's
+Docker build does, audits at **0** (follow-redirects 1.16.2, no `zod`).
+
 **What is left, and why it is accepted for now.**
 
 `zod` <4.6.6 (high):
@@ -334,7 +344,7 @@ scripts already wipe `node_modules` whenever `package.json` changes.
   visitor's own browser.
 - **Next step.** Re-check when AppKit 2.x ships.
 
-`decode-uri-component` (moderate):
+`decode-uri-component` (moderate when written; npm rates it high as of 2026-11-03):
 - **Source.** It reaches the tree only through `@walletconnect/ethereum-provider`
   2.21.1, which `@wagmi/connectors` 6.2.0 pins, via `query-string`.
 - **Impact.** Denial of service, in the browser.
@@ -394,7 +404,11 @@ replaced the key and moved the engine to Render Starter; odds resumed at
 security upgrade (`baac150`) was then deployed by API and the `intellabets.com`
 alias assigned by hand (see "Symptoms → causes").
 
-**Login and registration are broken in production right now (found 2026-09-24).**
+**Resolved (verified 2026-11-02): login and registration broken in production
+(found 2026-09-24).** A sign-in with an unregistered email now returns "No
+account found with that email" — the full-row `User` lookup succeeds — so the
+schema sync below was applied at some point. Account creation was not
+re-tested live. The original entry:
 `prisma.user.findUnique()` / `.create()` fail because `User.premiumStripeSubId`
 (schema change committed 2026-09-10, `payoutsEnabled` likely too) was never
 applied to the production Neon database. Confirmed live: `POST /api/register`
@@ -411,7 +425,10 @@ and redeploy first (see LAUNCH-PLAN.md P0.1 for the order and why).
 is unset** (found 2026-09-25). Anyone can POST a purchase event and grant any
 user premium or AI access, or credit tipster earnings; user ids are public via
 `/api/leaderboard` and profiles. Fixed in code (fails closed with 503 when the
-secret is unset) but not yet deployed — until then, keep the variable set.
+secret is unset). **Verified 2026-11-02:** the live webhook answers an unsigned
+POST with 401, so the fail-closed code is deployed and the secret is set. The
+audit for grants made while it was open (LAUNCH-PLAN P0.1 step 6) is not
+recorded as done.
 
 **Support chat is failing for a non-schema reason.** One anonymous test message
 got the catch-branch reply ("Something went wrong on our side..."), which wraps
