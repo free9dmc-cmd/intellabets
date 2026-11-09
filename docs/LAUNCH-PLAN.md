@@ -124,7 +124,9 @@ Backups if declined: PaymentCloud, Soar Payments. Apply to one at a time —
 parallel applications look like shopping for lax underwriting.
 
 **Crypto in parallel:** NOWPayments, as a second rail. Different customers, and
-no single point of failure this time.
+no single point of failure this time. The code is built and dormant; the
+activation steps and what is still unverified are in RUNBOOK "Crypto payments
+(NOWPayments)" (2026-11-09).
 
 ### 3. Delete the dead Stripe key
 `STRIPE_SECRET_KEY` still sits in Vercel. If it is well-formed but revoked,
