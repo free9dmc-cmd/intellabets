@@ -193,7 +193,7 @@ underwriter reviewing the site will be looking for exactly it.
 
 1. **r/sportsbook and betting forums** — sharp audience, allergic to hype, receptive to method. Participate honestly; do not spam picks. Drafts for the owner to post personally: `docs/marketing/forum-posts.md` (2026-11-03). It has a by-hand de-vig explainer, the "what's your record?" answer, and a line-shopping post that waits on PR #21. It also has a pre-posting checklist: read each forum's self-promotion rules, disclose affiliation, no performance figures or picks, and 21+ wording on any post with a link.
 2. **Long-form SEO** — "de-vig calculator", "closing line value", "line shopping" have real intent and weak incumbents.
-3. **YouTube/TikTok explainers** — showing the vig calculation on a real slate is inherently demonstrable.
+3. **YouTube/TikTok explainers** — showing the vig calculation on a real slate is inherently demonstrable. Three short scripts for the owner to record: `docs/marketing/video-scripts.md` (2026-11-08). They cover "-110/-110 isn't a coin flip", "same bet, three prices", and "why we don't post our record". Each has timed shots and a voice-over. Rules: real prices yes, results and picks never; 21+ / 1-800-GAMBLER on screen throughout; a standard description; check each platform's gambling rules first.
 4. **Paid** — last. Do not pay for traffic to a page that can't take payment.
 
 ### Pricing
