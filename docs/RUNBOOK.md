@@ -44,6 +44,8 @@ Both deploy automatically from `main`.
 | `ENGINE_SERVICE_KEY` | Service-to-service auth | Picks pages empty, **no error shown** |
 | `PROPS_SPORTS` *(Render)* | Sports whose player props are fetched, e.g. `basketball_nba,americanfootball_nfl,icehockey_nhl` | Empty: no props job, the Player props switch says none are priced |
 | `PROPS_CREDIT_CAP_MONTH` / `PROPS_MIN_REMAINING_CREDITS` *(Render)* | Props credit cap (3500) and floor (1000) | See "Player props" under AI Picks |
+| `NOWPAYMENTS_API_KEY` + `NOWPAYMENTS_IPN_SECRET` | Crypto checkout. **Both or neither** | With either one missing the crypto rail is off. See "Crypto payments (NOWPayments)" |
+| `NOWPAYMENTS_SANDBOX` | `true` points at NOWPayments' sandbox API | Left `true` in production: invoices are test invoices and no real money arrives |
 | `STRIPE_SECRET_KEY` | *(dead — account terminated)* | See Known issues |
 | `DEMO_BILLING` | **Never set in production** | Grants paid access with no payment |
 
@@ -355,6 +357,68 @@ Docker build does, audits at **0** (follow-redirects 1.16.2, no `zod`).
 
 `mobile/` is outside the root lockfile now. It keeps its own Expo 51 alerts
 until it is moved to a current Expo SDK or removed.
+
+---
+
+## Crypto payments (NOWPayments)
+
+Built and dormant. Nothing here has been run against a real NOWPayments
+account yet, sandbox or live, so treat the first sandbox payment as the test of
+the integration, not a formality.
+
+Code: `web/lib/billing/providers/nowpayments.ts` (invoice + callback
+verification), `web/app/api/webhooks/nowpayments/route.ts` (callback endpoint).
+
+### How it behaves
+
+- The rail is on only when **both** `NOWPAYMENTS_API_KEY` and
+  `NOWPAYMENTS_IPN_SECRET` are set. The API key alone could create invoices
+  whose callbacks all fail verification, so customers would pay and get nothing.
+- Checkout creates a `PaymentOrder` row, then a NOWPayments invoice, and sends
+  the customer to NOWPayments' hosted page.
+- NOWPayments calls back to `${NEXT_PUBLIC_APP_URL}/api/webhooks/nowpayments`.
+  Access is granted on status `confirmed` or `finished`, never on submission.
+- Each payment grants **one month**. Nothing renews; the customer pays again.
+- A retried callback is ignored (deduplicated on NOWPayments' `payment_id`).
+- A short payment does not grant: the callback is refused when less crypto
+  arrived than was requested (1% rounding allowance), or when the invoice was
+  priced below the plan. Vercel logs `nowpayments IPN underpaid <order id>`.
+- A `refunded` callback is **not** handled. Revoke access by hand after a refund.
+
+### Turning it on
+
+1. Confirm NOWPayments will take the business. A third-party review says it is
+   closed to US residents; read their current terms before anything else.
+2. Create the account, add a payout wallet, and generate an API key and an IPN
+   secret in their dashboard. These are two different values.
+3. **Sandbox first.** In a Vercel *Preview* environment set both keys from a
+   sandbox account plus `NOWPAYMENTS_SANDBOX=true`. `NEXT_PUBLIC_APP_URL` must
+   be that preview's own URL, because the callback address is built from it.
+4. Check `GET /api/billing/providers` lists `nowpayments`, pay one sandbox
+   invoice for each plan, and confirm the `PaymentOrder` row turns `paid` and
+   the account gets access.
+5. Production: set the live keys, remove `NOWPAYMENTS_SANDBOX` (or set it to
+   `false`), redeploy, and move the `intellabets.com` alias.
+6. Card stays the default rail when it is configured. Set
+   `BILLING_PROVIDER=nowpayments` to make crypto the default instead.
+
+### Not yet verified
+
+- **Signature format.** We sign-check over the callback JSON with keys sorted at
+  every depth. Published examples disagree on whether NOWPayments sorts nested
+  keys. If step 4 returns 400 on a genuine callback, this is the first suspect.
+- **Minimum payment.** The AI plan is $9.99. Some coins may have a higher
+  minimum, which would make that invoice unpayable in those coins.
+
+### Symptoms
+
+| Symptom | Likely cause |
+|---|---|
+| Crypto option missing at checkout | One of the two keys is unset or blank, or the deploy predates the change |
+| Customer paid, no access, callback returned 400 | Wrong `NOWPAYMENTS_IPN_SECRET`, or the signature format above |
+| Customer paid, no access, callback returned 200 | Status not yet `confirmed`, or `nowpayments IPN underpaid` in the logs |
+| Checkout returns 500 on crypto | NOWPayments rejected the invoice; the log line carries their status and message |
+| Invoices pay but no money arrives | `NOWPAYMENTS_SANDBOX=true` in production |
 
 ---
 

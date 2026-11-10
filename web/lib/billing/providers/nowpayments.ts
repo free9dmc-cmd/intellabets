@@ -53,17 +53,89 @@ export function verifyNowpaymentsSignature(
   return timingSafeEqualStr(expected, signature.trim())
 }
 
+/**
+ * How far below the quoted crypto amount a payment may land and still count as
+ * paid in full. NOWPayments already decides this itself (a short payment arrives
+ * as `partially_paid`, never `finished`), so this only absorbs rounding in the
+ * coin's last decimals. Our own choice, not a NOWPayments figure.
+ */
+const UNDERPAYMENT_TOLERANCE = 0.01
+
+/** The IPN fields the amount checks read. NOWPayments sends some as strings. */
+export interface NowpaymentsAmountFields {
+  /** Invoice price in the fiat currency we quoted (USD dollars). */
+  price_amount?: number | string | null
+  /** Crypto amount the customer was asked to send, in `pay_currency`. */
+  pay_amount?: number | string | null
+  /** Crypto amount that actually arrived, in `pay_currency`. */
+  actually_paid?: number | string | null
+}
+
+/** Parse an IPN amount; null when it is absent or not a finite number. */
+function parseAmount(value: number | string | null | undefined): number | null {
+  if (value === null || value === undefined || value === "") return null
+  const parsed = typeof value === "number" ? value : Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+/**
+ * Defense-in-depth against granting access on a short payment. Pure, exported
+ * for unit tests. Returns a reason when the payment must NOT grant, else null.
+ *
+ * Two independent comparisons, each in a single currency so no exchange rate is
+ * involved:
+ *   1. The invoice was priced at no less than the order expected (USD). This
+ *      ties the IPN back to the order we created, but says nothing about what
+ *      arrived.
+ *   2. What arrived is no less than what was asked for (crypto, pay_currency).
+ *      This is the check on the money itself.
+ * A field that is absent is skipped rather than failed: the signed
+ * `payment_status` stays the primary gate, and rejecting on a missing optional
+ * field would leave a paying customer without access.
+ */
+export function findNowpaymentsUnderpayment(
+  fields: NowpaymentsAmountFields,
+  expectedCents: number
+): string | null {
+  const priceAmount = parseAmount(fields.price_amount)
+  if (priceAmount !== null && Math.round(priceAmount * 100) < expectedCents) {
+    return `invoice priced at ${priceAmount} USD, order expected ${expectedCents} cents`
+  }
+
+  const payAmount = parseAmount(fields.pay_amount)
+  const actuallyPaid = parseAmount(fields.actually_paid)
+  if (payAmount !== null && payAmount > 0 && actuallyPaid !== null) {
+    const minimumAccepted = payAmount * (1 - UNDERPAYMENT_TOLERANCE)
+    if (actuallyPaid < minimumAccepted) {
+      return `received ${actuallyPaid} of ${payAmount} requested`
+    }
+  }
+
+  return null
+}
+
+/**
+ * Both keys, or the rail stays off. The API key alone can create invoices, but
+ * without the IPN secret every callback fails signature verification — so a
+ * customer could pay and never be granted access. Exported for unit tests.
+ */
+export function isNowpaymentsConfigured(env: NodeJS.ProcessEnv = process.env): boolean {
+  return Boolean(env.NOWPAYMENTS_API_KEY?.trim() && env.NOWPAYMENTS_IPN_SECRET?.trim())
+}
+
 export const nowpaymentsProvider: PaymentProvider = {
   id: "nowpayments",
   label: "Crypto (NOWPayments)",
 
   isConfigured() {
-    return Boolean(process.env.NOWPAYMENTS_API_KEY)
+    return isNowpaymentsConfigured()
   },
 
   async createCheckout(input: CheckoutInput): Promise<CheckoutResult> {
-    const apiKey = process.env.NOWPAYMENTS_API_KEY
-    if (!apiKey) return { kind: "unsupported", reason: "NOWPayments not configured" }
+    const apiKey = process.env.NOWPAYMENTS_API_KEY?.trim()
+    if (!apiKey || !isNowpaymentsConfigured()) {
+      return { kind: "unsupported", reason: "NOWPayments not configured" }
+    }
 
     const amountCents = planAmountCents(input.plan)
 
@@ -119,11 +191,10 @@ export const nowpaymentsProvider: PaymentProvider = {
       throw new InvalidWebhookSignatureError()
     }
 
-    const body = JSON.parse(rawBody) as {
+    const body = JSON.parse(rawBody) as NowpaymentsAmountFields & {
       payment_id?: string | number
       payment_status?: string
       order_id?: string
-      price_amount?: number
       pay_currency?: string
     }
 
@@ -137,22 +208,17 @@ export const nowpaymentsProvider: PaymentProvider = {
       : null
     if (!order || order.provider !== "nowpayments") return null
 
-    // Defense-in-depth: never grant on an underpayment. price_amount is the
-    // invoice's USD price (dollars); expectedAmount is cents. Only reject when a
-    // price is present and is strictly below what the order expected.
-    if (typeof body.price_amount === "number") {
-      const paidCents = Math.round(body.price_amount * 100)
-      if (paidCents < Number(order.expectedAmount)) {
-        console.error(
-          "nowpayments IPN underpaid",
-          order.id,
-          "paidCents",
-          paidCents,
-          "expected",
-          order.expectedAmount
-        )
-        return null
-      }
+    // Defense-in-depth: never grant on a short payment (see the helper).
+    const underpayment = findNowpaymentsUnderpayment(body, Number(order.expectedAmount))
+    if (underpayment) {
+      console.error(
+        "nowpayments IPN underpaid",
+        order.id,
+        "payment",
+        body.payment_id,
+        underpayment
+      )
+      return null
     }
 
     await prisma.paymentOrder.update({

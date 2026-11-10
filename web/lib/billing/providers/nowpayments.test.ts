@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest"
-import { verifyNowpaymentsSignature } from "./nowpayments"
+import {
+  verifyNowpaymentsSignature,
+  findNowpaymentsUnderpayment,
+  isNowpaymentsConfigured,
+} from "./nowpayments"
 import { sortKeysDeep, hmacHex } from "./crypto-utils"
 
 /**
@@ -73,5 +77,111 @@ describe("verifyNowpaymentsSignature", () => {
   it("rejects an unparseable body", () => {
     const sig = signLikeNowpayments(payload)
     expect(verifyNowpaymentsSignature("not json {", sig, IPN_SECRET)).toBe(false)
+  })
+})
+
+describe("isNowpaymentsConfigured", () => {
+  const env = (vars: Record<string, string>) => vars as NodeJS.ProcessEnv
+
+  it("is on only when both the API key and the IPN secret are set", () => {
+    expect(
+      isNowpaymentsConfigured(env({ NOWPAYMENTS_API_KEY: "k", NOWPAYMENTS_IPN_SECRET: "s" }))
+    ).toBe(true)
+  })
+
+  it("stays off with the API key alone (invoices would be paid but never granted)", () => {
+    expect(isNowpaymentsConfigured(env({ NOWPAYMENTS_API_KEY: "k" }))).toBe(false)
+  })
+
+  it("stays off with the IPN secret alone, or with neither", () => {
+    expect(isNowpaymentsConfigured(env({ NOWPAYMENTS_IPN_SECRET: "s" }))).toBe(false)
+    expect(isNowpaymentsConfigured(env({}))).toBe(false)
+  })
+
+  it("treats a blank or whitespace-only value as unset", () => {
+    expect(
+      isNowpaymentsConfigured(env({ NOWPAYMENTS_API_KEY: "k", NOWPAYMENTS_IPN_SECRET: "  " }))
+    ).toBe(false)
+  })
+})
+
+describe("findNowpaymentsUnderpayment", () => {
+  const EXPECTED_CENTS = 1999
+
+  it("passes a payment that arrived in full", () => {
+    expect(
+      findNowpaymentsUnderpayment(
+        { price_amount: 19.99, pay_amount: 0.0003, actually_paid: 0.0003 },
+        EXPECTED_CENTS
+      )
+    ).toBeNull()
+  })
+
+  it("passes an overpayment", () => {
+    expect(
+      findNowpaymentsUnderpayment(
+        { price_amount: 19.99, pay_amount: 20, actually_paid: 25 },
+        EXPECTED_CENTS
+      )
+    ).toBeNull()
+  })
+
+  it("rejects when less crypto arrived than was requested, even at the full invoice price", () => {
+    // The case the old price-only check could not see.
+    expect(
+      findNowpaymentsUnderpayment(
+        { price_amount: 19.99, pay_amount: 20, actually_paid: 10 },
+        EXPECTED_CENTS
+      )
+    ).toMatch(/received 10 of 20/)
+  })
+
+  it("absorbs rounding inside the tolerance but not beyond it", () => {
+    const fields = { price_amount: 19.99, pay_amount: 100 }
+    expect(findNowpaymentsUnderpayment({ ...fields, actually_paid: 99.5 }, EXPECTED_CENTS)).toBeNull()
+    expect(
+      findNowpaymentsUnderpayment({ ...fields, actually_paid: 98.9 }, EXPECTED_CENTS)
+    ).not.toBeNull()
+  })
+
+  it("rejects an invoice priced below what the order expected", () => {
+    expect(
+      findNowpaymentsUnderpayment(
+        { price_amount: 9.99, pay_amount: 10, actually_paid: 10 },
+        EXPECTED_CENTS
+      )
+    ).toMatch(/invoice priced/)
+  })
+
+  it("reads amounts sent as strings", () => {
+    expect(
+      findNowpaymentsUnderpayment(
+        { price_amount: "19.99", pay_amount: "20", actually_paid: "10" },
+        EXPECTED_CENTS
+      )
+    ).not.toBeNull()
+    expect(
+      findNowpaymentsUnderpayment(
+        { price_amount: "19.99", pay_amount: "20", actually_paid: "20" },
+        EXPECTED_CENTS
+      )
+    ).toBeNull()
+  })
+
+  it("rejects a payment where nothing arrived", () => {
+    expect(
+      findNowpaymentsUnderpayment({ pay_amount: 20, actually_paid: 0 }, EXPECTED_CENTS)
+    ).not.toBeNull()
+  })
+
+  it("skips a comparison whose fields are absent or unparseable", () => {
+    expect(findNowpaymentsUnderpayment({}, EXPECTED_CENTS)).toBeNull()
+    expect(findNowpaymentsUnderpayment({ price_amount: 19.99 }, EXPECTED_CENTS)).toBeNull()
+    expect(
+      findNowpaymentsUnderpayment(
+        { price_amount: 19.99, pay_amount: "n/a", actually_paid: null },
+        EXPECTED_CENTS
+      )
+    ).toBeNull()
   })
 })
