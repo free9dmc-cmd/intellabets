@@ -49,14 +49,17 @@
     "@nestjs/testing": "^11.1.18",
     "@types/bcryptjs": "^2.4.6",
     "@types/bull": "^4.10.0",
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.0.0",
     "@types/passport-jwt": "^4.0.1",
     "@types/passport-local": "^1.0.38",
-    "@types/node": "^20.0.0",
     "@types/ws": "^8.5.0",
+    "@typescript-eslint/eslint-plugin": "^8.72.2",
+    "@typescript-eslint/parser": "^8.72.2",
+    "eslint": "^8.57.1",
     "jest": "^29.7.0",
-    "ts-jest": "^29.2.0",
-    "@types/jest": "^29.5.0",
     "prisma": "^5.20.0",
+    "ts-jest": "^29.2.0",
     "tsx": "^4.19.0",
     "typescript": "^5.5.0"
   },
@@ -69,6 +72,12 @@
     },
     "bull": {
       "uuid": "^11.1.1"
+    },
+    "@nestjs/cli": {
+      "glob": "^14.0.4"
+    },
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "^11.0.5"
     }
   }
 }

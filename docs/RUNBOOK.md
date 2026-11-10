@@ -293,8 +293,10 @@ Vercel runs Node 24.
 Removed:
 - unused GraphQL/Apollo packages in `backend/`;
 - unused `@auth/prisma-adapter` in `web/`;
-- `mobile/` from the npm workspace. It pins React 18.2 for React Native 0.74
-  and would otherwise hoist an old React next to `next` (see README).
+- `mobile/` from the npm workspace. It pinned React 18.2 for React Native 0.74
+  at the time and would have hoisted an old React next to `next` (see README).
+  It is on Expo SDK 58 / React 19 since 2026-11-10 but still installs on its
+  own, with its own `mobile/package-lock.json`.
 
 **npm `overrides` live in three files and must stay in step.**
 
@@ -312,6 +314,10 @@ Most are scoped, semver-compatible security bumps:
 - `uuid` under the MetaMask packages;
 - `postcss-selector-parser` 7 under `tailwindcss`. This one was checked to
   produce byte-identical CSS.
+- `glob` 14 under `@nestjs/cli` and `rimraf`, and `minimatch` 11 under
+  `@typescript-eslint/typescript-estree`. These two are **major** bumps past
+  what the parents ask for, on development tooling only (2026-11-10).
+- `@walletconnect/ethereum-provider` pinned to 2.26.0 (2026-11-10, see below).
 
 Two of them are build fixes, not security patches. Do not drop them:
 - **`@reown/appkit-adapter-wagmi` → `@wagmi/connectors ^6.2.0`.** Without it
@@ -334,29 +340,60 @@ advisories below. Dependabot's backend `zod` / `follow-redirects` alerts come
 from the root lockfile: resolving `backend/package.json` standalone, as Render's
 Docker build does, audits at **0** (follow-redirects 1.16.2, no `zod`).
 
+**Re-checked 2026-11-10.** Three new advisories had appeared (`glob`,
+`minimatch`, `deepmerge`) and `mobile/` was audited for the first time.
+
+| Advisory | Was | Fix |
+|---|---|---|
+| `decode-uri-component` (high) | In the browser wallet chain via `@walletconnect/ethereum-provider` 2.21.1 → `query-string` | Provider pinned to 2.26.0, which no longer uses `query-string`. Gone |
+| `glob` 9–14.0.1 (moderate) | `@nestjs/cli` pins 13.0.6; `rimraf` under `@capacitor/cli` | Overridden to `^14.0.4`. Gone |
+| `minimatch` 7–11.0.0 (moderate) | `@typescript-eslint/typescript-estree` asks for `^10.2.2` | Overridden to `^11.0.5`. Gone |
+| `mobile/`: 48 flagged, 1 critical (`tar`), all from Expo SDK 51 | Expo 51, React Native 0.74, React 18.2 | Moved to Expo SDK 58, React Native 0.88, React 19, with the same `glob` / `minimatch` overrides and a lockfile. `npm audit` in `mobile/`: **0** |
+
+`npm audit` after the change: root 23 (14 high, 9 low), `web` standalone 14
+high, `backend` standalone 9 low, `mobile/` 0. Everything left is the two
+accepted advisories below.
+
+Checked with: web tests and `next build`; backend tests, typecheck, lint and
+`nest build`; `tsc` in `mobile/` and one `@expo/fingerprint` run.
+
+**Not checked, do these before relying on them:**
+- **A live wallet connection.** The WalletConnect provider moved from 2.21.1 to
+  2.26.0 with only a build and unit tests behind it. The wallet rail is dormant
+  (no `WEB3_*` keys), so nothing live changed. Before setting those keys, pay
+  once on Base Sepolia (`WEB3_SANDBOX=true`) through a real wallet.
+- **The mobile app running.** `mobile/` has no screens and no app entry, so the
+  SDK 58 move was only type-checked. `nativewind` 2 and `react-native-purchases`
+  8 were left alone; neither is flagged, and both have newer majors that will
+  need attention when screens are built.
+
+`backend/` now declares `eslint` and the two `@typescript-eslint` packages it
+lints with. Before, `npm run lint` there only worked when the web app's ESLint
+happened to be hoisted to the workspace root, and the new lockfile no longer
+hoists it.
+
+The root lockfile was regenerated from scratch for this (overrides only apply
+on a fresh resolve), so many transitive versions moved within their ranges.
+
 **What is left, and why it is accepted for now.**
 
 `zod` <4.6.6 (high):
 - **Source.** Zod 3, inside the wallet-checkout chain: `@reown/appkit-wallet`
   pins `zod 3.22.4` exactly, and `@coinbase/cdp-sdk` requires `^3.25.76`.
   Both are still true in their latest releases (AppKit 1.8.24, CDP SDK
-  1.60.0), so **there is no upstream fix yet**. Upgrading to wagmi 3 would not
-  clear it.
+  1.61.0, re-checked 2026-11-10), so **there is no upstream fix yet**.
+  Upgrading to wagmi 3 would not clear it.
 - **Impact.** Memory exhaustion on oversized input, in code that runs in the
   visitor's own browser.
-- **Next step.** Re-check when AppKit 2.x ships.
+- **Next step.** Re-check when AppKit 2.x ships. The only way to clear it today
+  is to remove the wallet rail.
 
-`decode-uri-component` (moderate when written; npm rates it high as of 2026-11-03):
-- **Source.** It reaches the tree only through `@walletconnect/ethereum-provider`
-  2.21.1, which `@wagmi/connectors` 6.2.0 pins, via `query-string`.
-- **Impact.** Denial of service, in the browser.
-- **Possible fix.** Overriding the provider to ≥2.23 (latest 2.26.0) would drop
-  it, but that changes the WalletConnect provider version. Do it only with a
-  live wallet test, i.e. a WalletConnect project id. Fixed versions of the
-  package itself are ESM-only and would break `query-string`'s `require()`.
-
-`mobile/` is outside the root lockfile now. It keeps its own Expo 51 alerts
-until it is moved to a current Expo SDK or removed.
+`deepmerge` ≤4.3.1 (low):
+- **Source.** `jest-config` and `fork-ts-checker-webpack-plugin` (under
+  `@nestjs/cli`). Test and build tooling only.
+- **Why it stays.** 4.3.1 is the latest release, so there is no fixed version.
+  npm's suggested "fix" is a downgrade to jest 25.
+- **Next step.** Re-check when a deepmerge release above 4.3.1 exists.
 
 ---
 
