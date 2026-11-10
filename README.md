@@ -68,7 +68,7 @@ hundreds of bets to separate skill from variance.
 | `web/` | Next.js 15 App Router (React 19), Prisma, NextAuth | Customer site, accounts, subscriptions, support chat |
 | `backend/` | NestJS, Prisma, BullMQ | Odds ingestion, de-vig engine, predictions, settlement |
 | `skills/` | Agent Skills | `pick-writeup`, `bet-grading`, plus the analyst agent config |
-| `mobile/` | Expo / React Native | Shell only — no screens built yet; outside the npm workspace (own install) |
+| `mobile/` | Expo / React Native | Shell only (Expo SDK 58) — no screens built yet; outside the npm workspace (own install and lockfile) |
 | `admin-web/` | React + Vite | Placeholder — no source yet; the live admin console is `web/app/admin` |
 
 ### The two-database split

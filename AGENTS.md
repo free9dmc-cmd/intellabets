@@ -39,7 +39,7 @@ is reviewable, and are bind-mounted read-only into the containers.
    --no-package-lock`, the same shape as `backend/Dockerfile`, whose build
    context is the backend directory alone). That gives each app its own Prisma
    client, at the cost of a slower first boot.
-   The repo-root `package-lock.json` is current (regenerated 2026-10-24; `npm ci`
+   The repo-root `package-lock.json` is current (regenerated 2026-11-10; `npm ci`
    at the root works), but a single workspace install would still share one
    Prisma client between the two apps, so the sandbox keeps per-package
    installs. Root `overrides` do not apply to those installs, which is why
