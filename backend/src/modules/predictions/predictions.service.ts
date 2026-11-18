@@ -419,15 +419,24 @@ export class PredictionsService {
     const movementByOutcome = new Map<string, ReturnType<typeof computeLineMovement>>()
     if (def.needsMovement) {
       const gameIds = Array.from(new Set(candidates.map((c) => c.gameId)))
-      for (const gameId of gameIds) {
-        const snaps = await this.prisma.oddsSnapshot.findMany({
-          where: { gameId },
+      if (gameIds.length > 0) {
+        const snapshots = await this.prisma.oddsSnapshot.findMany({
+          where: { gameId: { in: gameIds } },
           orderBy: { capturedAt: "asc" },
-          select: { markets: true },
+          select: { gameId: true, markets: true },
         })
-        if (snaps.length < 2) continue
-        for (const c of candidates.filter((x) => x.gameId === gameId)) {
-          movementByOutcome.set(c.outcomeId, computeLineMovement(snaps, c.outcomeId))
+
+        const snapshotsByGame = new Map<string, { markets: unknown }[]>()
+        for (const snapshot of snapshots) {
+          const gameSnapshots = snapshotsByGame.get(snapshot.gameId) ?? []
+          gameSnapshots.push({ markets: snapshot.markets })
+          snapshotsByGame.set(snapshot.gameId, gameSnapshots)
+        }
+
+        for (const candidate of candidates) {
+          const snaps = snapshotsByGame.get(candidate.gameId)
+          if (!snaps || snaps.length < 2) continue
+          movementByOutcome.set(candidate.outcomeId, computeLineMovement(snaps, candidate.outcomeId))
         }
       }
     }
