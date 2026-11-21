@@ -31,7 +31,7 @@
     "@wagmi/core": "^2.22.1",
     "authorizenet": "^1.0.10",
     "bcryptjs": "^2.4.3",
-    "next": "15.5.28",
+    "next": "15.5.29",
     "next-auth": "^4.24.15",
     "react": "^19",
     "react-dom": "^19",
